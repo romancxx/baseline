@@ -1,0 +1,62 @@
+name: Ingest
+
+on:
+  schedule:
+    # 06:00 UTC, after the US close and before the European morning.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  # A run that overlaps with the previous one would do the same work twice. It would not
+  # corrupt anything — the unique indexes see to that — but it would waste the API budget.
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: fetch · dedup · match · classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The embedding model is ~128MB and unchanging; downloading it nightly is pure waste.
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: node_modules/@huggingface/transformers/.cache
+          key: transformers-${{ vars.EMBEDDING_MODEL || 'Xenova/bge-small-en-v1.5' }}
+
+      - name: Ingest
+        run: pnpm ingest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.APP_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          LOG_LEVEL: info
+
+      # Same job, so it only runs if ingest succeeded — classifying yesterday's articles
+      # while today's failed to arrive would quietly produce a stale digest.
+      - name: Summarize
+        run: pnpm summarize
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.APP_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          LOG_LEVEL: info

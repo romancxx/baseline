@@ -1,0 +1,85 @@
+{
+  "name": "stock-news",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22.11.0",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:coverage": "vitest run --coverage",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:seed": "pnpm db:seed:instruments && pnpm db:seed:feeds",
+    "db:seed:instruments": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-instruments.ts",
+    "db:seed:feeds": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-feeds.ts",
+    "ingest": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/ingest-news.ts",
+    "summarize": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/summarize.ts",
+    "test:db": "vitest run --project db",
+    "db:types": "supabase gen types typescript --local --schema public > src/shared/supabase/database.types.ts",
+    "db:types:linked": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@huggingface/transformers": "^4.2.0",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
+    "clsx": "^2.1.1",
+    "fast-xml-parser": "^5.11.1",
+    "lucide-react": "^1.52.0",
+    "next": "^16.3.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "husky": "^9.1.7",
+    "jsdom": "^30.0.1",
+    "lint-staged": "^17.3.0",
+    "supabase": "^2.115.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "lint-staged": {
+    "*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "esbuild",
+      "onnxruntime-node",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}

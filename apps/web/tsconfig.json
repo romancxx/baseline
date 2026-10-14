@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    /* Language & emit — Next handles the actual compilation; tsc is a checker only. */
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "ES2023"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "incremental": true,
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    /* Strictness. `strict` is the floor, not the ceiling. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
+    /* `verbatimModuleSyntax` keeps type-only imports erasable, which matters for
+       "use client"/"use server" boundaries. Biome's useImportType enforces it in editors. */
+    "verbatimModuleSyntax": true,
+    /* Unused-code checks are owned by Biome (it can autofix them); leaving them off
+       here avoids two tools reporting the same thing with different wording. */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", "out", "coverage"]
+}
