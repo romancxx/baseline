@@ -2,7 +2,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from app.config import Environment, get_settings
+from app.core.config import Environment, get_settings
 
 
 @pytest.fixture(autouse=True)

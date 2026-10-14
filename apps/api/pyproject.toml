@@ -36,7 +36,11 @@ select = [
     "I",  # isort
     "UP", # pyupgrade
     "B",  # flake8-bugbear
+    "TID252", # relative imports
 ]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.pyright]
 include = ["src", "tests"]
