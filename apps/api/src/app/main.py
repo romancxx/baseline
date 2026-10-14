@@ -1,14 +1,22 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel
+
+from app.config import get_settings
 
 
 class HealthResponse(BaseModel):
     status: str
 
 
-app = FastAPI()
+settings = get_settings()
+
+app = FastAPI(title="StockNews API", debug=settings.debug)
+router = APIRouter()
 
 
-@app.get("/health")
+@router.get("/health")
 async def health() -> HealthResponse:
     return HealthResponse(status="ok")
+
+
+app.include_router(router, prefix="/api/v1")

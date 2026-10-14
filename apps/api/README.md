@@ -2,6 +2,9 @@
 
 Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
 
+Settings are read from environment variables, then from `.env`. Start from the example:
+`cp .env.example .env`.
+
 Run from `apps/api/`:
 
 | Task       | Command                                |
