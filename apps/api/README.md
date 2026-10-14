@@ -5,6 +5,9 @@ Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
 Settings are read from environment variables, then from `.env`. Start from the example:
 `cp .env.example .env`.
 
+Postgres runs in Docker and reads its credentials from the same `.env`. From the repo root,
+`just db-up` starts it and waits until it is healthy; `just db-down` stops it and keeps the data.
+
 Run from `apps/api/`:
 
 | Task       | Command                                |
@@ -24,7 +27,7 @@ From the repo root, the same commands are available as `just api-install`, `just
 ```
 src/app/
 ├── main.py        # create_app(): builds the FastAPI app and mounts module routers
-├── core/          # app-wide code shared by all modules (settings, ...)
+├── core/          # app-wide code shared by all modules (settings, database)
 └── modules/
     └── <feature>/ # one package per feature
 ```
@@ -42,3 +45,7 @@ Each module contains only the files it needs, from this set:
 ## Code standards
 
 The rules for writing code here are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
+
+## Improvements
+
+Known shortcuts and planned improvements are tracked in [IMPROVEMENTS.md](IMPROVEMENTS.md).

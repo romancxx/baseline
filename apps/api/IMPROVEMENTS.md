@@ -1,0 +1,12 @@
+# Improvements
+
+Known shortcuts and gaps, with what they should become and when it becomes worth doing.
+
+| Area | Now | Improvement | Worth doing when |
+| --- | --- | --- | --- |
+| Tests | Importing `app.core.database` reads `DATABASE_URL`, so `just api-test` fails without a `.env`. | Provide test settings before the app is imported (`conftest.py` or `pytest-env`), or create the engine lazily. | CI is set up. |
+| Tests | `/health` is tested with a fake session; nothing runs against a real database. | A test database with one rolled-back transaction per test. The module-level engine needs `NullPool` or a dispose between tests, since each `TestClient` runs its own event loop. | The first model lands. |
+| Database | An unreachable host makes asyncpg wait for its default 60s connect timeout, so `/health` hangs. | Set `connect_args={"timeout": …}` on the engine. | Before deploying. |
+| Health | `check_database` swallows the error without recording it. | Log the exception when the check fails. | Logging is set up. |
+| Lint | Formatting is not checked: `just api-lint` runs only `ruff check`. | Add `ruff format --check` to `api-lint`. | CI is set up. |
+| Lint | "`core/` never imports from `modules/`" is review-only. | Ban `app.modules` imports with ruff `TID251`, allowed in `main.py` and `modules/`. | A second module lands. |

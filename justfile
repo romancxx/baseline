@@ -20,3 +20,9 @@ api-typecheck:
 
 api-test:
     {{api}} run pytest
+
+db-up:
+    docker compose up -d --wait
+
+db-down:
+    docker compose down

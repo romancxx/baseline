@@ -18,7 +18,7 @@ Run `just api-lint`, `just api-typecheck` and `just api-test` before considering
 ```
 src/app/
   main.py               create_app(): builds the app, mounts every router
-  core/                 app-wide code shared by all modules (config.py)
+  core/                 app-wide code shared by all modules (config.py, database.py)
   modules/<feature>/    one package per feature
 tests/
 ```
@@ -88,27 +88,43 @@ for future features. **[review]**
   **[review]**
 - **Code reads settings through `get_settings()`**, never `os.environ` or a module-level
   `Settings()`. **[review]**
-- **Every setting is in `Settings` and in `.env.example`.** Add the field before the `.env`
-  key: an unknown key in `.env` fails at startup. **[review]**
+- **Every setting is in `Settings` and in `.env.example`.** **[review]**
+- **`.env` is shared with Docker Compose.** Keys only the container reads (`POSTGRES_*`) stay
+  out of `Settings`. Variables that must agree (`DATABASE_URL` and `POSTGRES_*`) sit together
+  in `.env.example`, with a comment saying so. **[review]**
 
-## 5. Testing
+## 5. Database
+
+- **Endpoints get a session only through `Depends(get_db_session)`**; services receive it as
+  a parameter. Never create an engine or a session anywhere else. **[review]**
+- **Database access is async**: `AsyncSession` and `await`, no sync engine. **[review]**
+- **Never build SQL with f-strings or concatenation.** Pass values as bound parameters
+  (SQLAlchemy constructs or `text()` with `:name` parameters). **[review]**
+- **Models inherit `Base` from `app.core.database`** and declare columns with
+  `Mapped[...]` and `mapped_column()`. **[review]**
+
+## 6. Testing
 
 - **Tests build the app with `create_app()` through a fixture**, never the module-level
   `app`. **[review]**
+- **Dependencies are replaced with `app.dependency_overrides`**, never by patching modules.
+  **[review]**
 - **Settings are overridden with `monkeypatch.setenv`** and `get_settings.cache_clear()`
   before and after the test. **[review]**
 - **Test names describe behaviour**: `test_<subject>_<behaviour>`
-  (`test_health_returns_ok`). **[review]**
+  (`test_health_returns_ok_when_database_answers`). **[review]**
 
-## 6. Comments
+## 7. Comments
 
 - **Comments describe the code**: what a value is or what a block does. **[review]**
 - **Comments do not argue for implementation choices.** Reasoning goes in the commit
   message or the docs. **[review]**
 - **Only comment what the code cannot say itself**, in one line where possible. If deleting
   the comment loses no information, delete it. **[review]**
+- **Deliberate shortcuts go in `IMPROVEMENTS.md`**: what exists, what it should become, and
+  when it is worth doing. A `TODO` in code is not a substitute. **[review]**
 
-## 7. Tooling
+## 8. Tooling
 
 - **uv only.** Add dependencies with `uv add` (`--dev` for tooling); never hand-edit
   `uv.lock`. **[review]**
