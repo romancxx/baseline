@@ -22,9 +22,30 @@ Run from `apps/api/`:
 From the repo root, the same commands are available as `just api-install`, `just api-dev`,
 `just api-lint`, `just api-format`, `just api-typecheck` and `just api-test`.
 
+## Migrations
+
+Alembic manages the schema. Run from `apps/api/` with Postgres up:
+
+| Task                          | Command                                              |
+| ----------------------------- | ---------------------------------------------------- |
+| Apply all pending migrations  | `uv run alembic upgrade head`                        |
+| Generate a migration          | `uv run alembic revision --autogenerate -m "<what>"` |
+| Create an empty migration     | `uv run alembic revision -m "<what>"`                |
+| Roll back the last migration  | `uv run alembic downgrade -1`                        |
+| Roll back everything          | `uv run alembic downgrade base`                      |
+| Show the applied revision     | `uv run alembic current`                             |
+| Show the revision chain       | `uv run alembic history`                             |
+| Print SQL instead of running  | `uv run alembic upgrade head --sql`                  |
+
+Generated files go to `migrations/versions/` and are linted and formatted by ruff on creation.
+
 ## Project layout
 
 ```
+alembic.ini        # Alembic config; the database URL comes from Settings
+migrations/
+├── env.py         # connects Alembic to Settings and Base.metadata
+└── versions/      # one file per revision
 src/app/
 ├── main.py        # create_app(): builds the FastAPI app and mounts module routers
 ├── core/          # app-wide code shared by all modules (settings, database)
