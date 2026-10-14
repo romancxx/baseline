@@ -4,13 +4,14 @@ Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
 
 Run from `apps/api/`:
 
-| Task       | Command               |
-| ---------- | --------------------- |
-| Install    | `uv sync`             |
-| Lint       | `uv run ruff check`   |
-| Format     | `uv run ruff format`  |
-| Type-check | `uv run pyright`      |
-| Test       | `uv run pytest`       |
+| Task       | Command                                |
+| ---------- | -------------------------------------- |
+| Install    | `uv sync`                              |
+| Dev server | `uv run uvicorn app.main:app --reload` |
+| Lint       | `uv run ruff check`                    |
+| Format     | `uv run ruff format`                   |
+| Type-check | `uv run pyright`                       |
+| Test       | `uv run pytest`                        |
 
-From the repo root, the same commands are available as `just api-install`, `just api-lint`,
-`just api-format`, `just api-typecheck` and `just api-test`.
+From the repo root, the same commands are available as `just api-install`, `just api-dev`,
+`just api-lint`, `just api-format`, `just api-typecheck` and `just api-test`.

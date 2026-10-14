@@ -7,7 +7,10 @@ authors = [
     { name = "Roman Cirier", email = "roman.cirier@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi>=0.143.0",
+    "uvicorn[standard]>=0.54.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.25,<0.12.0"]
@@ -15,6 +18,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
     "pyright>=1.1.414",
     "pytest>=9.1.1",
     "ruff>=0.17.0",
@@ -34,8 +38,8 @@ select = [
 ]
 
 [tool.pyright]
-include = ["src"]
-typeCheckingMode = "strict"
+include = ["src", "tests"]
+strict = ["src"]
 
 [tool.pytest]
 testpaths = ["tests"]
