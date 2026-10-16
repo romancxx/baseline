@@ -19,7 +19,7 @@ Run `just api-lint`, `just api-typecheck` and `just api-test` before considering
 src/app/
   main.py               create_app(): builds the app, mounts every router
   core/                 app-wide code shared by all modules (config.py, database.py,
-                        exceptions.py, error_handlers.py)
+                        exceptions.py, error_handlers.py, logging.py, middleware.py)
   modules/<feature>/    one package per feature
 migrations/
   env.py                connects Alembic to Settings and Base.metadata
@@ -154,7 +154,20 @@ for future features. **[review]**
 - **Never edit a revision once it has run anywhere but your machine**; write a new one.
   **[review]**
 
-## 6. Testing
+## 6. Logging
+
+- **Log through structlog**: `logger = structlog.stdlib.get_logger(__name__)` at module level.
+  Never `print()`, never `logging.getLogger()` directly. **[review]**
+- **Event names are dotted and stable**: `<area>.<event>` in `snake_case` (`http.request`,
+  `http.unhandled_error`). Variable data goes in fields, never in the event name. **[review]**
+- **Per-request context comes from contextvars.** The middleware binds `request_id`; bind
+  anything else that belongs to the whole request with `bind_contextvars`, never by passing
+  it to every log call. **[review]**
+- **An unexpected exception is logged once, by the middleware.** Do not catch, log and
+  re-raise; let it propagate. **[review]**
+- **Never log a secret, a token or a request body.** **[review]**
+
+## 7. Testing
 
 - **Tests build the app with `create_app()` through a fixture**, never the module-level
   `app`. **[review]**
@@ -174,7 +187,7 @@ for future features. **[review]**
 - **Never assert that a database timestamp changed during a test.** A test runs in one
   transaction, so `now()` returns the same value throughout. **[review]**
 
-## 7. Comments
+## 8. Comments
 
 - **Comments describe the code**: what a value is or what a block does. **[review]**
 - **Comments do not argue for implementation choices.** Reasoning goes in the commit
@@ -184,7 +197,7 @@ for future features. **[review]**
 - **Deliberate shortcuts go in `IMPROVEMENTS.md`**: what exists, what it should become, and
   when it is worth doing. A `TODO` in code is not a substitute. **[review]**
 
-## 8. Tooling
+## 9. Tooling
 
 - **uv only.** Add dependencies with `uv add` (`--dev` for tooling); never hand-edit
   `uv.lock`. **[review]**

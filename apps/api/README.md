@@ -43,6 +43,14 @@ Alembic manages the schema. Run from `apps/api/` with Postgres up:
 
 Generated files go to `migrations/versions/` and are linted and formatted by ruff on creation.
 
+## Logging
+
+Logs go to stdout: readable console lines when `ENVIRONMENT=local`, one JSON object per line
+otherwise. uvicorn's own logs use the same format, except the reloader's few lines under
+`--reload`. Each request is logged once (`http.request`: method, path, status, duration) with a
+`request_id`, which is also returned in the `X-Request-ID` response header. A client may send
+its own `X-Request-ID` (letters, digits, `.`, `_`, `-`, up to 128 characters) to have it reused.
+
 ## Project layout
 
 ```
@@ -52,7 +60,7 @@ migrations/
 └── versions/      # one file per revision
 src/app/
 ├── main.py        # create_app(): builds the FastAPI app and mounts module routers
-├── core/          # app-wide code shared by all modules (settings, database, errors)
+├── core/          # app-wide code shared by all modules (settings, database, errors, logging)
 └── modules/
     └── <feature>/ # one package per feature
 ```

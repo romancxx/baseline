@@ -30,7 +30,7 @@ STATUS_CODES: dict[type[AppError], int] = {
 
 
 async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
-    return _error_response(_status_code(exc), exc.code, exc.message)
+    return error_response(_status_code(exc), exc.code, exc.message)
 
 
 async def handle_validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -38,7 +38,7 @@ async def handle_validation_error(_request: Request, exc: RequestValidationError
         ErrorDetail(loc=list(error["loc"]), message=error["msg"], type=error["type"])
         for error in exc.errors()
     ]
-    return _error_response(
+    return error_response(
         status.HTTP_422_UNPROCESSABLE_CONTENT,
         "validation_error",
         "The request is invalid.",
@@ -49,7 +49,7 @@ async def handle_validation_error(_request: Request, exc: RequestValidationError
 async def handle_http_exception(_request: Request, exc: HTTPException) -> JSONResponse:
     """Errors raised by FastAPI itself, such as an unknown route (404) or method (405)."""
     code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
-    return _error_response(exc.status_code, code, exc.detail, headers=exc.headers)
+    return error_response(exc.status_code, code, exc.detail, headers=exc.headers)
 
 
 def _status_code(exc: AppError) -> int:
@@ -59,7 +59,7 @@ def _status_code(exc: AppError) -> int:
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def _error_response(
+def error_response(
     status_code: int,
     code: str,
     message: str,

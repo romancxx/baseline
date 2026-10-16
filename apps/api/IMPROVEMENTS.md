@@ -10,7 +10,7 @@ Known shortcuts and gaps, with what they should become and when it becomes worth
 | Instruments | `GET /instruments` returns every row. | Pagination (limit and cursor or offset). | The list outgrows one response. |
 | Instruments | Any `IntegrityError` on commit is reported as a duplicate (409). | Check the violated constraint (`uq_instruments_symbol_exchange`) and let other integrity errors through. | A second constraint (e.g. a foreign key) is added to the table. |
 | Instruments | In `PATCH`, `null` means "leave unchanged" (`exclude_none`). | Use `exclude_unset` so `null` can clear a value. | The table gets a nullable column. |
-| Health | `check_database` swallows the error without recording it. | Log the exception when the check fails. | Logging is set up. |
+| Logging | Nothing checks that logs stay free of sensitive data. The request log has the path only (no query string), and no request bodies or headers are logged. | Review every new log field before it ships, and add a structlog processor that redacts known sensitive keys (`password`, `token`, `authorization`, …). | Before auth lands, or before logging query strings, headers or user data. |
 | Lint | Formatting is not checked: `just api-lint` runs only `ruff check`. | Add `ruff format --check` to `api-lint`. | CI is set up. |
-| Errors | An unhandled exception returns Starlette's plain-text 500, not the `{code, message, details}` shape. | A handler for `Exception` that returns `internal_error` and logs the traceback. | Logging is set up. |
+| Logging | The log level is fixed at `INFO`. | A `LOG_LEVEL` setting. | Someone needs debug logs from a deployed environment. |
 | Errors | OpenAPI still documents FastAPI's default 422 body (`HTTPValidationError`) and no 404/409 responses. | Declare `ErrorResponse` in the routes' `responses`. | A client is generated from the OpenAPI schema. |

@@ -1,6 +1,7 @@
 import pytest
 from fastapi import FastAPI
 from httpx2 import AsyncClient
+from structlog.testing import capture_logs
 
 from app.core.database import get_db_session
 
@@ -26,7 +27,13 @@ async def test_health_returns_503_when_database_is_unreachable(
 ) -> None:
     app.dependency_overrides[get_db_session] = lambda: UnreachableSession()
 
-    response = await client.get(URL)
+    with capture_logs() as logs:
+        response = await client.get(URL)
 
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}
+    assert {
+        "event": "health.database_unavailable",
+        "log_level": "warning",
+        "exc_info": True,
+    } in logs

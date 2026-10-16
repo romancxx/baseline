@@ -32,7 +32,7 @@ def migrated_database() -> Iterator[str]:
         raise RuntimeError(f"Refusing to recreate {name!r}: test databases must end in '_test'.")
 
     asyncio.run(_recreate_database(url))
-    config = Config(ALEMBIC_INI)
+    config = Config(ALEMBIC_INI, attributes={"configure_logger": False})
     command.upgrade(config, "head")
     yield url
     command.downgrade(config, "base")
