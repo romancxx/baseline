@@ -1,43 +1,32 @@
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from httpx2 import AsyncClient
 
 from app.core.database import get_db_session
-from app.main import create_app
+
+pytestmark = pytest.mark.anyio
+
+URL = "/api/v1/health"
 
 
-class FakeSession:
-    def __init__(self, error: Exception | None = None) -> None:
-        self.error = error
-
+class UnreachableSession:
     async def execute(self, statement: object) -> None:
-        if self.error is not None:
-            raise self.error
+        raise ConnectionRefusedError
 
 
-@pytest.fixture
-def app() -> FastAPI:
-    return create_app()
-
-
-@pytest.fixture
-def client(app: FastAPI) -> TestClient:
-    return TestClient(app)
-
-
-def test_health_returns_ok_when_database_answers(app: FastAPI, client: TestClient) -> None:
-    app.dependency_overrides[get_db_session] = lambda: FakeSession()
-
-    response = client.get("/api/v1/health")
+async def test_health_returns_ok_when_database_answers(client: AsyncClient) -> None:
+    response = await client.get(URL)
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_health_returns_503_when_database_is_unreachable(app: FastAPI, client: TestClient) -> None:
-    app.dependency_overrides[get_db_session] = lambda: FakeSession(ConnectionRefusedError())
+async def test_health_returns_503_when_database_is_unreachable(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    app.dependency_overrides[get_db_session] = lambda: UnreachableSession()
 
-    response = client.get("/api/v1/health")
+    response = await client.get(URL)
 
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}

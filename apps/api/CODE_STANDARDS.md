@@ -52,7 +52,7 @@ for future features. **[review]**
 
 1. **Imports are absolute everywhere**: `from app.modules.health.schemas import HealthResponse`,
    never `from .schemas import …`. **[lint]**
-2. **`core/` never imports from `modules/`.** **[review]**
+2. **`core/` never imports from `modules/`.** **[lint]**
 3. **A module may import another module's `service.py` or `schemas.py`, never its router.**
    **[review]**
 4. **Routers are mounted only in `create_app()`.** **[review]**
@@ -152,6 +152,15 @@ for future features. **[review]**
   before and after the test. **[review]**
 - **Test names describe behaviour**: `test_<subject>_<behaviour>`
   (`test_health_returns_ok_when_database_answers`). **[review]**
+- **API tests use the `client` fixture from `tests/conftest.py`**: a fresh app on the test
+  database, with everything the test writes rolled back afterwards. **[review]**
+- **Test settings live in `[tool.pytest_env]`**, and the test database name ends in `_test`;
+  `conftest.py` refuses to recreate any other. **[test]**
+- **Async tests are marked at module level**: `pytestmark = pytest.mark.anyio`. **[test]**
+- **Request bodies come from a payload factory** (`instrument_payload(**overrides)`) in the
+  test module, moved to a shared module only when a second test file needs it. **[review]**
+- **Never assert that a database timestamp changed during a test.** A test runs in one
+  transaction, so `now()` returns the same value throughout. **[review]**
 
 ## 7. Comments
 

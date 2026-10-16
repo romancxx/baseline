@@ -22,9 +22,11 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "anyio>=4.15.1",
     "httpx2>=2.13.1",
     "pyright>=1.1.414",
     "pytest>=9.1.1",
+    "pytest-env>=1.8.0",
     "ruff>=0.17.0",
 ]
 
@@ -40,10 +42,18 @@ select = [
     "UP", # pyupgrade
     "B",  # flake8-bugbear
     "TID252", # relative imports
+    "TID251", # banned imports
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"app.modules".msg = "core/ must not import from modules/."
+
+[tool.ruff.lint.per-file-ignores]
+# The app.modules ban applies only inside core/.
+"!src/app/core/**" = ["TID251"]
 
 [tool.pyright]
 include = ["src", "tests", "migrations"]
@@ -51,3 +61,7 @@ strict = ["src"]
 
 [tool.pytest]
 testpaths = ["tests"]
+
+[tool.pytest_env]
+ENVIRONMENT = "test"
+DATABASE_URL = "postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test"

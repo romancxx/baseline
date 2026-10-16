@@ -22,6 +22,10 @@ Run from `apps/api/`:
 From the repo root, the same commands are available as `just api-install`, `just api-dev`,
 `just api-lint`, `just api-format`, `just api-typecheck` and `just api-test`.
 
+Tests need Postgres running. Each run recreates a separate `stocknews_test` database, migrates
+it to head, and migrates it back to base at the end; the development database is not touched.
+Test settings are in `[tool.pytest_env]` in `pyproject.toml`, so tests do not need a `.env`.
+
 ## Migrations
 
 Alembic manages the schema. Run from `apps/api/` with Postgres up:
