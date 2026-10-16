@@ -52,7 +52,7 @@ migrations/
 └── versions/      # one file per revision
 src/app/
 ├── main.py        # create_app(): builds the FastAPI app and mounts module routers
-├── core/          # app-wide code shared by all modules (settings, database)
+├── core/          # app-wide code shared by all modules (settings, database, errors)
 └── modules/
     └── <feature>/ # one package per feature
 ```

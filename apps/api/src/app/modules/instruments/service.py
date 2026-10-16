@@ -5,12 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ConflictError, NotFoundError
 from app.modules.instruments.models import Instrument
 from app.modules.instruments.schemas import InstrumentCreate, InstrumentUpdate
-
-
-class DuplicateInstrumentError(Exception):
-    """An instrument with the same (symbol, exchange) already exists."""
 
 
 async def create_instrument(session: AsyncSession, data: InstrumentCreate) -> Instrument:
@@ -21,8 +18,11 @@ async def create_instrument(session: AsyncSession, data: InstrumentCreate) -> In
     return instrument
 
 
-async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Instrument | None:
-    return await session.get(Instrument, instrument_id)
+async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Instrument:
+    instrument = await session.get(Instrument, instrument_id)
+    if instrument is None:
+        raise NotFoundError(f"Instrument {instrument_id} not found.")
+    return instrument
 
 
 async def list_instruments(session: AsyncSession) -> Sequence[Instrument]:
@@ -33,8 +33,9 @@ async def list_instruments(session: AsyncSession) -> Sequence[Instrument]:
 
 
 async def update_instrument(
-    session: AsyncSession, instrument: Instrument, data: InstrumentUpdate
+    session: AsyncSession, instrument_id: uuid.UUID, data: InstrumentUpdate
 ) -> Instrument:
+    instrument = await get_instrument(session, instrument_id)
     # None means "leave unchanged": none of these columns is nullable.
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(instrument, field, value)
@@ -43,7 +44,8 @@ async def update_instrument(
     return instrument
 
 
-async def delete_instrument(session: AsyncSession, instrument: Instrument) -> None:
+async def delete_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> None:
+    instrument = await get_instrument(session, instrument_id)
     await session.delete(instrument)
     await session.commit()
 
@@ -53,4 +55,4 @@ async def _commit(session: AsyncSession) -> None:
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
-        raise DuplicateInstrumentError from exc
+        raise ConflictError("An instrument with this symbol and exchange already exists.") from exc

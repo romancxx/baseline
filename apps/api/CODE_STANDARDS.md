@@ -18,7 +18,8 @@ Run `just api-lint`, `just api-typecheck` and `just api-test` before considering
 ```
 src/app/
   main.py               create_app(): builds the app, mounts every router
-  core/                 app-wide code shared by all modules (config.py, database.py)
+  core/                 app-wide code shared by all modules (config.py, database.py,
+                        exceptions.py, error_handlers.py)
   modules/<feature>/    one package per feature
 migrations/
   env.py                connects Alembic to Settings and Base.metadata
@@ -67,8 +68,19 @@ for future features. **[review]**
   **[pyright]**
 - **Endpoints return a schema instance, never a `dict` or an ORM object.** Convert with
   `InstrumentRead.model_validate(instrument)`. **[pyright]**
-- **Services raise their own exceptions** (`DuplicateInstrumentError`); the router turns them
-  into an `HTTPException`. **[review]**
+- **Services report failures by raising an `AppError` subclass** from `app.core.exceptions`
+  (`NotFoundError`, `ConflictError`), with a message written for the API client. Nothing
+  raises `HTTPException`. **[review]**
+- **Routers do not catch `AppError`s**; the handlers in `core/error_handlers.py` turn them
+  into responses. **[review]**
+- **Every error response is `{code, message, details}`** (`ErrorResponse`), including
+  validation errors and FastAPI's own 404 and 405. **[test]**
+- **A new kind of error is an `AppError` subclass with its own `code`**, plus an entry in
+  `STATUS_CODES`. Without one it is answered with 500. **[review]**
+- **A case the client must tell apart gets its own subclass** of an existing kind, with a
+  specific `code`: `class DuplicateInstrumentError(ConflictError): code =
+  "instrument_already_exists"`. It inherits the status code. Never pass a code where the error
+  is raised. **[review]**
 - **`async def` by default; plain `def` when the endpoint calls blocking code** (a sync
   driver, `requests`, `time.sleep`). Never call blocking code inside an `async def`.
   **[review]**

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from app.core.config import get_settings
 from app.core.database import engine
+from app.core.error_handlers import EXCEPTION_HANDLERS
 from app.modules.health.router import router as health_router
 from app.modules.instruments.router import router as instruments_router
 
@@ -18,7 +19,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    app = FastAPI(title="StockNews API", debug=settings.debug, lifespan=lifespan)
+    app = FastAPI(
+        title="StockNews API",
+        debug=settings.debug,
+        lifespan=lifespan,
+        exception_handlers=EXCEPTION_HANDLERS,
+    )
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(instruments_router, prefix="/api/v1")
 
