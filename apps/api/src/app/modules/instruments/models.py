@@ -1,7 +1,7 @@
 import uuid
 from enum import StrEnum
 
-from sqlalchemy import Enum, String, UniqueConstraint, func
+from sqlalchemy import Enum, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, enum_values
@@ -17,7 +17,11 @@ class InstrumentType(StrEnum):
 
 class Instrument(TimestampMixin, Base):
     __tablename__ = "instruments"
-    __table_args__ = (UniqueConstraint("symbol", "exchange"),)
+    __table_args__ = (
+        UniqueConstraint("symbol", "exchange"),
+        # Serves the keyset pagination order.
+        Index(None, "created_at", "id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.uuidv7())
     symbol: Mapped[str] = mapped_column(String(32))

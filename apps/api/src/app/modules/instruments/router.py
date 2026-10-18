@@ -1,9 +1,16 @@
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.database import DbSession
-from app.modules.instruments.schemas import InstrumentCreate, InstrumentRead, InstrumentUpdate
+from app.core.pagination import Page, Pagination, encode_cursor
+from app.modules.instruments.schemas import (
+    InstrumentCreate,
+    InstrumentFilters,
+    InstrumentRead,
+    InstrumentUpdate,
+)
 from app.modules.instruments.service import (
     create_instrument,
     delete_instrument,
@@ -22,9 +29,14 @@ async def create(session: DbSession, data: InstrumentCreate) -> InstrumentRead:
 
 
 @router.get("")
-async def list_all(session: DbSession) -> list[InstrumentRead]:
-    instruments = await list_instruments(session)
-    return [InstrumentRead.model_validate(instrument) for instrument in instruments]
+async def list_all(
+    session: DbSession, filters: Annotated[InstrumentFilters, Depends()], page: Pagination
+) -> Page[InstrumentRead]:
+    instruments, next_cursor = await list_instruments(session, filters, page)
+    return Page[InstrumentRead](
+        items=[InstrumentRead.model_validate(instrument) for instrument in instruments],
+        next_cursor=encode_cursor(next_cursor) if next_cursor else None,
+    )
 
 
 @router.get("/{instrument_id}")

@@ -2,7 +2,8 @@ import uuid
 from typing import Any
 
 import pytest
-from httpx2 import AsyncClient
+from fastapi import FastAPI
+from httpx2 import AsyncClient, Response
 
 pytestmark = pytest.mark.anyio
 
@@ -82,14 +83,92 @@ async def test_get_unknown_instrument_returns_404(client: AsyncClient) -> None:
     }
 
 
-async def test_list_instruments_returns_all_sorted_by_symbol(client: AsyncClient) -> None:
+def symbols(response: Response) -> list[str]:
+    return [instrument["symbol"] for instrument in response.json()["items"]]
+
+
+async def test_list_instruments_returns_newest_first_in_one_page(client: AsyncClient) -> None:
     await create_instrument(client, symbol="MSFT", name="Microsoft")
     await create_instrument(client, symbol="AAPL")
 
     response = await client.get(URL)
 
     assert response.status_code == 200
-    assert [instrument["symbol"] for instrument in response.json()] == ["AAPL", "MSFT"]
+    assert symbols(response) == ["AAPL", "MSFT"]
+    assert response.json()["next_cursor"] is None
+
+
+async def test_list_instruments_follows_cursors_through_every_page(client: AsyncClient) -> None:
+    for symbol in ["A", "B", "C", "D", "E"]:
+        await create_instrument(client, symbol=symbol)
+
+    pages: list[list[str]] = []
+    params: dict[str, str | int] = {"limit": 2}
+    while True:
+        response = await client.get(URL, params=params)
+        pages.append(symbols(response))
+        next_cursor = response.json()["next_cursor"]
+        if next_cursor is None:
+            break
+        params = {"limit": 2, "cursor": next_cursor}
+
+    assert pages == [["E", "D"], ["C", "B"], ["A"]]
+
+
+async def test_list_instruments_documents_each_query_parameter(app: FastAPI) -> None:
+    parameters = app.openapi()["paths"][URL]["get"]["parameters"]
+
+    assert [(p["name"], p.get("required", False)) for p in parameters] == [
+        ("type", False),
+        ("exchange", False),
+        ("symbol_prefix", False),
+        ("limit", False),
+        ("cursor", False),
+    ]
+
+
+@pytest.mark.parametrize("limit", [0, 101])
+async def test_list_instruments_rejects_limit_out_of_bounds(
+    client: AsyncClient, limit: int
+) -> None:
+    response = await client.get(URL, params={"limit": limit})
+
+    assert response.status_code == 422
+    assert response.json()["details"][0]["loc"] == ["query", "limit"]
+
+
+async def test_list_instruments_rejects_invalid_cursor(client: AsyncClient) -> None:
+    response = await client.get(URL, params={"cursor": "not-a-cursor"})
+
+    assert response.status_code == 422
+    assert response.json()["details"] == [
+        {"loc": ["query", "cursor"], "message": "Invalid cursor.", "type": "value_error"}
+    ]
+
+
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        ({"type": "etf"}, ["SPY"]),
+        ({"exchange": "arcx"}, ["SPY"]),
+        ({"symbol_prefix": "am"}, ["AMZN"]),
+        ({"symbol_prefix": "a", "type": "stock"}, ["AXB", "AMZN", "AAPL"]),
+        # "_" is matched literally, not as a LIKE wildcard.
+        ({"symbol_prefix": "A_"}, []),
+    ],
+)
+async def test_list_instruments_applies_filters(
+    client: AsyncClient, params: dict[str, str], expected: list[str]
+) -> None:
+    await create_instrument(client, symbol="AAPL")
+    await create_instrument(client, symbol="AMZN", name="Amazon")
+    await create_instrument(client, symbol="SPY", name="SPDR S&P 500", exchange="ARCX", type="etf")
+    await create_instrument(client, symbol="AXB", name="AXB Corp")
+
+    response = await client.get(URL, params=params)
+
+    assert response.status_code == 200
+    assert symbols(response) == expected
 
 
 async def test_update_instrument_changes_only_given_fields(client: AsyncClient) -> None:

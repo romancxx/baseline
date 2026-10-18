@@ -19,7 +19,8 @@ Run `just api-lint`, `just api-typecheck` and `just api-test` before considering
 src/app/
   main.py               create_app(): builds the app, mounts every router
   core/                 app-wide code shared by all modules (config.py, database.py,
-                        exceptions.py, error_handlers.py, logging.py, middleware.py)
+                        exceptions.py, error_handlers.py, logging.py, middleware.py,
+                        pagination.py)
   modules/<feature>/    one package per feature
 migrations/
   env.py                connects Alembic to Settings and Base.metadata
@@ -84,6 +85,23 @@ for future features. **[review]**
 - **`async def` by default; plain `def` when the endpoint calls blocking code** (a sync
   driver, `requests`, `time.sleep`). Never call blocking code inside an `async def`.
   **[review]**
+
+### 2.1 Lists
+
+- **Every list endpoint is paginated**: it takes `page: Pagination` and returns
+  `Page[<Entity>Read]`. Never return a bare list. **[review]**
+- **Pagination is keyset, newest first**: `ORDER BY created_at DESC, id DESC`, rows after the
+  cursor selected with `tuple_(created_at, id) < (cursor.created_at, cursor.id)`, and
+  `limit + 1` rows fetched to know whether a next page exists. **[test]**
+- **A paginated table has an index on `(created_at, id)`.** **[review]**
+- **Cursors are opaque to clients**: built with `encode_cursor` and read with
+  `Pagination`, never parsed or constructed by hand. **[review]**
+- **List filters are a `<Entity>Filters` model** in `schemas.py`, taken as
+  `Annotated[<Entity>Filters, Depends()]` so OpenAPI lists each filter as its own query
+  parameter (`Query()` documents one required object). Its fields reuse the field aliases so
+  filter input is normalized like create input. **[test]**
+- **Prefix filters use `column.startswith(value, autoescape=True)`**, so `%` and `_` match
+  literally. **[test]**
 
 ## 3. Python and typing
 

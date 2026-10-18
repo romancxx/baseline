@@ -35,6 +35,12 @@ class InstrumentUpdate(BaseModel):
     type: InstrumentType | None = None
 
 
+class InstrumentFilters(BaseModel):
+    type: InstrumentType | None = None
+    exchange: Mic | None = None
+    symbol_prefix: Symbol | None = None
+
+
 class InstrumentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

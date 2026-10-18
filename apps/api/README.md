@@ -51,6 +51,17 @@ otherwise. uvicorn's own logs use the same format, except the reloader's few lin
 `request_id`, which is also returned in the `X-Request-ID` response header. A client may send
 its own `X-Request-ID` (letters, digits, `.`, `_`, `-`, up to 128 characters) to have it reused.
 
+## Pagination
+
+List endpoints return one page at a time, newest first:
+
+```json
+{ "items": [ ... ], "next_cursor": "eyJjcmVhdGVkX2F0Ijog..." }
+```
+
+`limit` sets the page size (default 20, 1 to 100). To get the next page, repeat the request
+with the same filters and `cursor=<next_cursor>`. `next_cursor` is `null` on the last page.
+
 ## Project layout
 
 ```
