@@ -20,7 +20,7 @@ src/app/
   main.py               create_app(): builds the app, mounts every router
   core/                 app-wide code shared by all modules (config.py, database.py,
                         exceptions.py, error_handlers.py, logging.py, middleware.py,
-                        pagination.py)
+                        pagination.py, security.py)
   modules/<feature>/    one package per feature
 migrations/
   env.py                connects Alembic to Settings and Base.metadata
@@ -184,6 +184,19 @@ for future features. **[review]**
 - **An unexpected exception is logged once, by the middleware.** Do not catch, log and
   re-raise; let it propagate. **[review]**
 - **Never log a secret, a token or a request body.** **[review]**
+
+### 6.1 Security
+
+- **Passwords are hashed with `hash_password` from `app.core.security`** (Argon2id via
+  pwdlib) and checked with `verify_password`. Never hash or compare passwords any other way.
+  **[test]**
+- **A plain password is never stored, logged, returned, or echoed in an error.** Read
+  schemas never include `hashed_password`. **[test]**
+- **Password fields are never normalized**: no stripping, no case change. **[review]**
+- **Emails go through the `Email` alias** (validated, then lowercased); the
+  `ck_users_email_lowercase` constraint rejects anything else. **[test]**
+- **`/auth` endpoints live in `modules/auth/`**; the `User` entity, its schemas and service
+  live in `modules/users/`. **[review]**
 
 ## 7. Testing
 

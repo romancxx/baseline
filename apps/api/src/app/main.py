@@ -8,6 +8,7 @@ from app.core.database import engine
 from app.core.error_handlers import EXCEPTION_HANDLERS
 from app.core.logging import configure_logging
 from app.core.middleware import RequestLoggingMiddleware
+from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.instruments.router import router as instruments_router
 
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(RequestLoggingMiddleware)
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(instruments_router, prefix="/api/v1")
 
     return app
