@@ -6,7 +6,8 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-import app.modules.instruments.models  # noqa: F401  (registers its tables on Base.metadata)
+import app.modules.auth.models  # noqa: F401  (registers its tables on Base.metadata)
+import app.modules.instruments.models  # noqa: F401
 import app.modules.users.models  # noqa: F401
 from app.core.config import get_settings
 from app.core.database import Base

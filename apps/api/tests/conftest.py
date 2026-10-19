@@ -85,9 +85,13 @@ def app(db_session: AsyncSession) -> FastAPI:
     return app
 
 
+# https, so the client's cookie jar sends back Secure cookies such as the refresh token.
+BASE_URL = "https://test"
+
+
 @pytest.fixture
 async def client(app: FastAPI) -> AsyncGenerator[AsyncClient]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
         yield client
 
 
@@ -103,6 +107,6 @@ async def auth_client(app: FastAPI, user: User) -> AsyncGenerator[AsyncClient]:
     """A client that sends a valid access token for `user`."""
     headers = {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test", headers=headers
+        transport=ASGITransport(app=app), base_url=BASE_URL, headers=headers
     ) as client:
         yield client

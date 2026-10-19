@@ -57,7 +57,13 @@ its own `X-Request-ID` (letters, digits, `.`, `_`, `-`, up to 128 characters) to
 characters). `POST /api/v1/auth/login` takes a form (`username` = the email, `password`) and
 returns `{"access_token", "token_type": "bearer", "expires_in"}`. Send the token as
 `Authorization: Bearer <token>`; it expires after `ACCESS_TOKEN_EXPIRE_MINUTES` (15 by
-default). Every endpoint except health, register and login requires it.
+default). Every endpoint except health, register, login, refresh and logout requires it.
+
+Login also sets a `refresh_token` cookie (`HttpOnly`, `Secure`, `SameSite=Strict`,
+`Path=/api/v1/auth`, valid `REFRESH_TOKEN_EXPIRE_DAYS`, 30 by default). When the access token
+expires, `POST /api/v1/auth/refresh` with that cookie returns a new access token and replaces
+the cookie; each refresh token works once. Sending an already used refresh token logs the
+user out everywhere. `POST /api/v1/auth/logout` revokes the cookie's token and clears it.
 
 In `/docs`, click **Authorize**, enter the email and password, and Swagger UI logs in and
 sends the token with every request.

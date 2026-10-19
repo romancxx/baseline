@@ -208,6 +208,13 @@ for future features. **[review]**
   takes as long. **[test]**
 - **`JWT_SECRET` is at least 32 characters**, generated with `openssl rand -hex 32`, and
   different in every environment. **[test]**
+- **Refresh tokens are stored only as `hash_refresh_token(token)`**; the token itself exists
+  only in the response cookie. **[test]**
+- **Refresh tokens travel only in the `refresh_token` cookie**, set and cleared by the auth
+  router with fixed flags (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/v1/auth`).
+  Never in a response body or a query string. **[test]**
+- **A refresh token is used once**: `rotate_refresh_token` revokes it as it issues the next
+  one, and a reused token revokes all of the user's tokens. **[test]**
 
 ## 7. Testing
 

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     jwt_secret: SecretStr = Field(min_length=32)
     access_token_expire_minutes: int = Field(default=15, gt=0)
+    refresh_token_expire_days: int = Field(default=30, gt=0)
 
 
 @lru_cache
