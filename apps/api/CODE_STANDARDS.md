@@ -55,8 +55,8 @@ for future features. **[review]**
 1. **Imports are absolute everywhere**: `from app.modules.health.schemas import HealthResponse`,
    never `from .schemas import …`. **[lint]**
 2. **`core/` never imports from `modules/`.** **[lint]**
-3. **A module may import another module's `service.py` or `schemas.py`, never its router.**
-   **[review]**
+3. **A module may import another module's `service.py`, `schemas.py` or `dependencies.py`,
+   never its router.** **[review]**
 4. **Routers are mounted only in `create_app()`.** **[review]**
 
 ## 2. Routers and endpoints
@@ -197,6 +197,17 @@ for future features. **[review]**
   `ck_users_email_lowercase` constraint rejects anything else. **[test]**
 - **`/auth` endpoints live in `modules/auth/`**; the `User` entity, its schemas and service
   live in `modules/users/`. **[review]**
+- **Every endpoint requires a token unless it is public on purpose.** Protect a whole router
+  with `APIRouter(..., dependencies=[Depends(get_current_user)])`; take `user: CurrentUser`
+  when the endpoint needs the user. Public today: health, register, login. **[test]**
+- **Access tokens are created and read only by `create_access_token` / `decode_access_token`**
+  in `app.core.security`. The algorithm is the `JWT_ALGORITHM` constant, never a setting.
+  **[review]**
+- **Login failures look identical**: one `InvalidCredentialsError` for an unknown email or a
+  wrong password, and an unknown email is still checked against `DUMMY_PASSWORD_HASH` so it
+  takes as long. **[test]**
+- **`JWT_SECRET` is at least 32 characters**, generated with `openssl rand -hex 32`, and
+  different in every environment. **[test]**
 
 ## 7. Testing
 
@@ -210,6 +221,8 @@ for future features. **[review]**
   (`test_health_returns_ok_when_database_answers`). **[review]**
 - **API tests use the `client` fixture from `tests/conftest.py`**: a fresh app on the test
   database, with everything the test writes rolled back afterwards. **[review]**
+- **Protected endpoints are tested with `auth_client`** (a valid token for the `user`
+  fixture), plus one test that the endpoint answers 401 through plain `client`. **[review]**
 - **Test settings live in `[tool.pytest_env]`**, and the test database name ends in `_test`;
   `conftest.py` refuses to recreate any other. **[test]**
 - **Async tests are marked at module level**: `pytestmark = pytest.mark.anyio`. **[test]**

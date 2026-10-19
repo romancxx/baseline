@@ -11,6 +11,7 @@ from app.core.middleware import RequestLoggingMiddleware
 from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.instruments.router import router as instruments_router
+from app.modules.users.router import router as users_router
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
+    app.include_router(users_router, prefix="/api/v1")
     app.include_router(instruments_router, prefix="/api/v1")
 
     return app

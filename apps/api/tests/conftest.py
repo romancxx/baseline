@@ -13,7 +13,11 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.core.database import get_db_session
+from app.core.security import create_access_token
 from app.main import create_app
+from app.modules.users.models import User
+from app.modules.users.schemas import UserCreate
+from app.modules.users.service import create_user
 
 ALEMBIC_INI = Path(__file__).parents[1] / "alembic.ini"
 
@@ -84,4 +88,21 @@ def app(db_session: AsyncSession) -> FastAPI:
 @pytest.fixture
 async def client(app: FastAPI) -> AsyncGenerator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture
+async def user(db_session: AsyncSession) -> User:
+    return await create_user(
+        db_session, UserCreate(email="user@example.com", password="fixture password 123")
+    )
+
+
+@pytest.fixture
+async def auth_client(app: FastAPI, user: User) -> AsyncGenerator[AsyncClient]:
+    """A client that sends a valid access token for `user`."""
+    headers = {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test", headers=headers
+    ) as client:
         yield client

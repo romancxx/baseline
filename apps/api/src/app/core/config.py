@@ -1,7 +1,7 @@
 from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import PostgresDsn
+from pydantic import Field, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     environment: Environment = Environment.LOCAL
     debug: bool = False
     database_url: PostgresDsn
+    jwt_secret: SecretStr = Field(min_length=32)
+    access_token_expire_minutes: int = Field(default=15, gt=0)
 
 
 @lru_cache

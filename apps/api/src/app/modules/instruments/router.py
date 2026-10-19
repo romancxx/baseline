@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.core.database import DbSession
 from app.core.pagination import Page, Pagination, encode_cursor
+from app.modules.auth.dependencies import get_current_user
 from app.modules.instruments.schemas import (
     InstrumentCreate,
     InstrumentFilters,
@@ -19,7 +20,9 @@ from app.modules.instruments.service import (
     update_instrument,
 )
 
-router = APIRouter(prefix="/instruments", tags=["instruments"])
+router = APIRouter(
+    prefix="/instruments", tags=["instruments"], dependencies=[Depends(get_current_user)]
+)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

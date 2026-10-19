@@ -20,14 +20,14 @@ def instrument_payload(**overrides: str) -> dict[str, str]:
     } | overrides
 
 
-async def create_instrument(client: AsyncClient, **overrides: str) -> dict[str, Any]:
-    response = await client.post(URL, json=instrument_payload(**overrides))
+async def create_instrument(auth_client: AsyncClient, **overrides: str) -> dict[str, Any]:
+    response = await auth_client.post(URL, json=instrument_payload(**overrides))
     assert response.status_code == 201
     return response.json()
 
 
-async def test_create_instrument_returns_it_with_generated_fields(client: AsyncClient) -> None:
-    response = await client.post(URL, json=instrument_payload())
+async def test_create_instrument_returns_it_with_generated_fields(auth_client: AsyncClient) -> None:
+    response = await auth_client.post(URL, json=instrument_payload())
 
     assert response.status_code == 201
     body = response.json()
@@ -37,10 +37,10 @@ async def test_create_instrument_returns_it_with_generated_fields(client: AsyncC
     assert body["updated_at"] is not None
 
 
-async def test_create_duplicate_symbol_and_exchange_returns_409(client: AsyncClient) -> None:
-    await create_instrument(client)
+async def test_create_duplicate_symbol_and_exchange_returns_409(auth_client: AsyncClient) -> None:
+    await create_instrument(auth_client)
 
-    response = await client.post(URL, json=instrument_payload(name="Apple again"))
+    response = await auth_client.post(URL, json=instrument_payload(name="Apple again"))
 
     assert response.status_code == 409
     assert response.json() == {
@@ -51,9 +51,9 @@ async def test_create_duplicate_symbol_and_exchange_returns_409(client: AsyncCli
 
 
 async def test_create_invalid_instrument_returns_422_with_one_detail_per_field(
-    client: AsyncClient,
+    auth_client: AsyncClient,
 ) -> None:
-    response = await client.post(URL, json=instrument_payload(currency="USDD", type="bond"))
+    response = await auth_client.post(URL, json=instrument_payload(currency="USDD", type="bond"))
 
     assert response.status_code == 422
     body = response.json()
@@ -61,19 +61,19 @@ async def test_create_invalid_instrument_returns_422_with_one_detail_per_field(
     assert [detail["loc"] for detail in body["details"]] == [["body", "currency"], ["body", "type"]]
 
 
-async def test_get_instrument_returns_it(client: AsyncClient) -> None:
-    created = await create_instrument(client)
+async def test_get_instrument_returns_it(auth_client: AsyncClient) -> None:
+    created = await create_instrument(auth_client)
 
-    response = await client.get(f"{URL}/{created['id']}")
+    response = await auth_client.get(f"{URL}/{created['id']}")
 
     assert response.status_code == 200
     assert response.json() == created
 
 
-async def test_get_unknown_instrument_returns_404(client: AsyncClient) -> None:
+async def test_get_unknown_instrument_returns_404(auth_client: AsyncClient) -> None:
     instrument_id = uuid.uuid4()
 
-    response = await client.get(f"{URL}/{instrument_id}")
+    response = await auth_client.get(f"{URL}/{instrument_id}")
 
     assert response.status_code == 404
     assert response.json() == {
@@ -87,25 +87,27 @@ def symbols(response: Response) -> list[str]:
     return [instrument["symbol"] for instrument in response.json()["items"]]
 
 
-async def test_list_instruments_returns_newest_first_in_one_page(client: AsyncClient) -> None:
-    await create_instrument(client, symbol="MSFT", name="Microsoft")
-    await create_instrument(client, symbol="AAPL")
+async def test_list_instruments_returns_newest_first_in_one_page(auth_client: AsyncClient) -> None:
+    await create_instrument(auth_client, symbol="MSFT", name="Microsoft")
+    await create_instrument(auth_client, symbol="AAPL")
 
-    response = await client.get(URL)
+    response = await auth_client.get(URL)
 
     assert response.status_code == 200
     assert symbols(response) == ["AAPL", "MSFT"]
     assert response.json()["next_cursor"] is None
 
 
-async def test_list_instruments_follows_cursors_through_every_page(client: AsyncClient) -> None:
+async def test_list_instruments_follows_cursors_through_every_page(
+    auth_client: AsyncClient,
+) -> None:
     for symbol in ["A", "B", "C", "D", "E"]:
-        await create_instrument(client, symbol=symbol)
+        await create_instrument(auth_client, symbol=symbol)
 
     pages: list[list[str]] = []
     params: dict[str, str | int] = {"limit": 2}
     while True:
-        response = await client.get(URL, params=params)
+        response = await auth_client.get(URL, params=params)
         pages.append(symbols(response))
         next_cursor = response.json()["next_cursor"]
         if next_cursor is None:
@@ -129,16 +131,16 @@ async def test_list_instruments_documents_each_query_parameter(app: FastAPI) -> 
 
 @pytest.mark.parametrize("limit", [0, 101])
 async def test_list_instruments_rejects_limit_out_of_bounds(
-    client: AsyncClient, limit: int
+    auth_client: AsyncClient, limit: int
 ) -> None:
-    response = await client.get(URL, params={"limit": limit})
+    response = await auth_client.get(URL, params={"limit": limit})
 
     assert response.status_code == 422
     assert response.json()["details"][0]["loc"] == ["query", "limit"]
 
 
-async def test_list_instruments_rejects_invalid_cursor(client: AsyncClient) -> None:
-    response = await client.get(URL, params={"cursor": "not-a-cursor"})
+async def test_list_instruments_rejects_invalid_cursor(auth_client: AsyncClient) -> None:
+    response = await auth_client.get(URL, params={"cursor": "not-a-cursor"})
 
     assert response.status_code == 422
     assert response.json()["details"] == [
@@ -158,57 +160,78 @@ async def test_list_instruments_rejects_invalid_cursor(client: AsyncClient) -> N
     ],
 )
 async def test_list_instruments_applies_filters(
-    client: AsyncClient, params: dict[str, str], expected: list[str]
+    auth_client: AsyncClient, params: dict[str, str], expected: list[str]
 ) -> None:
-    await create_instrument(client, symbol="AAPL")
-    await create_instrument(client, symbol="AMZN", name="Amazon")
-    await create_instrument(client, symbol="SPY", name="SPDR S&P 500", exchange="ARCX", type="etf")
-    await create_instrument(client, symbol="AXB", name="AXB Corp")
+    await create_instrument(auth_client, symbol="AAPL")
+    await create_instrument(auth_client, symbol="AMZN", name="Amazon")
+    await create_instrument(
+        auth_client, symbol="SPY", name="SPDR S&P 500", exchange="ARCX", type="etf"
+    )
+    await create_instrument(auth_client, symbol="AXB", name="AXB Corp")
 
-    response = await client.get(URL, params=params)
+    response = await auth_client.get(URL, params=params)
 
     assert response.status_code == 200
     assert symbols(response) == expected
 
 
-async def test_update_instrument_changes_only_given_fields(client: AsyncClient) -> None:
-    created = await create_instrument(client)
+async def test_update_instrument_changes_only_given_fields(auth_client: AsyncClient) -> None:
+    created = await create_instrument(auth_client)
 
-    response = await client.patch(f"{URL}/{created['id']}", json={"name": "Apple"})
+    response = await auth_client.patch(f"{URL}/{created['id']}", json={"name": "Apple"})
 
     assert response.status_code == 200
     body = response.json()
     assert body == created | {"name": "Apple", "updated_at": body["updated_at"]}
 
 
-async def test_update_unknown_instrument_returns_404(client: AsyncClient) -> None:
-    response = await client.patch(f"{URL}/{uuid.uuid4()}", json={"name": "Apple"})
+async def test_update_unknown_instrument_returns_404(auth_client: AsyncClient) -> None:
+    response = await auth_client.patch(f"{URL}/{uuid.uuid4()}", json={"name": "Apple"})
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
 
 
-async def test_update_to_existing_symbol_and_exchange_returns_409(client: AsyncClient) -> None:
-    await create_instrument(client)
-    microsoft = await create_instrument(client, symbol="MSFT", name="Microsoft")
+async def test_update_to_existing_symbol_and_exchange_returns_409(auth_client: AsyncClient) -> None:
+    await create_instrument(auth_client)
+    microsoft = await create_instrument(auth_client, symbol="MSFT", name="Microsoft")
 
-    response = await client.patch(f"{URL}/{microsoft['id']}", json={"symbol": "AAPL"})
+    response = await auth_client.patch(f"{URL}/{microsoft['id']}", json={"symbol": "AAPL"})
 
     assert response.status_code == 409
     assert response.json()["code"] == "conflict"
 
 
-async def test_delete_instrument_removes_it(client: AsyncClient) -> None:
-    created = await create_instrument(client)
+async def test_delete_instrument_removes_it(auth_client: AsyncClient) -> None:
+    created = await create_instrument(auth_client)
 
-    response = await client.delete(f"{URL}/{created['id']}")
+    response = await auth_client.delete(f"{URL}/{created['id']}")
 
     assert response.status_code == 204
-    assert (await client.get(f"{URL}/{created['id']}")).status_code == 404
+    assert (await auth_client.get(f"{URL}/{created['id']}")).status_code == 404
 
 
-async def test_delete_unknown_instrument_returns_404(client: AsyncClient) -> None:
-    response = await client.delete(f"{URL}/{uuid.uuid4()}")
+async def test_delete_unknown_instrument_returns_404(auth_client: AsyncClient) -> None:
+    response = await auth_client.delete(f"{URL}/{uuid.uuid4()}")
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("POST", URL),
+        ("GET", URL),
+        ("GET", f"{URL}/{uuid.UUID(int=0)}"),
+        ("PATCH", f"{URL}/{uuid.UUID(int=0)}"),
+        ("DELETE", f"{URL}/{uuid.UUID(int=0)}"),
+    ],
+)
+async def test_instruments_endpoints_require_a_token(
+    client: AsyncClient, method: str, path: str
+) -> None:
+    response = await client.request(method, path)
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "unauthorized"

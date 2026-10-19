@@ -3,7 +3,7 @@
 Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
 
 Settings are read from environment variables, then from `.env`. Start from the example:
-`cp .env.example .env`.
+`cp .env.example .env`, then set `JWT_SECRET` to the output of `openssl rand -hex 32`.
 
 Postgres runs in Docker and reads its credentials from the same `.env`. From the repo root,
 `just db-up` starts it and waits until it is healthy; `just db-down` stops it and keeps the data.
@@ -50,6 +50,17 @@ otherwise. uvicorn's own logs use the same format, except the reloader's few lin
 `--reload`. Each request is logged once (`http.request`: method, path, status, duration) with a
 `request_id`, which is also returned in the `X-Request-ID` response header. A client may send
 its own `X-Request-ID` (letters, digits, `.`, `_`, `-`, up to 128 characters) to have it reused.
+
+## Authentication
+
+`POST /api/v1/auth/register` creates an account (JSON `email`, `password` of 12 to 128
+characters). `POST /api/v1/auth/login` takes a form (`username` = the email, `password`) and
+returns `{"access_token", "token_type": "bearer", "expires_in"}`. Send the token as
+`Authorization: Bearer <token>`; it expires after `ACCESS_TOKEN_EXPIRE_MINUTES` (15 by
+default). Every endpoint except health, register and login requires it.
+
+In `/docs`, click **Authorize**, enter the email and password, and Swagger UI logs in and
+sends the token with every request.
 
 ## Pagination
 

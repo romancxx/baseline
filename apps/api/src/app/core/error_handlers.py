@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
-from app.core.exceptions import AppError, ConflictError, NotFoundError
+from app.core.exceptions import AppError, ConflictError, NotFoundError, UnauthorizedError
 
 
 class ErrorDetail(BaseModel):
@@ -24,13 +24,16 @@ class ErrorResponse(BaseModel):
 
 
 STATUS_CODES: dict[type[AppError], int] = {
+    UnauthorizedError: status.HTTP_401_UNAUTHORIZED,
     NotFoundError: status.HTTP_404_NOT_FOUND,
     ConflictError: status.HTTP_409_CONFLICT,
 }
 
 
 async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
-    return error_response(_status_code(exc), exc.code, exc.message)
+    # OAuth2 (RFC 6750) requires a 401 to say which authentication scheme to use.
+    headers = {"WWW-Authenticate": "Bearer"} if isinstance(exc, UnauthorizedError) else None
+    return error_response(_status_code(exc), exc.code, exc.message, headers=headers)
 
 
 async def handle_validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:

@@ -14,6 +14,8 @@ dependencies = [
     "pwdlib[argon2]>=0.3.1",
     "pydantic-settings>=2.15.0",
     "pydantic[email]>=2.14.1",
+    "pyjwt>=2.15.1",
+    "python-multipart>=0.0.32",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
@@ -68,3 +70,4 @@ testpaths = ["tests"]
 [tool.pytest_env]
 ENVIRONMENT = "test"
 DATABASE_URL = "postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test"
+JWT_SECRET = "test-secret-not-used-anywhere-else-0123456789"
