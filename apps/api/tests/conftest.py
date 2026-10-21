@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncGenerator, Iterator
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 from alembic import command
@@ -15,6 +16,7 @@ from app.core.config import get_settings
 from app.core.database import get_db_session
 from app.core.security import create_access_token
 from app.main import create_app
+from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 from app.modules.users.service import create_user
@@ -110,3 +112,38 @@ async def auth_client(app: FastAPI, user: User) -> AsyncGenerator[AsyncClient]:
         transport=ASGITransport(app=app), base_url=BASE_URL, headers=headers
     ) as client:
         yield client
+
+
+class InstrumentFactory(Protocol):
+    async def __call__(
+        self,
+        symbol: str = ...,
+        *,
+        name: str = ...,
+        exchange: str = ...,
+        currency: str = ...,
+        type: InstrumentType = ...,
+    ) -> Instrument: ...
+
+
+@pytest.fixture
+def make_instrument(db_session: AsyncSession) -> InstrumentFactory:
+    """A function that inserts an instrument; each argument overrides one default column."""
+
+    async def make(
+        symbol: str = "AAPL",
+        *,
+        name: str = "Apple Inc.",
+        exchange: str = "XNAS",
+        currency: str = "USD",
+        type: InstrumentType = InstrumentType.STOCK,
+    ) -> Instrument:
+        instrument = Instrument(
+            symbol=symbol, name=name, exchange=exchange, currency=currency, type=type
+        )
+        db_session.add(instrument)
+        await db_session.commit()
+        await db_session.refresh(instrument)
+        return instrument
+
+    return make

@@ -1,269 +1,197 @@
 # Code standards
 
-The rules every change to the API follows. Each rule is tagged with what holds it in place:
+The rules every change to the API follows. Why the code is shaped this way is in
+[docs/adr/](docs/adr/README.md); this file only says what to do. Each rule is tagged with what
+holds it in place:
 
-- **[lint]** ruff (`pyproject.toml`) — fails `just api-lint`.
-- **[pyright]** pyright (`pyproject.toml`) — fails `just api-typecheck`.
+- **[lint]** ruff — fails `just api-lint`.
+- **[pyright]** pyright — fails `just api-typecheck`.
 - **[test]** A test fails if the rule is broken.
 - **[review]** Convention only. Nothing catches it but a reader, so read for it.
 
-Run `just api-lint`, `just api-typecheck` and `just api-test` before considering a change done.
+Run `just api-format`, `just api-lint`, `just api-typecheck` and `just api-test` before
+considering a change done.
 
 ---
 
-## 1. Architecture
+## 1. Structure — [ADR 0002](docs/adr/0002-api-architecture.md)
 
-### 1.1 Layout
+- A feature is a package in `src/app/modules/<feature>/`; code every feature uses goes in
+  `src/app/core/`. **[review]**
+- A module uses only these file names, each only when needed, and each always for the same
+  thing: `router.py`, `schemas.py`, `models.py`, `service.py`, `dependencies.py`. No empty
+  files or modules for future features. **[review]**
+- Imports are absolute: `from app.modules.health.schemas import HealthResponse`. **[lint]**
+- `core/` never imports from `modules/`. **[lint]**
+- A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
+  `router.py`. **[review]**
+- Routers are mounted only in `create_app()`, under `/api/v1`. **[review]**
 
-```
-src/app/
-  main.py               create_app(): builds the app, mounts every router
-  core/                 app-wide code shared by all modules (config.py, database.py,
-                        exceptions.py, error_handlers.py, logging.py, middleware.py,
-                        pagination.py, security.py)
-  modules/<feature>/    one package per feature
-migrations/
-  env.py                connects Alembic to Settings and Base.metadata
-  versions/             one file per revision
-tests/
-```
+## 2. Routers and endpoints — [ADR 0002](docs/adr/0002-api-architecture.md), [ADR 0003](docs/adr/0003-api-conventions.md)
 
-Folders follow **features**, not file types. Adding a feature means adding a module, not
-touching shared folders. **[review]**
-
-### 1.2 Module file vocabulary
-
-A module has only the files it needs, but a file name always means the same thing. Do not
-invent a new name for something one of these covers, and do not create empty files or modules
-for future features. **[review]**
-
-| File | Holds |
-| --- | --- |
-| `router.py` | The `APIRouter` and its endpoints |
-| `schemas.py` | Pydantic request and response models: the module's API contract |
-| `models.py` | Database-facing types: table rows as the database stores them |
-| `service.py` | Business logic and data access |
-| `dependencies.py` | Functions the router injects with `Depends()` |
-
-- **Routers are thin**: read the request, call a service or dependency, return a schema.
+- A router sets its prefix and tag to the module name:
+  `APIRouter(prefix="/instruments", tags=["instruments"])`. **[review]**
+- A router only reads the request, calls a service or dependency, and returns a schema.
   **[review]**
-- **Services know nothing about HTTP**: no `Request`, `Response`, `HTTPException` or
-  `Depends`. **[review]**
-
-### 1.3 Dependency rules
-
-1. **Imports are absolute everywhere**: `from app.modules.health.schemas import HealthResponse`,
-   never `from .schemas import …`. **[lint]**
-2. **`core/` never imports from `modules/`.** **[lint]**
-3. **A module may import another module's `service.py`, `schemas.py` or `dependencies.py`,
-   never its router.** **[review]**
-4. **Routers are mounted only in `create_app()`.** **[review]**
-
-## 2. Routers and endpoints
-
-- **A router sets its own prefix and tag**, both named after the module:
-  `APIRouter(prefix="/health", tags=["health"])`. **[review]**
-- **`create_app()` mounts every router under `/api/v1`.** **[review]**
-- **The response model is the return annotation** (`-> HealthResponse`). Use
-  `response_model=` only when the function returns a different type than the one exposed.
-  **[pyright]**
-- **Endpoints return a schema instance, never a `dict` or an ORM object.** Convert with
+- The response model is the return annotation (`-> InstrumentRead`); `response_model=` only
+  when the returned type differs from the exposed one. **[pyright]**
+- Return a schema instance, never a `dict` or an ORM object:
   `InstrumentRead.model_validate(instrument)`. **[pyright]**
-- **Services report failures by raising an `AppError` subclass** from `app.core.exceptions`
-  (`NotFoundError`, `ConflictError`), with a message written for the API client. Nothing
-  raises `HTTPException`. **[review]**
-- **Routers do not catch `AppError`s**; the handlers in `core/error_handlers.py` turn them
-  into responses. **[review]**
-- **Every error response is `{code, message, details}`** (`ErrorResponse`), including
-  validation errors and FastAPI's own 404 and 405. **[test]**
-- **A new kind of error is an `AppError` subclass with its own `code`**, plus an entry in
-  `STATUS_CODES`. Without one it is answered with 500. **[review]**
-- **A case the client must tell apart gets its own subclass** of an existing kind, with a
-  specific `code`: `class DuplicateInstrumentError(ConflictError): code =
-  "instrument_already_exists"`. It inherits the status code. Never pass a code where the error
-  is raised. **[review]**
-- **`async def` by default; plain `def` when the endpoint calls blocking code** (a sync
-  driver, `requests`, `time.sleep`). Never call blocking code inside an `async def`.
-  **[review]**
+- `async def` by default; plain `def` when the endpoint calls blocking code. Never call
+  blocking code inside `async def`. **[review]**
+- Every endpoint requires a token unless it is public on purpose: protect the router with
+  `dependencies=[Depends(get_current_user)]`, or take `user: CurrentUser`. **[test]**
 
-### 2.1 Lists
+## 3. Errors — [ADR 0003](docs/adr/0003-api-conventions.md)
 
-- **Every list endpoint is paginated**: it takes `page: Pagination` and returns
-  `Page[<Entity>Read]`. Never return a bare list. **[review]**
-- **Pagination is keyset, newest first**: `ORDER BY created_at DESC, id DESC`, rows after the
-  cursor selected with `tuple_(created_at, id) < (cursor.created_at, cursor.id)`, and
-  `limit + 1` rows fetched to know whether a next page exists. **[test]**
-- **A paginated table has an index on `(created_at, id)`.** **[review]**
-- **Cursors are opaque to clients**: built with `encode_cursor` and read with
-  `Pagination`, never parsed or constructed by hand. **[review]**
-- **List filters are a `<Entity>Filters` model** in `schemas.py`, taken as
-  `Annotated[<Entity>Filters, Depends()]` so OpenAPI lists each filter as its own query
-  parameter (`Query()` documents one required object). Its fields reuse the field aliases so
-  filter input is normalized like create input. **[test]**
-- **Prefix filters use `column.startswith(value, autoescape=True)`**, so `%` and `_` match
-  literally. **[test]**
+- Services fail by raising an `AppError` subclass from `app.core.exceptions`, with a message
+  written for the API client. Nothing raises `HTTPException`. **[review]**
+- Routers never catch `AppError`. **[review]**
+- A new kind of error gets a `code` and an entry in `STATUS_CODES`. **[review]**
+- A case the client must tell apart is a subclass of an existing kind with its own `code`
+  (`class InvalidCredentialsError(UnauthorizedError): code = "invalid_credentials"`). Never
+  pass a code at the raise site. **[review]**
+- Every error response has the `{code, message, details}` shape. **[test]**
 
-## 3. Python and typing
+## 4. Lists — [ADR 0003](docs/adr/0003-api-conventions.md)
 
-- **pyright is strict on `src/`**, standard on `tests/`. Never loosen it locally. **[pyright]**
-- **Every function annotates its parameters and return type**, tests included
-  (`def test_…() -> None`). **[pyright]** in `src/`, **[review]** in `tests/`.
-- **No `Any`, `cast()` or `# type: ignore` to silence our own code**; only at an untyped
-  third-party boundary. **[review]**
-- **Modern syntax**: `list[str]`, `X | None`, `collections.abc` types. **[lint]**
-- **A fixed set of string values is a `StrEnum`** (`Environment`), not bare strings.
-  **[review]**
-- **PEP 8 naming**: `snake_case` modules, functions and variables; `PascalCase` classes;
+- A list endpoint takes `page: Pagination` and returns `Page[<Entity>Read]`, never a bare
+  list. **[review]**
+- Order by `created_at DESC, id DESC`, select rows after the cursor with
+  `tuple_(created_at, id) < (...)`, fetch `limit + 1`. **[test]**
+- A paginated table has an index on `(created_at, id)`. **[review]**
+- Build cursors only with `encode_cursor`; never parse or construct one by hand. **[review]**
+- Filters are an `<Entity>Filters` model in `schemas.py`, taken as
+  `Annotated[<Entity>Filters, Depends()]`, never `Query()`. **[test]**
+- Prefix filters use `column.startswith(value, autoescape=True)`. **[test]**
+
+## 5. Python and typing — [ADR 0001](docs/adr/0001-project-and-tooling.md)
+
+- Annotate every parameter and return type, tests included (`def test_…() -> None`).
+  **[pyright]** in `src/`, **[review]** in `tests/`.
+- Never loosen pyright locally. No `Any`, `cast()` or `# pyright: ignore` to silence our own
+  code; at a third-party boundary, ignore one named rule and comment why. **[review]**
+- Modern syntax: `list[str]`, `X | None`, `collections.abc` types. **[lint]**
+- A fixed set of string values is a `StrEnum`. **[review]**
+- PEP 8 names: `snake_case` modules, functions and variables; `PascalCase` classes;
   `SCREAMING_SNAKE_CASE` module-level constants. **[review]**
-- **An entity has three schemas**: `<Entity>Create`, `<Entity>Update` (every field optional)
-  and `<Entity>Read` (`from_attributes=True`). Other responses are `<Name>Response`
-  (`HealthResponse`). **[review]**
-- **Input is normalized in the schema** (whitespace, case) so the database stores one form.
-  Shared field constraints are `Annotated` aliases (`Symbol`, `Currency`). **[review]**
 
-## 4. Settings
+## 6. Schemas — [ADR 0002](docs/adr/0002-api-architecture.md), [ADR 0006](docs/adr/0006-instruments.md)
 
-- **`Settings` holds only values that vary between deployments** (environment, debug, and
-  later URLs and secrets). Values that are the same everywhere are constants in code.
+- An entity has `<Entity>Read` (`from_attributes=True`), plus `<Entity>Create` and
+  `<Entity>Update` (every field optional) only for the writes the API exposes. Other responses
+  are `<Name>Response`. **[review]**
+- Normalize input in the schema (whitespace, case). Shared field rules are `Annotated` aliases
+  (`Symbol`, `Mic`, `Email`), reused wherever the field appears. **[review]**
+
+## 7. Settings — [ADR 0003](docs/adr/0003-api-conventions.md)
+
+- Only values that vary between deployments are settings; the rest are constants in code.
   **[review]**
-- **Code reads settings through `get_settings()`**, never `os.environ` or a module-level
-  `Settings()`. **[review]**
-- **Every setting is in `Settings` and in `.env.example`.** **[review]**
-- **`.env` is shared with Docker Compose.** Keys only the container reads (`POSTGRES_*`) stay
-  out of `Settings`. Variables that must agree (`DATABASE_URL` and `POSTGRES_*`) sit together
-  in `.env.example`, with a comment saying so. **[review]**
-
-## 5. Database
-
-- **Endpoints get a session only through `DbSession`**; services receive it as a parameter.
-  Never create an engine or a session anywhere else. **[review]**
-- **Services commit, then `refresh()` an object before returning it**, so values the database
-  generated (`id`, timestamps) are loaded. **[review]**
-- **Uniqueness is enforced by a constraint and caught as `IntegrityError` on commit**, never
-  by a `SELECT` before the write. **[review]**
-- **Database access is async**: `AsyncSession` and `await`, no sync engine. **[review]**
-- **Never build SQL with f-strings or concatenation.** Pass values as bound parameters
-  (SQLAlchemy constructs or `text()` with `:name` parameters). **[review]**
-- **Models inherit `Base` from `app.core.database`** and declare columns with
-  `Mapped[...]` and `mapped_column()`. **[review]**
-- **Every `models.py` is imported in `migrations/env.py`**, or autogenerate does not see its
-  tables. **[review]**
-- **Primary keys are UUIDv7s generated by the database**:
-  `mapped_column(primary_key=True, server_default=func.uuidv7())`. **[review]**
-- **Mutable tables use `TimestampMixin`.** Every `datetime` column is
-  `DateTime(timezone=True)`. **[review]**
-- **Enum columns store values**:
-  `Enum(InstrumentType, name="instrument_type", values_callable=enum_values)`. **[review]**
-- **Constraint and index names come from `NAMING_CONVENTION`**; never pass `name=`, except to
-  a `CheckConstraint`, which takes a short rule name (`name="quantity_positive"`) that the
-  convention prefixes. **[review]**
-
-### 5.1 Migrations
-
-- **The schema changes only through Alembic revisions**, never by hand in the database.
+- Read settings through `get_settings()`, never `os.environ` or a module-level `Settings()`.
   **[review]**
-- **Read every autogenerated revision before applying it**, and fix what autogenerate missed
-  or got wrong (renames, enum changes, server defaults). **[review]**
-- **Every revision has a working `downgrade()`**: run `alembic downgrade -1` then
-  `alembic upgrade head` before committing it. **[review]**
-- **A revision that creates a Postgres enum type drops it in `downgrade()`**
-  (`sa.Enum(name="instrument_type").drop(op.get_bind())`); `drop_table` leaves it behind.
+- A new setting goes in `Settings` and in `.env.example`; a required one also in
+  `[tool.pytest_env]`. **[review]**
+- Keys only Docker Compose reads (`POSTGRES_*`) stay out of `Settings`. **[review]**
+
+## 8. Database — [ADR 0004](docs/adr/0004-database-and-migrations.md)
+
+- Get a session only through `DbSession`; pass it to services as a parameter. Never create an
+  engine or session elsewhere. **[review]**
+- Database access is async (`AsyncSession`, `await`). **[review]**
+- Services commit, then `refresh()` an object before returning it. **[review]**
+- Enforce uniqueness with a constraint and catch `IntegrityError` on commit; never `SELECT`
+  first. **[review]**
+- Never build SQL with f-strings or concatenation; bind values. **[review]**
+- Models inherit `Base`, use `Mapped[...]` / `mapped_column()`, and `TimestampMixin` when
+  mutable. **[review]**
+- Primary keys: `mapped_column(primary_key=True, server_default=func.uuidv7())`. **[review]**
+- Every `datetime` column is `DateTime(timezone=True)`. **[review]**
+- Enum columns: `Enum(PyEnum, name="<snake_case>", values_callable=enum_values)`. **[review]**
+- Never name a constraint or index; the naming convention does. A `CheckConstraint` takes a
+  short rule name (`name="email_lowercase"`). **[review]**
+- Import every `models.py` in `migrations/env.py`. **[review]**
+
+### 8.1 Migrations
+
+- Change the schema only through Alembic revisions. **[review]**
+- Read every autogenerated revision and fix it before applying it; remove the autogenerate
+  marker comments. **[review]**
+- Run `alembic downgrade -1` then `alembic upgrade head` before committing a revision.
+  **[test]** (the test session also runs every downgrade)
+- A revision that creates a Postgres enum type drops it in `downgrade()`. **[review]**
+- Never edit a revision once it has run anywhere but your machine. **[review]**
+
+## 9. Security — [ADR 0005](docs/adr/0005-authentication.md)
+
+- Hash and check passwords only with `hash_password` / `verify_password`. **[test]**
+- Never store, log, return or echo a plain password. Read schemas never include
+  `hashed_password`. **[test]**
+- Never strip or otherwise change a password. **[review]**
+- Emails go through the `Email` alias. **[test]**
+- Create and read access tokens only with `create_access_token` / `decode_access_token`.
   **[review]**
-- **Never edit a revision once it has run anywhere but your machine**; write a new one.
-  **[review]**
-
-## 6. Logging
-
-- **Log through structlog**: `logger = structlog.stdlib.get_logger(__name__)` at module level.
-  Never `print()`, never `logging.getLogger()` directly. **[review]**
-- **Event names are dotted and stable**: `<area>.<event>` in `snake_case` (`http.request`,
-  `http.unhandled_error`). Variable data goes in fields, never in the event name. **[review]**
-- **Per-request context comes from contextvars.** The middleware binds `request_id`; bind
-  anything else that belongs to the whole request with `bind_contextvars`, never by passing
-  it to every log call. **[review]**
-- **An unexpected exception is logged once, by the middleware.** Do not catch, log and
-  re-raise; let it propagate. **[review]**
-- **Never log a secret, a token or a request body.** **[review]**
-
-### 6.1 Security
-
-- **Passwords are hashed with `hash_password` from `app.core.security`** (Argon2id via
-  pwdlib) and checked with `verify_password`. Never hash or compare passwords any other way.
+- Login failures raise one `InvalidCredentialsError` and verify against `DUMMY_PASSWORD_HASH`
+  when the user is unknown. **[test]**
+- Store refresh tokens only as `hash_refresh_token(token)`; send them only in the
+  `refresh_token` cookie with the router's fixed flags, never in a body or query string.
   **[test]**
-- **A plain password is never stored, logged, returned, or echoed in an error.** Read
-  schemas never include `hashed_password`. **[test]**
-- **Password fields are never normalized**: no stripping, no case change. **[review]**
-- **Emails go through the `Email` alias** (validated, then lowercased); the
-  `ck_users_email_lowercase` constraint rejects anything else. **[test]**
-- **`/auth` endpoints live in `modules/auth/`**; the `User` entity, its schemas and service
-  live in `modules/users/`. **[review]**
-- **Every endpoint requires a token unless it is public on purpose.** Protect a whole router
-  with `APIRouter(..., dependencies=[Depends(get_current_user)])`; take `user: CurrentUser`
-  when the endpoint needs the user. Public today: health, register, login. **[test]**
-- **Access tokens are created and read only by `create_access_token` / `decode_access_token`**
-  in `app.core.security`. The algorithm is the `JWT_ALGORITHM` constant, never a setting.
+- A refresh token is used once: rotate through `rotate_refresh_token`. **[test]**
+
+## 10. Logging — [ADR 0003](docs/adr/0003-api-conventions.md)
+
+- One logger per module: `logger = structlog.stdlib.get_logger(__name__)`. Never `print()`,
+  never `logging.getLogger()`. **[review]**
+- Event names are `<area>.<event>` in `snake_case`; variable data goes in fields. **[review]**
+- Bind request-wide context with `bind_contextvars`, never by repeating it in each call.
   **[review]**
-- **Login failures look identical**: one `InvalidCredentialsError` for an unknown email or a
-  wrong password, and an unknown email is still checked against `DUMMY_PASSWORD_HASH` so it
-  takes as long. **[test]**
-- **`JWT_SECRET` is at least 32 characters**, generated with `openssl rand -hex 32`, and
-  different in every environment. **[test]**
-- **Refresh tokens are stored only as `hash_refresh_token(token)`**; the token itself exists
-  only in the response cookie. **[test]**
-- **Refresh tokens travel only in the `refresh_token` cookie**, set and cleared by the auth
-  router with fixed flags (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/v1/auth`).
-  Never in a response body or a query string. **[test]**
-- **A refresh token is used once**: `rotate_refresh_token` revokes it as it issues the next
-  one, and a reused token revokes all of the user's tokens. **[test]**
+- Do not catch, log and re-raise; the middleware logs unexpected exceptions once. **[review]**
+- Never log a secret, a token, a password or a request body. **[review]**
 
-## 7. Testing
+## 11. Testing — [ADR 0003](docs/adr/0003-api-conventions.md)
 
-- **Tests build the app with `create_app()` through a fixture**, never the module-level
-  `app`. **[review]**
-- **Dependencies are replaced with `app.dependency_overrides`**, never by patching modules.
+- Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
+- Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
+  `make_instrument`, `db_session`, `app`. Never import the module-level `app`. **[review]**
+- Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not
+  through the API, unless the API call is what the test covers. **[review]**
+- A protected endpoint has a test that it answers 401 through plain `client`. **[review]**
+- Replace dependencies with `app.dependency_overrides`, never by patching modules. **[review]**
+- Override settings with `monkeypatch.setenv` and `get_settings.cache_clear()` before and
+  after. **[review]**
+- Test settings live in `[tool.pytest_env]`; the test database name ends in `_test`. **[test]**
+- Name tests `test_<subject>_<behaviour>`. **[review]**
+- Build request bodies with a payload factory in the test module (`user_payload(**overrides)`).
   **[review]**
-- **Settings are overridden with `monkeypatch.setenv`** and `get_settings.cache_clear()`
-  before and after the test. **[review]**
-- **Test names describe behaviour**: `test_<subject>_<behaviour>`
-  (`test_health_returns_ok_when_database_answers`). **[review]**
-- **API tests use the `client` fixture from `tests/conftest.py`**: a fresh app on the test
-  database, with everything the test writes rolled back afterwards. **[review]**
-- **Protected endpoints are tested with `auth_client`** (a valid token for the `user`
-  fixture), plus one test that the endpoint answers 401 through plain `client`. **[review]**
-- **Test settings live in `[tool.pytest_env]`**, and the test database name ends in `_test`;
-  `conftest.py` refuses to recreate any other. **[test]**
-- **Async tests are marked at module level**: `pytestmark = pytest.mark.anyio`. **[test]**
-- **Request bodies come from a payload factory** (`instrument_payload(**overrides)`) in the
-  test module, moved to a shared module only when a second test file needs it. **[review]**
-- **Never assert that a database timestamp changed during a test.** A test runs in one
-  transaction, so `now()` returns the same value throughout. **[review]**
+- Never assert that a database timestamp changed within one test. **[review]**
+- Before trusting a new test, break the behaviour it covers and see it fail. **[review]**
 
-## 8. Comments
+## 12. Comments and documentation
 
-- **Comments describe the code**: what a value is or what a block does. **[review]**
-- **Comments do not argue for implementation choices.** Reasoning goes in the commit
-  message or the docs. **[review]**
-- **Only comment what the code cannot say itself**, in one line where possible. If deleting
-  the comment loses no information, delete it. **[review]**
-- **Deliberate shortcuts go in `IMPROVEMENTS.md`**: what exists, what it should become, and
-  when it is worth doing. A `TODO` in code is not a substitute. **[review]**
-
-## 9. Tooling
-
-- **uv only.** Add dependencies with `uv add` (`--dev` for tooling); never hand-edit
-  `uv.lock`. **[review]**
-- **Formatting is ruff's** (100 columns). Run `just api-format`; do not hand-format.
+- Comments describe the code: what a value is or what a block does. **[review]**
+- Comments never argue for an implementation choice; that goes in an ADR or the commit
+  message. **[review]**
+- Only comment what the code cannot say; if deleting a comment loses nothing, delete it.
   **[review]**
+- A change to how a topic works updates its ADR in `docs/adr/` (or adds one for a new topic,
+  with a row in the index). **[review]**
+- A deliberate shortcut gets a row in `docs/improvements.md`, linked to its ADR. A `TODO` in
+  code is not a substitute. **[review]**
+
+## 13. Tooling — [ADR 0001](docs/adr/0001-project-and-tooling.md)
+
+- uv only: `uv add` (`--dev` for tooling); never hand-edit `uv.lock`. **[review]**
+- Formatting is ruff's; never hand-format. **[review]**
 
 ---
 
 ## Checklist: adding a module
 
-1. Create `src/app/modules/<name>/` with an `__init__.py` and only the files from §1.2 it
-   needs.
-2. In `router.py`: `APIRouter(prefix="/<name>", tags=["<name>"])`.
+1. Create `src/app/modules/<name>/` with `__init__.py` and only the files from §1 it needs.
+2. In `router.py`: `APIRouter(prefix="/<name>", tags=["<name>"])`, protected unless public on
+   purpose.
 3. Mount the router in `create_app()`.
-4. Add tests that build the app with `create_app()`.
+4. Add tests using the `conftest.py` fixtures, including the 401 case.
 
 ## Checklist: adding a table
 

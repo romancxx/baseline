@@ -107,6 +107,12 @@ Each module contains only the files it needs, from this set:
 
 The rules for writing code here are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
 
+## Decisions
+
+Why the API is built the way it is, one record per topic, is in
+[docs/adr/](docs/adr/README.md).
+
 ## Improvements
 
-Known shortcuts and planned improvements are tracked in [IMPROVEMENTS.md](IMPROVEMENTS.md).
+Known shortcuts and planned improvements are summarised in
+[docs/improvements.md](docs/improvements.md).
