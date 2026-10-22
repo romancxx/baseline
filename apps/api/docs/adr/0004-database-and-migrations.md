@@ -18,6 +18,11 @@
   and its downgrade run before it is committed. Its blind spots are renames, enum changes,
   server defaults and anything SQLAlchemy does not model (it left an enum type behind on the
   first downgrade).
+- **Enum changes are written by hand.** A revision creates and drops the Postgres type
+  explicitly and declares its columns with `create_type=False`: within one Alembic run,
+  SQLAlchemy skips creating a type name it has already created, even if it was dropped since.
+- **Local data is disposable** while nothing is deployed: a revision that reshapes a table may
+  drop and recreate it instead of migrating rows, and says so in its docstring.
 
 ## Consequences
 

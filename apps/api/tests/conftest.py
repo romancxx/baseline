@@ -117,12 +117,14 @@ async def auth_client(app: FastAPI, user: User) -> AsyncGenerator[AsyncClient]:
 class InstrumentFactory(Protocol):
     async def __call__(
         self,
-        symbol: str = ...,
+        yahoo_symbol: str = ...,
         *,
-        name: str = ...,
-        exchange: str = ...,
-        currency: str = ...,
         type: InstrumentType = ...,
+        name: str = ...,
+        exchange_code: str = ...,
+        currency: str = ...,
+        isin: str | None = ...,
+        share_class_figi: str | None = ...,
     ) -> Instrument: ...
 
 
@@ -131,15 +133,23 @@ def make_instrument(db_session: AsyncSession) -> InstrumentFactory:
     """A function that inserts an instrument; each argument overrides one default column."""
 
     async def make(
-        symbol: str = "AAPL",
+        yahoo_symbol: str = "AAPL",
         *,
-        name: str = "Apple Inc.",
-        exchange: str = "XNAS",
-        currency: str = "USD",
         type: InstrumentType = InstrumentType.STOCK,
+        name: str = "Apple Inc.",
+        exchange_code: str = "NMS",
+        currency: str = "USD",
+        isin: str | None = None,
+        share_class_figi: str | None = None,
     ) -> Instrument:
         instrument = Instrument(
-            symbol=symbol, name=name, exchange=exchange, currency=currency, type=type
+            type=type,
+            name=name,
+            yahoo_symbol=yahoo_symbol,
+            exchange_code=exchange_code,
+            currency=currency,
+            isin=isin,
+            share_class_figi=share_class_figi,
         )
         db_session.add(instrument)
         await db_session.commit()

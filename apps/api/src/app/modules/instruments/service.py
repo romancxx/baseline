@@ -24,12 +24,14 @@ async def list_instruments(
     statement = select(Instrument)
     if filters.type is not None:
         statement = statement.where(Instrument.type == filters.type)
-    if filters.exchange is not None:
-        statement = statement.where(Instrument.exchange == filters.exchange)
+    if filters.exchange_code is not None:
+        statement = statement.where(Instrument.exchange_code == filters.exchange_code)
     if filters.symbol_prefix is not None:
         statement = statement.where(
-            Instrument.symbol.startswith(filters.symbol_prefix, autoescape=True)
+            Instrument.yahoo_symbol.startswith(filters.symbol_prefix, autoescape=True)
         )
+    if filters.share_class_figi is not None:
+        statement = statement.where(Instrument.share_class_figi == filters.share_class_figi)
     if page.after is not None:
         statement = statement.where(
             tuple_(Instrument.created_at, Instrument.id) < (page.after.created_at, page.after.id)

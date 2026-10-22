@@ -4,6 +4,7 @@ import pytest
 from conftest import InstrumentFactory
 from fastapi import FastAPI
 from httpx2 import AsyncClient, Response
+from sqlalchemy.exc import IntegrityError
 
 from app.modules.instruments.models import InstrumentType
 from app.modules.instruments.schemas import InstrumentRead
@@ -11,6 +12,9 @@ from app.modules.instruments.schemas import InstrumentRead
 pytestmark = pytest.mark.anyio
 
 URL = "/api/v1/instruments"
+LVMH_ISIN = "FR0000121014"
+# Format-valid placeholder, not LVMH's real share class FIGI.
+LVMH_FIGI = "BBG000LVMH00"
 
 
 async def test_get_instrument_returns_it(
@@ -38,7 +42,7 @@ async def test_get_unknown_instrument_returns_404(auth_client: AsyncClient) -> N
 
 
 def symbols(response: Response) -> list[str]:
-    return [instrument["symbol"] for instrument in response.json()["items"]]
+    return [instrument["yahoo_symbol"] for instrument in response.json()["items"]]
 
 
 async def test_list_instruments_returns_newest_first_in_one_page(
@@ -78,8 +82,9 @@ async def test_list_instruments_documents_each_query_parameter(app: FastAPI) -> 
 
     assert [(p["name"], p.get("required", False)) for p in parameters] == [
         ("type", False),
-        ("exchange", False),
+        ("exchange_code", False),
         ("symbol_prefix", False),
+        ("share_class_figi", False),
         ("limit", False),
         ("cursor", False),
     ]
@@ -108,11 +113,12 @@ async def test_list_instruments_rejects_invalid_cursor(auth_client: AsyncClient)
     ("params", "expected"),
     [
         ({"type": "etf"}, ["SPY"]),
-        ({"exchange": "arcx"}, ["SPY"]),
+        ({"exchange_code": "pcx"}, ["SPY"]),
         ({"symbol_prefix": "am"}, ["AMZN"]),
-        ({"symbol_prefix": "a", "type": "stock"}, ["AXB", "AMZN", "AAPL"]),
+        ({"symbol_prefix": "a", "type": "stock"}, ["AMZN", "AAPL"]),
         # "_" is matched literally, not as a LIKE wildcard.
         ({"symbol_prefix": "A_"}, []),
+        ({"share_class_figi": LVMH_FIGI.lower()}, ["MOH.DE", "MC.PA"]),
     ],
 )
 async def test_list_instruments_applies_filters(
@@ -123,13 +129,40 @@ async def test_list_instruments_applies_filters(
 ) -> None:
     await make_instrument("AAPL")
     await make_instrument("AMZN", name="Amazon")
-    await make_instrument("SPY", name="SPDR S&P 500", exchange="ARCX", type=InstrumentType.ETF)
-    await make_instrument("AXB", name="AXB Corp")
+    await make_instrument("SPY", type=InstrumentType.ETF, name="SPDR S&P 500", exchange_code="PCX")
+    await make_instrument(
+        "MC.PA", name="LVMH", exchange_code="PAR", currency="EUR", share_class_figi=LVMH_FIGI
+    )
+    await make_instrument(
+        "MOH.DE", name="LVMH", exchange_code="GER", currency="EUR", share_class_figi=LVMH_FIGI
+    )
 
     response = await auth_client.get(URL, params=params)
 
     assert response.status_code == 200
     assert symbols(response) == expected
+
+
+async def test_instrument_yahoo_symbol_is_unique(make_instrument: InstrumentFactory) -> None:
+    await make_instrument("MC.PA")
+
+    with pytest.raises(IntegrityError, match="uq_instruments_yahoo_symbol"):
+        await make_instrument("MC.PA")
+
+
+async def test_instruments_can_share_an_isin(make_instrument: InstrumentFactory) -> None:
+    paris = await make_instrument("MC.PA", isin=LVMH_ISIN)
+    xetra = await make_instrument("MOH.DE", isin=LVMH_ISIN)
+
+    assert paris.isin == xetra.isin == LVMH_ISIN
+
+
+@pytest.mark.parametrize("isin", ["FR000012101", "fr0000121014", "FR000012101X"])
+async def test_instrument_rejects_a_malformed_isin(
+    make_instrument: InstrumentFactory, isin: str
+) -> None:
+    with pytest.raises(IntegrityError, match="ck_instruments_isin_format"):
+        await make_instrument(isin=isin)
 
 
 @pytest.mark.parametrize(

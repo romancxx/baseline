@@ -82,7 +82,7 @@ considering a change done.
   `<Entity>Update` (every field optional) only for the writes the API exposes. Other responses
   are `<Name>Response`. **[review]**
 - Normalize input in the schema (whitespace, case). Shared field rules are `Annotated` aliases
-  (`Symbol`, `Mic`, `Email`), reused wherever the field appears. **[review]**
+  (`Symbol`, `ExchangeCode`, `Email`), reused wherever the field appears. **[review]**
 
 ## 7. Settings — [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -120,6 +120,10 @@ considering a change done.
 - Run `alembic downgrade -1` then `alembic upgrade head` before committing a revision.
   **[test]** (the test session also runs every downgrade)
 - A revision that creates a Postgres enum type drops it in `downgrade()`. **[review]**
+- Write enum value changes by hand: `postgresql.ENUM(...).create()` / `.drop()`, and columns
+  declared with `postgresql.ENUM(name=..., create_type=False)`. **[review]**
+- A revision that deletes rows instead of migrating them says so in its docstring.
+  **[review]**
 - Never edit a revision once it has run anywhere but your machine. **[review]**
 
 ## 9. Security — [ADR 0005](docs/adr/0005-authentication.md)
