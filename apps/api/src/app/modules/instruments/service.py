@@ -1,13 +1,15 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import case, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.core.pagination import Cursor, PageRequest
 from app.modules.instruments.models import Instrument
 from app.modules.instruments.schemas import InstrumentFilters
+
+SEARCH_LIMIT = 20
 
 
 async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Instrument:
@@ -45,3 +47,25 @@ async def list_instruments(
         return instruments, None
     last = instruments[-1]
     return instruments, Cursor(created_at=last.created_at, id=last.id)
+
+
+async def search_instruments(session: AsyncSession, query: str) -> Sequence[Instrument]:
+    """Instruments matching `query`: its ISIN first, then symbols it starts, then similar names."""
+    isin_match = Instrument.isin == query.upper()
+    # Symbols are stored uppercase, so an uppercased prefix makes the match case-insensitive.
+    symbol_match = Instrument.yahoo_symbol.startswith(query.upper(), autoescape=True)
+    # pg_trgm's `name %> query`: some words of the name are similar to the query.
+    name_match = Instrument.name.bool_op("%>")(query)
+
+    rank = case((isin_match, 0), (symbol_match, 1), else_=2)
+    statement = (
+        select(Instrument)
+        .where(or_(isin_match, symbol_match, name_match))
+        .order_by(
+            rank,
+            func.word_similarity(query, Instrument.name).desc(),
+            Instrument.yahoo_symbol,
+        )
+        .limit(SEARCH_LIMIT)
+    )
+    return (await session.scalars(statement)).all()

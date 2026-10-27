@@ -49,6 +49,8 @@ considering a change done.
   **[review]**
 - Every endpoint requires a token unless it is public on purpose: protect the router with
   `dependencies=[Depends(get_current_user)]`, or take `user: CurrentUser`. **[test]**
+- Declare a fixed path (`/search`) before a path with a parameter (`/{instrument_id}`) in the
+  same router. **[test]**
 
 ## 3. Errors — [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -67,6 +69,8 @@ considering a change done.
 
 - A list endpoint takes `page: Pagination` and returns `Page[<Entity>Read]`, never a bare
   list. **[review]**
+- A search with a fixed result limit is not paginated: it takes an `<Entity>Search` model with
+  `Depends()` and returns `<Entity>SearchResponse` (`items`), never a bare list. **[review]**
 - Order by `created_at DESC, id DESC`, select rows after the cursor with
   `tuple_(created_at, id) < (...)`, fetch `limit + 1`. **[test]**
 - A paginated table has an index on `(created_at, id)`. **[review]**
@@ -124,6 +128,10 @@ considering a change done.
 - Enum columns: `Enum(PyEnum, name="<snake_case>", values_callable=enum_values)`. **[review]**
 - Never name a constraint or index; the naming convention does. A `CheckConstraint` takes a
   short rule name (`name="email_lowercase"`). **[review]**
+- Every branch of an `OR` that should use indexes needs its own index; check a new query
+  with `EXPLAIN` on a table large enough to make an index worth it. **[review]**
+- A Postgres extension is created in the revision that first needs it
+  (`CREATE EXTENSION IF NOT EXISTS`) and dropped in its downgrade. **[review]**
 - Import every `models.py` in `migrations/env.py`. **[review]**
 
 ### 8.1 Migrations

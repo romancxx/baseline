@@ -21,6 +21,9 @@
 - **Enum changes are written by hand.** A revision creates and drops the Postgres type
   explicitly and declares its columns with `create_type=False`: within one Alembic run,
   SQLAlchemy skips creating a type name it has already created, even if it was dropped since.
+- **Postgres extensions come from migrations**: the revision that first needs one creates it
+  (`CREATE EXTENSION IF NOT EXISTS pg_trgm`) and its downgrade drops it. pg_trgm is a trusted
+  extension, so the database owner can create it without superuser rights.
 - **Local data is disposable** while nothing is deployed: a revision that reshapes a table may
   drop and recreate it instead of migrating rows, and says so in its docstring.
 

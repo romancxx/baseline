@@ -22,7 +22,18 @@
   `GET /instruments/{id}`, behind authentication. Instruments are a shared directory filled
   from the market data provider by search and import, not entered by users, so there is no
   `POST`, `PATCH` or `DELETE`.
-- **Filter values are normalized** (trimmed, uppercased) to match the stored codes.
+- **Local search with pg_trgm**: `GET /instruments/search?q=` (2 to 100 characters) returns
+  at most 20 instruments as `{items}`, not paginated. It matches an exact ISIN, a
+  `yahoo_symbol` prefix, or a similar name, and ranks them in that order, then by name
+  similarity. Names are matched with word similarity (`name %> q`: the query is similar to
+  some words of the name), not whole-string similarity (`name % q`): with the defaults,
+  `toyota` scores 0.28 against "Toyota Motor Corporation" with `%` (below its 0.3 threshold)
+  and 1.0 with `%>`.
+- **Search indexes**: GIN `gin_trgm_ops` on `name` and `yahoo_symbol` (they also serve the
+  list's `symbol_prefix` filter) and a btree on `isin`, so each branch of the search's `OR` is
+  index-served and Postgres can combine them (`BitmapOr`).
+- **Filter values are normalized** (trimmed, uppercased) to match the stored codes; the
+  search uppercases the query for the ISIN and symbol matches, and trigrams ignore case.
 - **Tests insert instruments directly** through the `make_instrument` factory fixture.
 
 ## Consequences
@@ -43,3 +54,6 @@ would need a mapping.
 - CRUD for every user (lets anyone edit a directory everyone shares); writes restricted to an
   admin role (no roles exist, and nothing needs manual edits yet).
 - `VARCHAR` + `CHECK` for the type (easier to extend, weaker in the database).
+- For search: `name % q` with `similarity()` (misses short queries on long names: `toyota`,
+  `msci world`, `lvmh`); full-text search with `tsvector` (stems words but tolerates no typos
+  and splits symbols badly); an external search engine (one more service for a small table).

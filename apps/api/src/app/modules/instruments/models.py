@@ -20,6 +20,14 @@ class Instrument(TimestampMixin, Base):
         CheckConstraint("isin ~ '^[A-Z]{2}[A-Z0-9]{9}[0-9]$'", name="isin_format"),
         # Serves the keyset pagination order.
         Index(None, "created_at", "id"),
+        # Trigram indexes (pg_trgm) serve the search's fuzzy and prefix matches.
+        Index(None, "name", postgresql_using="gin", postgresql_ops={"name": "gin_trgm_ops"}),
+        Index(
+            None,
+            "yahoo_symbol",
+            postgresql_using="gin",
+            postgresql_ops={"yahoo_symbol": "gin_trgm_ops"},
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.uuidv7())
@@ -34,6 +42,6 @@ class Instrument(TimestampMixin, Base):
     # ISO 4217 currency code, e.g. GBP (never Yahoo's GBp).
     currency: Mapped[str] = mapped_column(String(3))
     # Shared by every listing of the same security.
-    isin: Mapped[str | None] = mapped_column(String(12))
+    isin: Mapped[str | None] = mapped_column(String(12), index=True)
     # Groups the listings of one share class (MC.PA, MOH.DE).
     share_class_figi: Mapped[str | None] = mapped_column(String(12), index=True)

@@ -16,6 +16,7 @@ ExchangeCode = Annotated[
 Figi = Annotated[
     str, StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Za-z0-9]{12}$")
 ]
+SearchQuery = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
 
 
 class InstrumentFilters(BaseModel):
@@ -23,6 +24,11 @@ class InstrumentFilters(BaseModel):
     exchange_code: ExchangeCode | None = None
     symbol_prefix: Symbol | None = None
     share_class_figi: Figi | None = None
+
+
+class InstrumentSearch(BaseModel):
+    # A symbol prefix, an ISIN, or words of the name.
+    q: SearchQuery
 
 
 class InstrumentRead(BaseModel):
@@ -38,3 +44,9 @@ class InstrumentRead(BaseModel):
     share_class_figi: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class InstrumentSearchResponse(BaseModel):
+    """The best matches first."""
+
+    items: list[InstrumentRead]

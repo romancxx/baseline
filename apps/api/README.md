@@ -85,6 +85,13 @@ List endpoints return one page at a time, newest first:
 `limit` sets the page size (default 20, 1 to 100). To get the next page, repeat the request
 with the same filters and `cursor=<next_cursor>`. `next_cursor` is `null` on the last page.
 
+## Instrument search
+
+`GET /api/v1/instruments/search?q=<text>` (2 to 100 characters) returns up to 20 instruments
+as `{"items": [...]}`, not paginated: an exact ISIN first, then symbols starting with the
+text, then names similar to it, tolerating case and small typos (`louis vuiton`). It runs on
+Postgres's pg_trgm extension, which the migrations enable.
+
 ## Project layout
 
 ```

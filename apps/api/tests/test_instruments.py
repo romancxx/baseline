@@ -165,6 +165,85 @@ async def test_instrument_rejects_a_malformed_isin(
         await make_instrument(isin=isin)
 
 
+SEARCH_URL = f"{URL}/search"
+LVMH_NAME = "LVMH Moët Hennessy - Louis Vuitton, Société Européenne"
+
+
+async def add_catalog(make_instrument: InstrumentFactory) -> None:
+    await make_instrument("AIR.PA", name="Airbus SE", exchange_code="PAR", currency="EUR")
+    await make_instrument("AI.PA", name="Air Liquide SA", exchange_code="PAR", currency="EUR")
+    await make_instrument("MSFT", name="Microsoft Corporation")
+    await make_instrument("MC.PA", name=LVMH_NAME, exchange_code="PAR", isin=LVMH_ISIN)
+    await make_instrument("MOH.DE", name=LVMH_NAME, exchange_code="GER", isin=LVMH_ISIN)
+    await make_instrument("7203.T", name="Toyota Motor Corporation", exchange_code="JPX")
+
+
+async def search(auth_client: AsyncClient, query: str) -> list[str]:
+    response = await auth_client.get(SEARCH_URL, params={"q": query})
+    assert response.status_code == 200
+    return symbols(response)
+
+
+async def test_search_ranks_symbol_prefixes_before_similar_names(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory
+) -> None:
+    await add_catalog(make_instrument)
+
+    # Air Liquide's name matches "air" better than Airbus's, but AIR.PA starts with it.
+    assert await search(auth_client, "air") == ["AIR.PA", "AI.PA"]
+
+
+async def test_search_finds_every_listing_of_an_isin(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory
+) -> None:
+    await add_catalog(make_instrument)
+
+    assert await search(auth_client, LVMH_ISIN.lower()) == ["MC.PA", "MOH.DE"]
+
+
+@pytest.mark.parametrize("query", ["microsoft", "MICROSOFT", "msf", "MsF"])
+async def test_search_ignores_case(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory, query: str
+) -> None:
+    await add_catalog(make_instrument)
+
+    assert await search(auth_client, query) == ["MSFT"]
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [("louis vuiton", ["MC.PA", "MOH.DE"]), ("toyta motor", ["7203.T"])],
+)
+async def test_search_tolerates_typos(
+    auth_client: AsyncClient,
+    make_instrument: InstrumentFactory,
+    query: str,
+    expected: list[str],
+) -> None:
+    await add_catalog(make_instrument)
+
+    assert await search(auth_client, query) == expected
+
+
+async def test_search_returns_at_most_20_instruments(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory
+) -> None:
+    for number in range(25):
+        await make_instrument(f"FUND{number}", name=f"Fund {number}")
+
+    assert len(await search(auth_client, "fund")) == 20
+
+
+@pytest.mark.parametrize("query", ["a", "  a  ", "x" * 101])
+async def test_search_rejects_a_query_too_short_or_too_long(
+    auth_client: AsyncClient, query: str
+) -> None:
+    response = await auth_client.get(SEARCH_URL, params={"q": query})
+
+    assert response.status_code == 422
+    assert response.json()["details"][0]["loc"] == ["query", "q"]
+
+
 @pytest.mark.parametrize(
     ("method", "path"),
     [
@@ -182,7 +261,7 @@ async def test_instruments_cannot_be_written_through_the_api(
     assert response.headers["allow"] == "GET"
 
 
-@pytest.mark.parametrize("path", [URL, f"{URL}/{uuid.UUID(int=0)}"])
+@pytest.mark.parametrize("path", [URL, f"{URL}/{uuid.UUID(int=0)}", f"{SEARCH_URL}?q=apple"])
 async def test_instruments_endpoints_require_a_token(client: AsyncClient, path: str) -> None:
     response = await client.get(path)
 
