@@ -21,6 +21,8 @@ considering a change done.
 - A client for an external service is a package in `src/app/integrations/<provider>/` with
   `client.py`, `schemas.py` and `dependencies.py`. It returns its own Pydantic models, never
   the library's dicts or DataFrames. **[review]**
+- A client that holds connections (an `httpx2.AsyncClient`) is created once in the lifespan,
+  stored on `app.state` and closed after `yield`; never one per request. **[review]**
 - A module uses only these file names, each only when needed, and each always for the same
   thing: `router.py`, `schemas.py`, `models.py`, `service.py`, `dependencies.py`. No empty
   files or modules for future features. **[review]**
@@ -175,8 +177,9 @@ considering a change done.
 - Replace our own dependencies with `app.dependency_overrides`, never by patching our modules.
   **[review]**
 - Tests never call an external service. An integration's tests replace the library at its
-  boundary with `monkeypatch.setattr` (`monkeypatch.setattr(yf, "Search", fake)`), never our
-  own functions. **[review]**
+  boundary, never our own functions: `monkeypatch.setattr(yf, "Search", fake)` for a library,
+  `httpx2.MockTransport(handler)` passed as the client's `transport` for an HTTP API.
+  **[review]**
 - Override settings with `monkeypatch.setenv` and `get_settings.cache_clear()` before and
   after. **[review]**
 - Test settings live in `[tool.pytest_env]`; the test database name ends in `_test`. **[test]**

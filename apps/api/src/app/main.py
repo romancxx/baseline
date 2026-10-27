@@ -8,6 +8,7 @@ from app.core.database import engine
 from app.core.error_handlers import EXCEPTION_HANDLERS
 from app.core.logging import configure_logging
 from app.core.middleware import RequestLoggingMiddleware
+from app.integrations.openfigi.client import OpenFigiClient
 from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.instruments.router import router as instruments_router
@@ -15,8 +16,11 @@ from app.modules.users.router import router as users_router
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    openfigi = OpenFigiClient(get_settings().openfigi_api_key)
+    app.state.openfigi = openfigi
     yield
+    await openfigi.aclose()
     await engine.dispose()
 
 

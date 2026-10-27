@@ -16,7 +16,9 @@ system to enforce boundaries the way NestJS modules do.
 - **External services in `integrations/<provider>/`**, not in a module, since several modules
   use them: `client.py` (the client class), `schemas.py` (the Pydantic models it returns),
   `dependencies.py` (the client as a FastAPI dependency). An integration speaks the provider's
-  language and knows nothing about our tables ([0007](0007-market-data.md)).
+  language and knows nothing about our tables ([0007](0007-market-data.md)). A client that
+  holds connections is created once in the lifespan, stored on `app.state` and closed on
+  shutdown; its dependency reads it from there ([0008](0008-security-identifiers.md)).
 - **App factory**: `create_app()` builds a fresh app (logging, error handlers, middleware,
   routers under `/api/v1`); the module-level `app` exists only for uvicorn.
 - **One-way imports**: `main` → `modules` → `integrations` → `core`. Modules may use each

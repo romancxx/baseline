@@ -11,7 +11,8 @@
   `exchange_code` (Yahoo's code as returned, e.g. `PAR`, `NMS`), currency (ISO 4217 as
   normalized by the Yahoo client: `GBP`, never `GBp`), `isin` (nullable, not unique, format
   checked in the database), `share_class_figi` (nullable, indexed).
-- **Listings of one security are grouped by `share_class_figi`**, filled from OpenFIGI.
+- **Listings of one security are grouped by `share_class_figi`**, filled from OpenFIGI
+  ([0008](0008-security-identifiers.md)).
 - **No instrument/listing split yet.** Yahoo returns no ISIN, so there is nothing from Yahoo
   to key a parent security on; OpenFIGI's share class FIGI is the grouping key, and a column
   on each row is enough to group by it. A parent `securities` table can be added later by
