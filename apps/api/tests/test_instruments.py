@@ -1,13 +1,16 @@
 import uuid
 
 import pytest
-from conftest import InstrumentFactory
+from conftest import FakeYahoo, InstrumentFactory
 from fastapi import FastAPI
 from httpx2 import AsyncClient, Response
 from sqlalchemy.exc import IntegrityError
 
+from app.core.exceptions import ProviderUnavailableError
+from app.integrations.yahoo.schemas import QuoteType, SearchResult
 from app.modules.instruments.models import InstrumentType
 from app.modules.instruments.schemas import InstrumentRead
+from app.modules.instruments.service import MIN_LOCAL_RESULTS
 
 pytestmark = pytest.mark.anyio
 
@@ -232,6 +235,97 @@ async def test_search_returns_at_most_20_instruments(
         await make_instrument(f"FUND{number}", name=f"Fund {number}")
 
     assert len(await search(auth_client, "fund")) == 20
+
+
+def yahoo_result(
+    yahoo_symbol: str, exchange_code: str, quote_type: QuoteType = QuoteType.EQUITY
+) -> SearchResult:
+    return SearchResult(
+        yahoo_symbol=yahoo_symbol,
+        name="Airbus SE",
+        exchange_code=exchange_code,
+        quote_type=quote_type,
+    )
+
+
+async def test_search_appends_yahoo_candidates_when_few_instruments_match(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory, yahoo: FakeYahoo
+) -> None:
+    await add_catalog(make_instrument)
+    yahoo.results = [yahoo_result("AIR.DE", "GER"), yahoo_result("AIRB.L", "LSE", QuoteType.ETF)]
+
+    response = await auth_client.get(SEARCH_URL, params={"q": "airbus"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [(item["source"], item["yahoo_symbol"]) for item in body["items"]] == [
+        ("local", "AIR.PA"),
+        ("yahoo", "AIR.DE"),
+        ("yahoo", "AIRB.L"),
+    ]
+    assert body["items"][2] == {
+        "source": "yahoo",
+        "yahoo_symbol": "AIRB.L",
+        "name": "Airbus SE",
+        "exchange_code": "LSE",
+        "type": "etf",
+    }
+    assert body["yahoo_unavailable"] is False
+    assert yahoo.queries == ["airbus"]
+
+
+async def test_search_drops_yahoo_results_already_stored(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory, yahoo: FakeYahoo
+) -> None:
+    await add_catalog(make_instrument)
+    # Stored, but under a name the query does not match.
+    await make_instrument("EADSY", name="Unrelated Holdings")
+    yahoo.results = [
+        yahoo_result("AIR.PA", "PAR"),
+        yahoo_result("EADSY", "PNK"),
+        yahoo_result("AIR.DE", "GER"),
+    ]
+
+    response = await auth_client.get(SEARCH_URL, params={"q": "airbus"})
+
+    assert [(item["source"], item["yahoo_symbol"]) for item in response.json()["items"]] == [
+        ("local", "AIR.PA"),
+        ("yahoo", "AIR.DE"),
+    ]
+
+
+async def test_search_does_not_ask_yahoo_when_enough_instruments_match(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory, yahoo: FakeYahoo
+) -> None:
+    for number in range(MIN_LOCAL_RESULTS):
+        await make_instrument(f"FUND{number}", name=f"Fund {number}")
+    yahoo.results = [yahoo_result("AIR.DE", "GER")]
+
+    response = await auth_client.get(SEARCH_URL, params={"q": "fund"})
+
+    assert {item["source"] for item in response.json()["items"]} == {"local"}
+    assert yahoo.queries == []
+
+
+async def test_search_returns_local_results_when_yahoo_is_down(
+    auth_client: AsyncClient, make_instrument: InstrumentFactory, yahoo: FakeYahoo
+) -> None:
+    await add_catalog(make_instrument)
+    yahoo.failure = ProviderUnavailableError("Yahoo Finance is unavailable. Try again later.")
+
+    response = await auth_client.get(SEARCH_URL, params={"q": "airbus"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["yahoo_symbol"] for item in body["items"]] == ["AIR.PA"]
+    assert body["yahoo_unavailable"] is True
+
+
+async def test_search_documents_source_as_the_discriminator(app: FastAPI) -> None:
+    schemas = app.openapi()["components"]["schemas"]
+    items = schemas["InstrumentSearchResponse"]["properties"]["items"]["items"]
+
+    assert items["discriminator"]["propertyName"] == "source"
 
 
 @pytest.mark.parametrize("query", ["a", "  a  ", "x" * 101])

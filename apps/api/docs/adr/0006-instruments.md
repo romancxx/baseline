@@ -29,6 +29,12 @@
   some words of the name), not whole-string similarity (`name % q`): with the defaults,
   `toyota` scores 0.28 against "Toyota Motor Corporation" with `%` (below its 0.3 threshold)
   and 1.0 with `%>`.
+- **Yahoo fills thin results**: when fewer than 5 stored instruments match, the search also
+  asks Yahoo and appends its results whose `yahoo_symbol` is not stored (checked against the
+  table, not only the local results). They are candidates, not saved: each item has a
+  `source` (`local` or `yahoo`), and a Yahoo candidate has no id; saving one is a separate,
+  explicit step. If Yahoo is unavailable, the local results come back with
+  `yahoo_unavailable: true` instead of a 503.
 - **Search indexes**: GIN `gin_trgm_ops` on `name` and `yahoo_symbol` (they also serve the
   list's `symbol_prefix` filter) and a btree on `isin`, so each branch of the search's `OR` is
   index-served and Postgres can combine them (`BitmapOr`).
@@ -57,3 +63,7 @@ would need a mapping.
 - For search: `name % q` with `similarity()` (misses short queries on long names: `toyota`,
   `msci world`, `lvmh`); full-text search with `tsvector` (stems words but tolerates no typos
   and splits symbols badly); an external search engine (one more service for a small table).
+- For the Yahoo fallback: asking Yahoo on every search (a Yahoo round trip even when the
+  table has the answer); saving Yahoo's results as they are found (fills the table with
+  listings nobody picked); a 503 when Yahoo fails (loses the local results the user can still
+  use); a separate Yahoo search endpoint (the client would make two calls and merge them).

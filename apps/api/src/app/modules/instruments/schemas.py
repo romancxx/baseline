@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.modules.instruments.models import InstrumentType
 
@@ -46,7 +46,31 @@ class InstrumentRead(BaseModel):
     updated_at: datetime
 
 
-class InstrumentSearchResponse(BaseModel):
-    """The best matches first."""
+class LocalSearchResult(InstrumentRead):
+    """A stored instrument."""
 
-    items: list[InstrumentRead]
+    source: Literal["local"] = "local"
+
+
+class YahooSearchResult(BaseModel):
+    """A listing found on Yahoo and not stored yet, so it has no id."""
+
+    source: Literal["yahoo"] = "yahoo"
+    yahoo_symbol: str
+    name: str
+    exchange_code: str
+    type: InstrumentType
+
+
+# `source` tells the two apart, in validation and in the OpenAPI schema.
+InstrumentSearchResult = Annotated[
+    LocalSearchResult | YahooSearchResult, Field(discriminator="source")
+]
+
+
+class InstrumentSearchResponse(BaseModel):
+    """Stored instruments, best matches first, then Yahoo's candidates."""
+
+    items: list[InstrumentSearchResult]
+    # True when Yahoo was needed but could not be reached: `items` holds local results only.
+    yahoo_unavailable: bool

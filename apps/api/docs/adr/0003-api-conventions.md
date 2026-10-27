@@ -51,6 +51,9 @@ testing.
 - **Fixtures** build a fresh app per test with the session dependency overridden: `client`,
   `auth_client`, `user`. Rows a test needs come from factory fixtures (`make_instrument`)
   that insert through the session. Test settings come from `[tool.pytest_env]`.
+- **Endpoints never reach a provider in tests**: the `app` fixture overrides each external
+  client's dependency with a fake (`yahoo`, a `FakeYahoo`), which a test configures and
+  inspects.
 - **No external calls**: a third-party library is replaced at its own boundary, so the
   integration's code still runs: with `monkeypatch` for a library such as yfinance, with
   `httpx2.MockTransport` for an HTTP API.

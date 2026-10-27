@@ -87,10 +87,25 @@ with the same filters and `cursor=<next_cursor>`. `next_cursor` is `null` on the
 
 ## Instrument search
 
-`GET /api/v1/instruments/search?q=<text>` (2 to 100 characters) returns up to 20 instruments
-as `{"items": [...]}`, not paginated: an exact ISIN first, then symbols starting with the
-text, then names similar to it, tolerating case and small typos (`louis vuiton`). It runs on
-Postgres's pg_trgm extension, which the migrations enable.
+`GET /api/v1/instruments/search?q=<text>` (2 to 100 characters) returns up to 20 stored
+instruments, not paginated: an exact ISIN first, then symbols starting with the text, then
+names similar to it, tolerating case and small typos (`louis vuiton`). It runs on Postgres's
+pg_trgm extension, which the migrations enable.
+
+When fewer than 5 stored instruments match, Yahoo's results are appended, minus those already
+stored. They are not saved:
+
+```json
+{
+  "items": [
+    { "source": "local", "id": "0193…", "yahoo_symbol": "AIR.PA", "name": "Airbus SE", … },
+    { "source": "yahoo", "yahoo_symbol": "AIR.DE", "name": "Airbus SE", "exchange_code": "GER", "type": "stock" }
+  ],
+  "yahoo_unavailable": false
+}
+```
+
+If Yahoo cannot be reached, the stored matches still come back, with `yahoo_unavailable: true`.
 
 ## Project layout
 

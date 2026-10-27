@@ -59,6 +59,8 @@ considering a change done.
 - Routers never catch `AppError`. **[review]**
 - An integration catches its library's and the network's failures and raises
   `ProviderUnavailableError`; no third-party exception leaves it. **[test]**
+- A service catches `ProviderUnavailableError` only when it can still answer without the
+  provider, and then says so in the response (`yahoo_unavailable: true`). **[review]**
 - A new kind of error gets a `code` and an entry in `STATUS_CODES`. **[review]**
 - A case the client must tell apart is a subclass of an existing kind with its own `code`
   (`class InvalidCredentialsError(UnauthorizedError): code = "invalid_credentials"`). Never
@@ -101,6 +103,8 @@ considering a change done.
   are `<Name>Response`. **[review]**
 - Normalize input in the schema (whitespace, case). Shared field rules are `Annotated` aliases
   (`Symbol`, `ExchangeCode`, `Email`), reused wherever the field appears. **[review]**
+- A list holding several kinds of item is a discriminated union on a `Literal` field:
+  `Annotated[A | B, Field(discriminator="source")]`. **[test]**
 
 ## 7. Settings — [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -178,7 +182,10 @@ considering a change done.
 
 - Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
-  `make_instrument`, `db_session`, `app`. Never import the module-level `app`. **[review]**
+  `make_instrument`, `yahoo`, `db_session`, `app`. Never import the module-level `app`.
+  **[review]**
+- A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
+  `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not
   through the API, unless the API call is what the test covers. **[review]**
 - A protected endpoint has a test that it answers 401 through plain `client`. **[review]**

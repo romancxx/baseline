@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from app.core.database import DbSession
 from app.core.pagination import Page, Pagination, encode_cursor
+from app.integrations.yahoo.dependencies import Yahoo
 from app.modules.auth.dependencies import get_current_user
 from app.modules.instruments.schemas import (
     InstrumentFilters,
@@ -33,12 +34,9 @@ async def list_all(
 # Declared before /{instrument_id}, which would otherwise take "search" as an id.
 @router.get("/search")
 async def search(
-    session: DbSession, params: Annotated[InstrumentSearch, Depends()]
+    session: DbSession, yahoo: Yahoo, params: Annotated[InstrumentSearch, Depends()]
 ) -> InstrumentSearchResponse:
-    instruments = await search_instruments(session, params.q)
-    return InstrumentSearchResponse(
-        items=[InstrumentRead.model_validate(instrument) for instrument in instruments]
-    )
+    return await search_instruments(session, yahoo, params.q)
 
 
 @router.get("/{instrument_id}")

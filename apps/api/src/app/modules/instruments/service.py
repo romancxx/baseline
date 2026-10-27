@@ -4,12 +4,23 @@ from collections.abc import Sequence
 from sqlalchemy import case, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, ProviderUnavailableError
 from app.core.pagination import Cursor, PageRequest
-from app.modules.instruments.models import Instrument
-from app.modules.instruments.schemas import InstrumentFilters
+from app.integrations.yahoo.client import YahooClient
+from app.integrations.yahoo.schemas import QuoteType
+from app.modules.instruments.models import Instrument, InstrumentType
+from app.modules.instruments.schemas import (
+    InstrumentFilters,
+    InstrumentSearchResponse,
+    InstrumentSearchResult,
+    LocalSearchResult,
+    YahooSearchResult,
+)
 
 SEARCH_LIMIT = 20
+# Below this many stored matches, the search also asks Yahoo.
+MIN_LOCAL_RESULTS = 5
+INSTRUMENT_TYPES = {QuoteType.EQUITY: InstrumentType.STOCK, QuoteType.ETF: InstrumentType.ETF}
 
 
 async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Instrument:
@@ -49,7 +60,45 @@ async def list_instruments(
     return instruments, Cursor(created_at=last.created_at, id=last.id)
 
 
-async def search_instruments(session: AsyncSession, query: str) -> Sequence[Instrument]:
+async def search_instruments(
+    session: AsyncSession, yahoo: YahooClient, query: str
+) -> InstrumentSearchResponse:
+    """Stored instruments matching `query`, then Yahoo's if fewer than MIN_LOCAL_RESULTS match."""
+    local: list[InstrumentSearchResult] = [
+        LocalSearchResult.model_validate(instrument)
+        for instrument in await _search_local(session, query)
+    ]
+    if len(local) >= MIN_LOCAL_RESULTS:
+        return InstrumentSearchResponse(items=local, yahoo_unavailable=False)
+
+    try:
+        found = await yahoo.search(query)
+    except ProviderUnavailableError:
+        return InstrumentSearchResponse(items=local, yahoo_unavailable=True)
+
+    # Get the Yahoo symbols of the stored instruments
+    stored = set(
+        await session.scalars(
+            select(Instrument.yahoo_symbol).where(
+                Instrument.yahoo_symbol.in_([result.yahoo_symbol for result in found])
+            )
+        )
+    )
+    candidates = [
+        YahooSearchResult(
+            yahoo_symbol=result.yahoo_symbol,
+            name=result.name,
+            exchange_code=result.exchange_code,
+            type=INSTRUMENT_TYPES[result.quote_type],
+        )
+        for result in found
+        # Only keep the Yahoo results that are not already stored.
+        if result.yahoo_symbol not in stored
+    ]
+    return InstrumentSearchResponse(items=[*local, *candidates], yahoo_unavailable=False)
+
+
+async def _search_local(session: AsyncSession, query: str) -> Sequence[Instrument]:
     """Instruments matching `query`: its ISIN first, then symbols it starts, then similar names."""
     isin_match = Instrument.isin == query.upper()
     # Symbols are stored uppercase, so an uppercased prefix makes the match case-insensitive.

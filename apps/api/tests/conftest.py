@@ -15,6 +15,9 @@ from sqlalchemy.pool import NullPool
 from app.core.config import get_settings
 from app.core.database import get_db_session
 from app.core.security import create_access_token
+from app.integrations.yahoo.client import YahooClient
+from app.integrations.yahoo.dependencies import get_yahoo_client
+from app.integrations.yahoo.schemas import SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.users.models import User
@@ -80,10 +83,32 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
         await transaction.rollback()
 
 
+class FakeYahoo(YahooClient):
+    """Answers `search` with `results`, or raises `failure`; records each query."""
+
+    def __init__(self) -> None:
+        self.results: list[SearchResult] = []
+        self.failure: Exception | None = None
+        self.queries: list[str] = []
+
+    async def search(self, query: str) -> list[SearchResult]:
+        self.queries.append(query)
+        if self.failure is not None:
+            raise self.failure
+        return self.results
+
+
 @pytest.fixture
-def app(db_session: AsyncSession) -> FastAPI:
+def yahoo() -> FakeYahoo:
+    """The Yahoo client the app uses in tests: no test reaches the real Yahoo."""
+    return FakeYahoo()
+
+
+@pytest.fixture
+def app(db_session: AsyncSession, yahoo: FakeYahoo) -> FastAPI:
     app = create_app()
     app.dependency_overrides[get_db_session] = lambda: db_session
+    app.dependency_overrides[get_yahoo_client] = lambda: yahoo
     return app
 
 
