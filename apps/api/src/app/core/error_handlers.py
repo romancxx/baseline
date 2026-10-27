@@ -8,7 +8,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
-from app.core.exceptions import AppError, ConflictError, NotFoundError, UnauthorizedError
+from app.core.exceptions import (
+    AppError,
+    ConflictError,
+    NotFoundError,
+    ProviderUnavailableError,
+    UnauthorizedError,
+)
 
 
 class ErrorDetail(BaseModel):
@@ -27,6 +33,7 @@ STATUS_CODES: dict[type[AppError], int] = {
     UnauthorizedError: status.HTTP_401_UNAUTHORIZED,
     NotFoundError: status.HTTP_404_NOT_FOUND,
     ConflictError: status.HTTP_409_CONFLICT,
+    ProviderUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

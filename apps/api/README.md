@@ -22,6 +22,10 @@ Run from `apps/api/`:
 From the repo root, the same commands are available as `just api-install`, `just api-dev`,
 `just api-lint`, `just api-format`, `just api-typecheck` and `just api-test`.
 
+`just yahoo-search "MSCI World"` searches the real Yahoo Finance and prints each stock or ETF
+found with its exchange code and currency. It is the only command that calls Yahoo; tests
+never do.
+
 Tests need Postgres running. Each run recreates a separate `stocknews_test` database, migrates
 it to head, and migrates it back to base at the end; the development database is not touched.
 Test settings are in `[tool.pytest_env]` in `pyproject.toml`, so tests do not need a `.env`.
@@ -86,12 +90,18 @@ alembic.ini        # Alembic config; the database URL comes from Settings
 migrations/
 ├── env.py         # connects Alembic to Settings and Base.metadata
 └── versions/      # one file per revision
+scripts/           # commands run by hand, such as yahoo_search.py
 src/app/
 ├── main.py        # create_app(): builds the FastAPI app and mounts module routers
 ├── core/          # app-wide code shared by all modules (settings, database, errors, logging)
+├── integrations/
+│   └── <provider>/ # one client per external service: client.py, schemas.py, dependencies.py
 └── modules/
     └── <feature>/ # one package per feature
 ```
+
+Imports go one way: `main` → `modules` → `integrations` → `core`. The `ruff.toml` files in
+`core/` and `integrations/` make the other direction a lint error.
 
 Each module contains only the files it needs, from this set:
 

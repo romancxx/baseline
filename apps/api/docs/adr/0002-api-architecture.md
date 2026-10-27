@@ -13,10 +13,17 @@ system to enforce boundaries the way NestJS modules do.
 - **Feature layout**: `modules/<feature>/` per feature, `core/` for what every feature uses,
   `main.py` to wire them. A module holds only the files it needs from `router.py`,
   `schemas.py`, `models.py`, `service.py`, `dependencies.py`.
+- **External services in `integrations/<provider>/`**, not in a module, since several modules
+  use them: `client.py` (the client class), `schemas.py` (the Pydantic models it returns),
+  `dependencies.py` (the client as a FastAPI dependency). An integration speaks the provider's
+  language and knows nothing about our tables ([0007](0007-market-data.md)).
 - **App factory**: `create_app()` builds a fresh app (logging, error handlers, middleware,
   routers under `/api/v1`); the module-level `app` exists only for uvicorn.
-- **One-way imports**: `main` → `modules` → `core`. Modules may use each other's service,
-  schemas and dependencies, never routers. `core/` importing `modules/` is a lint error.
+- **One-way imports**: `main` → `modules` → `integrations` → `core`. Modules may use each
+  other's service, schemas and dependencies, never routers. `core/` importing `modules/` or
+  `integrations/`, and `integrations/` importing `modules/`, are lint errors: ruff's
+  `banned-api` list is per config file, so each of those two directories has a `ruff.toml`
+  that extends `pyproject.toml` with its own bans.
 - **Thin routers, HTTP-free services**: routers parse, call a service, return a schema; services
   take a session and raise domain errors ([0003](0003-api-conventions.md)).
 - **`users` owns the `User` entity; `auth` owns the `/auth` endpoints and `get_current_user`**,
@@ -30,4 +37,5 @@ A feature is one new package plus one `include_router` line. Anything that needs
 ## Alternatives considered
 
 Layer layout (`routes/`, `models.py`, `crud.py`): fine when small, scatters features as they
-grow.
+grow. A provider client inside the first module that needs it (others would import that
+module for it). import-linter for the import rules (one more tool for what ruff covers).

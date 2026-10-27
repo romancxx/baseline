@@ -1,0 +1,4 @@
+extend = "../../../pyproject.toml"
+
+[lint.flake8-tidy-imports.banned-api]
+"app.modules".msg = "integrations/ must not import from modules/."

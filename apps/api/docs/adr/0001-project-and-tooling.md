@@ -14,7 +14,7 @@
 ## Consequences
 
 Strict pyright needs a commented, single-rule `# pyright: ignore[...]` at partly typed library
-boundaries (pydantic-settings, PyJWT).
+boundaries (pydantic-settings, PyJWT, yfinance).
 
 ## Alternatives considered
 

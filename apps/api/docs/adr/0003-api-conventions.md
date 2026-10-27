@@ -18,8 +18,9 @@ testing.
 
 ## Errors
 
-- **Services raise domain errors** from `core/exceptions.py` (`NotFoundError`, `ConflictError`,
-  `UnauthorizedError`), which know nothing about HTTP. A case the client must tell apart is a
+- **Services and integrations raise domain errors** from `core/exceptions.py`
+  (`NotFoundError`, `ConflictError`, `UnauthorizedError`, `ProviderUnavailableError`), which
+  know nothing about HTTP. A case the client must tell apart is a
   subclass with its own `code` (`invalid_credentials`).
 - **App-wide handlers** map them to a status and **one body shape, `{code, message, details}`**,
   also used for validation errors, FastAPI's own 404/405, and unhandled 500s. Validation
@@ -50,6 +51,8 @@ testing.
 - **Fixtures** build a fresh app per test with the session dependency overridden: `client`,
   `auth_client`, `user`. Rows a test needs come from factory fixtures (`make_instrument`)
   that insert through the session. Test settings come from `[tool.pytest_env]`.
+- **No external calls**: a third-party library is replaced at its own boundary with
+  `monkeypatch`, so the integration's code still runs.
 
 ## Alternatives considered
 

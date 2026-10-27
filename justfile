@@ -21,6 +21,10 @@ api-typecheck:
 api-test:
     {{api}} run pytest
 
+# Search the real Yahoo Finance, e.g. just yahoo-search "MSCI World"
+yahoo-search QUERY:
+    {{api}} run python scripts/yahoo_search.py {{quote(QUERY)}}
+
 db-up:
     docker compose up -d --wait
 

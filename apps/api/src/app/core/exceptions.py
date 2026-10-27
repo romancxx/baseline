@@ -21,3 +21,7 @@ class ConflictError(AppError):
 
 class UnauthorizedError(AppError):
     code = "unauthorized"
+
+
+class ProviderUnavailableError(AppError):
+    code = "provider_unavailable"

@@ -18,11 +18,15 @@ considering a change done.
 
 - A feature is a package in `src/app/modules/<feature>/`; code every feature uses goes in
   `src/app/core/`. **[review]**
+- A client for an external service is a package in `src/app/integrations/<provider>/` with
+  `client.py`, `schemas.py` and `dependencies.py`. It returns its own Pydantic models, never
+  the library's dicts or DataFrames. **[review]**
 - A module uses only these file names, each only when needed, and each always for the same
   thing: `router.py`, `schemas.py`, `models.py`, `service.py`, `dependencies.py`. No empty
   files or modules for future features. **[review]**
 - Imports are absolute: `from app.modules.health.schemas import HealthResponse`. **[lint]**
-- `core/` never imports from `modules/`. **[lint]**
+- `core/` never imports from `modules/` or `integrations/`; `integrations/` never imports from
+  `modules/`. **[lint]**
 - A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
   `router.py`. **[review]**
 - Routers are mounted only in `create_app()`, under `/api/v1`. **[review]**
@@ -39,6 +43,8 @@ considering a change done.
   `InstrumentRead.model_validate(instrument)`. **[pyright]**
 - `async def` by default; plain `def` when the endpoint calls blocking code. Never call
   blocking code inside `async def`. **[review]**
+- An integration's async method runs each blocking library call with `asyncio.to_thread`.
+  **[review]**
 - Every endpoint requires a token unless it is public on purpose: protect the router with
   `dependencies=[Depends(get_current_user)]`, or take `user: CurrentUser`. **[test]**
 
@@ -47,6 +53,8 @@ considering a change done.
 - Services fail by raising an `AppError` subclass from `app.core.exceptions`, with a message
   written for the API client. Nothing raises `HTTPException`. **[review]**
 - Routers never catch `AppError`. **[review]**
+- An integration catches its library's and the network's failures and raises
+  `ProviderUnavailableError`; no third-party exception leaves it. **[test]**
 - A new kind of error gets a `code` and an entry in `STATUS_CODES`. **[review]**
 - A case the client must tell apart is a subclass of an existing kind with its own `code`
   (`class InvalidCredentialsError(UnauthorizedError): code = "invalid_credentials"`). Never
@@ -73,8 +81,12 @@ considering a change done.
   code; at a third-party boundary, ignore one named rule and comment why. **[review]**
 - Modern syntax: `list[str]`, `X | None`, `collections.abc` types. **[lint]**
 - A fixed set of string values is a `StrEnum`. **[review]**
+- Money and prices are `Decimal`, never `float`. Build one from a float with
+  `Decimal(str(value))`, never `Decimal(value)`. **[review]**
 - PEP 8 names: `snake_case` modules, functions and variables; `PascalCase` classes;
   `SCREAMING_SNAKE_CASE` module-level constants. **[review]**
+- Separate a function's logical steps (fetch, check, build) with single blank lines.
+  **[review]**
 
 ## 6. Schemas — [ADR 0002](docs/adr/0002-api-architecture.md), [ADR 0006](docs/adr/0006-instruments.md)
 
@@ -160,7 +172,11 @@ considering a change done.
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not
   through the API, unless the API call is what the test covers. **[review]**
 - A protected endpoint has a test that it answers 401 through plain `client`. **[review]**
-- Replace dependencies with `app.dependency_overrides`, never by patching modules. **[review]**
+- Replace our own dependencies with `app.dependency_overrides`, never by patching our modules.
+  **[review]**
+- Tests never call an external service. An integration's tests replace the library at its
+  boundary with `monkeypatch.setattr` (`monkeypatch.setattr(yf, "Search", fake)`), never our
+  own functions. **[review]**
 - Override settings with `monkeypatch.setenv` and `get_settings.cache_clear()` before and
   after. **[review]**
 - Test settings live in `[tool.pytest_env]`; the test database name ends in `_test`. **[test]**
