@@ -31,7 +31,9 @@ considering a change done.
   `modules/`. **[lint]**
 - A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
   `router.py`. **[review]**
-- Routers are mounted only in `create_app()`, under `/api/v1`. **[review]**
+- Routers are mounted only in `create_app()`, on the `api` router, whose prefix is
+  `API_PREFIX` (`/api/v1`). A path the code needs in full is built from `API_PREFIX`, never
+  written out. **[review]**
 
 ## 2. Routers and endpoints — [ADR 0002](docs/adr/0002-api-architecture.md), [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -72,6 +74,8 @@ considering a change done.
 
 - A list endpoint takes `page: Pagination` and returns `Page[<Entity>Read]`, never a bare
   list. **[review]**
+- A time series is not paginated: it takes a capped date range (`dates: PriceRange`) and
+  returns `<Entity>sResponse` (`items`), oldest first. **[test]**
 - A search with a fixed result limit is not paginated: it takes an `<Entity>Search` model with
   `Depends()` and returns `<Entity>SearchResponse` (`items`), never a bare list. **[review]**
 - A service builds the list's `select()` with its filters and returns
@@ -83,7 +87,9 @@ considering a change done.
 - Cursors are built and read only by `core/pagination.py`; never parse or construct one by
   hand. **[review]**
 - Filters are an `<Entity>Filters` model in `schemas.py`, taken as
-  `Annotated[<Entity>Filters, Depends()]`, never `Query()`. **[test]**
+  `Annotated[<Entity>Filters, Depends()]`, never `Query()`. Query parameters that resolve
+  into one value with defaults (a cursor, a date range) are read with `Query()` by a
+  dependency function that raises `RequestValidationError`, like `page_request`. **[test]**
 - Prefix filters use `column.startswith(value, autoescape=True)`. **[test]**
 
 ## 5. Python and typing — [ADR 0001](docs/adr/0001-project-and-tooling.md)
@@ -141,8 +147,14 @@ considering a change done.
   replace it. **[test]**
 - Never build SQL with f-strings or concatenation; bind values. **[review]**
 - Models inherit `Base`, use `Mapped[...]` / `mapped_column()`, and `TimestampMixin` when
-  mutable. **[review]**
-- Primary keys: `mapped_column(primary_key=True, server_default=func.uuidv7())`. **[review]**
+  mutable, except time series written in bulk (`daily_prices`). **[review]**
+- Primary keys: `mapped_column(primary_key=True, server_default=func.uuidv7())`. A time
+  series is keyed by what identifies a row instead: `(instrument_id, date)`, both
+  `primary_key=True`. **[review]**
+- Bulk writes go through `session.execute(postgresql.insert(Model).on_conflict_do_update(...),
+  rows)` in batches of `BATCH_SIZE`, never one ORM object per row. **[test]**
+- Never keep a transaction open while waiting on an external service: read, `commit()`,
+  call the service, then write. **[review]**
 - Every `datetime` column is `DateTime(timezone=True)`. **[review]**
 - Enum columns: `Enum(PyEnum, name="<snake_case>", values_callable=enum_values)`. **[review]**
 - Every `ForeignKey` sets `ondelete`: `"CASCADE"` for a row that belongs to its parent,
@@ -208,8 +220,8 @@ considering a change done.
 
 - Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
-  `other_user`, `make_instrument`, `make_portfolio`, `make_position`, `yahoo`, `openfigi`, `db_session`, `app`.
-  Never import the module-level `app`. **[review]**
+  `other_user`, `make_instrument`, `make_portfolio`, `make_position`, `make_daily_price`,
+  `yahoo`, `openfigi`, `db_session`, `app`. Never import the module-level `app`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
   `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not

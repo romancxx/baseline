@@ -1,4 +1,5 @@
 import asyncio
+import datetime as dt
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterator
 from decimal import Decimal
 from pathlib import Path
@@ -20,11 +21,12 @@ from app.integrations.openfigi.client import OpenFigiClient
 from app.integrations.openfigi.dependencies import get_openfigi_client
 from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.dependencies import get_yahoo_client
-from app.integrations.yahoo.schemas import ListingDetails, SearchResult
+from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
+from app.modules.prices.models import DailyPrice
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 from app.modules.users.service import create_user
@@ -89,11 +91,13 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
 
 
 class FakeYahoo(YahooClient):
-    """Answers `search` with `results` and `get_details` from `details`, or raises `failure`."""
+    """Answers `search` with `results`, `get_details` from `details` and `get_history` from
+    `histories`, or raises `failure`."""
 
     def __init__(self) -> None:
         self.results: list[SearchResult] = []
         self.details: dict[str, ListingDetails] = {}
+        self.histories: dict[str, PriceHistory] = {}
         self.failure: Exception | None = None
         self.queries: list[str] = []
         self.details_requested: list[str] = []
@@ -113,6 +117,13 @@ class FakeYahoo(YahooClient):
         if self.failure is not None:
             raise self.failure
         return self.details.get(yahoo_symbol)
+
+    async def get_history(self, yahoo_symbol: str, start: dt.date | None = None) -> PriceHistory:
+        if self.failure is not None:
+            raise self.failure
+        history = self.histories.get(yahoo_symbol, PriceHistory(bars=[], splits=[]))
+        bars = [bar for bar in history.bars if start is None or bar.date >= start]
+        return PriceHistory(bars=bars, splits=history.splits)
 
 
 class FakeOpenFigi(OpenFigiClient):
@@ -281,5 +292,36 @@ def make_position(db_session: AsyncSession) -> PositionFactory:
         await db_session.commit()
         await db_session.refresh(position)
         return position
+
+    return make
+
+
+class DailyPriceFactory(Protocol):
+    async def __call__(
+        self, instrument: Instrument, date: dt.date, *, close: Decimal = ...
+    ) -> DailyPrice: ...
+
+
+@pytest.fixture
+def make_daily_price(db_session: AsyncSession) -> DailyPriceFactory:
+    """A function that inserts the bar of `instrument` on `date`; every price is `close`."""
+
+    async def make(
+        instrument: Instrument, date: dt.date, *, close: Decimal = Decimal(100)
+    ) -> DailyPrice:
+        price = DailyPrice(
+            instrument_id=instrument.id,
+            date=date,
+            open=close,
+            high=close,
+            low=close,
+            close=close,
+            adj_close=close,
+            volume=1000,
+        )
+        db_session.add(price)
+        await db_session.commit()
+        await db_session.refresh(price)
+        return price
 
     return make

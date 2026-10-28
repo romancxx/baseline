@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.core.config import get_settings
+from app.core.config import API_PREFIX, get_settings
 from app.core.database import DbSession
 from app.core.security import TOKEN_TYPE, create_access_token
 from app.modules.auth.schemas import TokenResponse
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 REFRESH_COOKIE = "refresh_token"
 # Browsers send the cookie only to /auth/refresh and /auth/logout.
-REFRESH_COOKIE_PATH = "/api/v1/auth"
+REFRESH_COOKIE_PATH = f"{API_PREFIX}{router.prefix}"
 
 RefreshCookie = Annotated[str | None, Cookie(alias=REFRESH_COOKIE)]
 

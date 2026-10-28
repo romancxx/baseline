@@ -4,13 +4,14 @@ from typing import Annotated
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
+from app.core.config import API_PREFIX
 from app.core.database import DbSession
 from app.core.security import decode_access_token
 from app.modules.auth.service import InvalidTokenError
 from app.modules.users.models import User
 
 # Reads "Authorization: Bearer <token>"; tokenUrl is where Swagger UI's Authorize button logs in.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_PREFIX}/auth/login")
 
 
 async def get_current_user(

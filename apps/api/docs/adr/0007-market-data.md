@@ -40,6 +40,21 @@ every exchange tried, and no throttling on a burst of 25 requests.
 - **Tests replace yfinance itself** (`monkeypatch.setattr(yf, "Search", ...)`) and never call
   Yahoo. `just yahoo-search QUERY` calls the real Yahoo by hand.
 
+### Stored prices
+
+- **`daily_prices` holds one row per instrument and trading day**, keyed by
+  `(instrument_id, date)`: no surrogate id, and the primary key's index serves every read
+  (one instrument, a date range, in date order). Prices are `Numeric(18, 6)`: Yahoo's 4
+  places, in pence, become 6 in pounds. Deleting an instrument deletes its prices.
+- **`backfill(instrument_id)`** fetches the full history and upserts it
+  (`ON CONFLICT (instrument_id, date) DO UPDATE`), so running it again stores Yahoo's
+  current values, including closes it has revised after a split or dividend. Rows go in
+  batches of 1,000, each one `executemany` call, all in one transaction; the read of the
+  instrument is committed before Yahoo is called.
+- **`GET /instruments/{id}/prices?from=&to=`** returns the bars of a date range, both ends
+  included, oldest first. It is not paginated: `to` defaults to today, `from` to one year
+  before `to`, and a range longer than five years (1,830 days) is a 422.
+
 ## Consequences
 
 Yahoo can change or rate-limit its unofficial API at any time; the only defence is the 503
@@ -51,5 +66,9 @@ no ISIN, so listings are grouped through OpenFIGI instead ([0006](0006-instrumen
 Paid APIs (EODHD, Twelve Data, Alpha Vantage): official and stable, but a cost for a personal
 app. Calling Yahoo's HTTP endpoints with an async client (no threads, but reimplements
 yfinance's cookie and crumb handling). `yf.download` for recent bars (the caller would have to
-pass each symbol's price factor, and an outage would look like every symbol missing). Prices
+pass each symbol's price factor, and an outage would look like every symbol missing). One
+multi-row `INSERT … VALUES` per batch instead of `executemany` (about 3 times slower on
+12,000 bars: SQLAlchemy compiles each batch's statement anew, and a date appearing twice in
+one statement fails `DO UPDATE`). A commit per batch (shorter transactions, but a failure
+would leave half a history). Prices
 as `float` (binary fractions cannot hold most decimal prices exactly).

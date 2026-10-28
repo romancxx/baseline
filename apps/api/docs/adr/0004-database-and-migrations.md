@@ -23,6 +23,10 @@
 - **Exact numbers are `Numeric(precision, scale)`**, read as `Decimal`. Their input schema
   has the same `max_digits` and `decimal_places`, so a value the column would round or
   overflow is a 422, never silently changed.
+- **Bulk writes are batched `executemany` upserts**: a list of rows passed to
+  `session.execute()` runs as one prepared statement, executed once per row in a pipeline
+  (asyncpg's `executemany`). Batches bound the memory of each call; the transaction covers
+  the whole write, and never a call to an external service.
 - **Deterministic constraint names** from a naming convention, so later migrations can alter
   constraints by name on every machine.
 - **Alembic** with the URL from `Settings`. Autogenerate is a draft: every revision is read

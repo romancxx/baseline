@@ -4,6 +4,8 @@ from functools import lru_cache
 from pydantic import Field, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+API_PREFIX = "/api/v1"
+
 
 class Environment(StrEnum):
     LOCAL = "local"

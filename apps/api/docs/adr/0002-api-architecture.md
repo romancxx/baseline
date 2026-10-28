@@ -20,7 +20,8 @@ system to enforce boundaries the way NestJS modules do.
   holds connections is created once in the lifespan, stored on `app.state` and closed on
   shutdown; its dependency reads it from there ([0008](0008-security-identifiers.md)).
 - **App factory**: `create_app()` builds a fresh app (logging, error handlers, middleware,
-  routers under `/api/v1`); the module-level `app` exists only for uvicorn.
+  routers included in one router prefixed with `API_PREFIX`, `/api/v1`); the module-level
+  `app` exists only for uvicorn.
 - **One-way imports**: `main` → `modules` → `integrations` → `core`. Modules may use each
   other's service, schemas and dependencies, never routers. `core/` importing `modules/` or
   `integrations/`, and `integrations/` importing `modules/`, are lint errors: ruff's

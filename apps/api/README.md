@@ -113,6 +113,16 @@ the new instrument, or 200 if the symbol was already stored; 404 if Yahoo does n
 503 if Yahoo is down. The share class FIGI is looked up on OpenFIGI; if that fails, the
 instrument is stored without one.
 
+## Prices
+
+`GET /api/v1/instruments/{id}/prices?from=2024-01-01&to=2024-12-31` returns the instrument's
+daily bars (open, high, low, close, adj_close, volume), oldest first, both dates included.
+`to` defaults to today and `from` to one year before `to`; a range longer than 1,830 days
+answers 422. Prices are in the instrument's currency, as JSON strings.
+
+The bars come from `backfill(instrument_id)` in the prices service, which stores the full
+history Yahoo has for the instrument; running it again updates the stored bars.
+
 ## Portfolios
 
 Each user has their own portfolios, managed under `/api/v1/portfolios`: `POST` creates one
