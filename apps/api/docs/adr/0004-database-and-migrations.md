@@ -14,6 +14,15 @@
   constraints, never by a prior `SELECT`. Where two requests may insert the same row, the
   insert says what to do on conflict (`postgresql.insert(...).on_conflict_do_nothing()`), so
   the constraint settles the race.
+- **Every foreign key says what deleting its parent does**: `CASCADE` for rows that belong
+  to the parent (a portfolio's positions), `RESTRICT` for rows that only refer to it (a
+  position's instrument), so a referenced row cannot disappear. `RESTRICT` fails at once,
+  where the default `NO ACTION` checks at the end of the statement.
+- **No lazy loading**: an async session cannot run a query on attribute access, so a
+  relationship every read needs is declared `lazy="joined"` and arrives in the same query.
+- **Exact numbers are `Numeric(precision, scale)`**, read as `Decimal`. Their input schema
+  has the same `max_digits` and `decimal_places`, so a value the column would round or
+  overflow is a 422, never silently changed.
 - **Deterministic constraint names** from a naming convention, so later migrations can alter
   constraints by name on every machine.
 - **Alembic** with the URL from `Settings`. Autogenerate is a draft: every revision is read

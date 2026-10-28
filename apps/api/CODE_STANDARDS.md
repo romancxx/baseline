@@ -36,7 +36,8 @@ considering a change done.
 ## 2. Routers and endpoints — [ADR 0002](docs/adr/0002-api-architecture.md), [ADR 0003](docs/adr/0003-api-conventions.md)
 
 - A router sets its prefix and tag to the module name:
-  `APIRouter(prefix="/instruments", tags=["instruments"])`. **[review]**
+  `APIRouter(prefix="/instruments", tags=["instruments"])`. A resource nested in another's
+  puts the parent's path first: `prefix="/portfolios/{portfolio_id}/positions"`. **[review]**
 - A router only reads the request, calls a service or dependency, and returns a schema.
   **[review]**
 - The response model is the return annotation (`-> InstrumentRead`); `response_model=` only
@@ -105,6 +106,12 @@ considering a change done.
 - An entity has `<Entity>Read` (`from_attributes=True`), plus `<Entity>Create` and
   `<Entity>Update` (every field optional) only for the writes the API exposes. Other responses
   are `<Name>Response`. **[review]**
+- An update applies `data.model_dump(exclude_unset=True)`, so an omitted field is left
+  unchanged and `null` clears a nullable column; `exclude_none=True` only when no updatable
+  column is nullable. **[test]**
+- A `Decimal` input has `max_digits` and `decimal_places` matching its `Numeric(p, s)`
+  column. Read schemas keep `Decimal`, so JSON carries it as a string; never convert to
+  `float`. **[review]**
 - Normalize input in the schema (whitespace, case). Shared field rules are `Annotated` aliases
   (`Symbol`, `ExchangeCode`, `Email`), reused wherever the field appears. **[review]**
 - A list holding several kinds of item is a discriminated union on a `Literal` field:
@@ -138,6 +145,11 @@ considering a change done.
 - Primary keys: `mapped_column(primary_key=True, server_default=func.uuidv7())`. **[review]**
 - Every `datetime` column is `DateTime(timezone=True)`. **[review]**
 - Enum columns: `Enum(PyEnum, name="<snake_case>", values_callable=enum_values)`. **[review]**
+- Every `ForeignKey` sets `ondelete`: `"CASCADE"` for a row that belongs to its parent,
+  `"RESTRICT"` for a row that only refers to it. Index a foreign key column unless an index
+  already starts with it. **[review]**
+- A `relationship()` that every read of the model needs is `lazy="joined"`; never rely on
+  lazy loading (it fails under `AsyncSession`). **[review]**
 - Never name a constraint or index; the naming convention does. A `CheckConstraint` takes a
   short rule name (`name="email_lowercase"`). **[review]**
 - Every branch of an `OR` that should use indexes needs its own index; check a new query
@@ -177,7 +189,8 @@ considering a change done.
 - A refresh token is used once: rotate through `rotate_refresh_token`. **[test]**
 - Query a user-owned table only with `user_id` = the current user: in list queries, and for
   one row through the resource's owned dependency (`portfolio: OwnedPortfolio`). Never load
-  one by id alone. **[test]**
+  one by id alone. A row owned through a parent is looked up within the owned parent
+  (`position: OwnedPosition`, inside `OwnedPortfolio`). **[test]**
 - Another user's row answers 404 with the same message as an unknown id, never 403.
   **[test]**
 
@@ -195,7 +208,7 @@ considering a change done.
 
 - Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
-  `other_user`, `make_instrument`, `make_portfolio`, `yahoo`, `openfigi`, `db_session`, `app`.
+  `other_user`, `make_instrument`, `make_portfolio`, `make_position`, `yahoo`, `openfigi`, `db_session`, `app`.
   Never import the module-level `app`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
   `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**

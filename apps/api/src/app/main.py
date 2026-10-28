@@ -13,6 +13,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.instruments.router import router as instruments_router
 from app.modules.portfolios.router import router as portfolios_router
+from app.modules.positions.router import router as positions_router
 from app.modules.users.router import router as users_router
 
 
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(instruments_router, prefix="/api/v1")
     app.include_router(portfolios_router, prefix="/api/v1")
+    app.include_router(positions_router, prefix="/api/v1")
 
     return app
 

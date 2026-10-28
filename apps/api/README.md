@@ -120,6 +120,14 @@ Each user has their own portfolios, managed under `/api/v1/portfolios`: `POST` c
 and `DELETE` act on `/portfolios/{id}`. Names are unique per user (409 otherwise). Another
 user's portfolio answers 404, exactly like an id that does not exist.
 
+A portfolio's positions are under `/api/v1/portfolios/{id}/positions`: `POST`
+`{"instrument_id": "0193…", "quantity": "10.5", "average_price": "182.25"}` adds one (201;
+both numbers optional, positive, up to 8 decimal places), `GET` lists them (paginated), and
+`PATCH` and `DELETE` act on `/positions/{position_id}`. Each position comes with its
+instrument. Decimals are returned as JSON strings (`"10.50000000"`); send them as strings
+too, to keep every digit. `PATCH` changes only the fields sent, and `null` clears one. An
+unknown instrument answers 404, an instrument already in the portfolio 409.
+
 ## Project layout
 
 ```

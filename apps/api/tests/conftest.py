@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterator
+from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
 
@@ -23,6 +24,7 @@ from app.integrations.yahoo.schemas import ListingDetails, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.portfolios.models import Portfolio
+from app.modules.positions.models import Position
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 from app.modules.users.service import create_user
@@ -243,5 +245,41 @@ def make_portfolio(db_session: AsyncSession) -> PortfolioFactory:
         await db_session.commit()
         await db_session.refresh(portfolio)
         return portfolio
+
+    return make
+
+
+class PositionFactory(Protocol):
+    async def __call__(
+        self,
+        portfolio: Portfolio,
+        instrument: Instrument,
+        *,
+        quantity: Decimal | None = ...,
+        average_price: Decimal | None = ...,
+    ) -> Position: ...
+
+
+@pytest.fixture
+def make_position(db_session: AsyncSession) -> PositionFactory:
+    """A function that inserts a position of `instrument` in `portfolio`."""
+
+    async def make(
+        portfolio: Portfolio,
+        instrument: Instrument,
+        *,
+        quantity: Decimal | None = None,
+        average_price: Decimal | None = None,
+    ) -> Position:
+        position = Position(
+            portfolio_id=portfolio.id,
+            instrument_id=instrument.id,
+            quantity=quantity,
+            average_price=average_price,
+        )
+        db_session.add(position)
+        await db_session.commit()
+        await db_session.refresh(position)
+        return position
 
     return make

@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Date:** 2026-10-19
 
-Cross-cutting choices every module relies on: configuration, errors, logging, pagination and
-testing.
+Cross-cutting choices every module relies on: configuration, errors, logging, pagination,
+decimals and testing.
 
 ## Configuration
 
@@ -45,6 +45,14 @@ testing.
   cursor condition and the `limit + 1` probe to any `select()` of a model with `id` and
   `created_at` (the `Paginatable` protocol), and returns a `KeysetPage`, whose `to_page()`
   builds the response. Services only write their filters.
+
+## Decimals
+
+- **Decimals are JSON strings in responses** (`"10.50000000"`, Pydantic's default for
+  `Decimal`): most clients read a JSON number as a binary float (JavaScript's `number`), which
+  cannot hold most decimal values exactly.
+- **Inputs take a string or a number.** A string is exact; a number goes through a Python
+  `float` when FastAPI parses the body, which keeps about 15 significant digits.
 
 ## Testing
 
