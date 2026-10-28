@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import AsyncGenerator, Iterator
+from collections.abc import AsyncGenerator, Awaitable, Callable, Iterator
 from pathlib import Path
 from typing import Protocol
 
@@ -15,9 +15,11 @@ from sqlalchemy.pool import NullPool
 from app.core.config import get_settings
 from app.core.database import get_db_session
 from app.core.security import create_access_token
+from app.integrations.openfigi.client import OpenFigiClient
+from app.integrations.openfigi.dependencies import get_openfigi_client
 from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.dependencies import get_yahoo_client
-from app.integrations.yahoo.schemas import SearchResult
+from app.integrations.yahoo.schemas import ListingDetails, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.users.models import User
@@ -84,18 +86,45 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
 
 
 class FakeYahoo(YahooClient):
-    """Answers `search` with `results`, or raises `failure`; records each query."""
+    """Answers `search` with `results` and `get_details` from `details`, or raises `failure`."""
 
     def __init__(self) -> None:
         self.results: list[SearchResult] = []
+        self.details: dict[str, ListingDetails] = {}
         self.failure: Exception | None = None
         self.queries: list[str] = []
+        self.details_requested: list[str] = []
+        # Awaited by get_details before it answers, as if another request ran meanwhile.
+        self.while_fetching_details: Callable[[], Awaitable[object]] | None = None
 
     async def search(self, query: str) -> list[SearchResult]:
         self.queries.append(query)
         if self.failure is not None:
             raise self.failure
         return self.results
+
+    async def get_details(self, yahoo_symbol: str) -> ListingDetails | None:
+        self.details_requested.append(yahoo_symbol)
+        if self.while_fetching_details is not None:
+            await self.while_fetching_details()
+        if self.failure is not None:
+            raise self.failure
+        return self.details.get(yahoo_symbol)
+
+
+class FakeOpenFigi(OpenFigiClient):
+    """Answers `get_share_class_figi` from `figis`, or raises `failure`; records each symbol."""
+
+    def __init__(self) -> None:
+        self.figis: dict[str, str] = {}
+        self.failure: Exception | None = None
+        self.symbols: list[str] = []
+
+    async def get_share_class_figi(self, yahoo_symbol: str) -> str | None:
+        self.symbols.append(yahoo_symbol)
+        if self.failure is not None:
+            raise self.failure
+        return self.figis.get(yahoo_symbol)
 
 
 @pytest.fixture
@@ -105,10 +134,17 @@ def yahoo() -> FakeYahoo:
 
 
 @pytest.fixture
-def app(db_session: AsyncSession, yahoo: FakeYahoo) -> FastAPI:
+def openfigi() -> FakeOpenFigi:
+    """The OpenFIGI client the app uses in tests: no test reaches the real OpenFIGI."""
+    return FakeOpenFigi()
+
+
+@pytest.fixture
+def app(db_session: AsyncSession, yahoo: FakeYahoo, openfigi: FakeOpenFigi) -> FastAPI:
     app = create_app()
     app.dependency_overrides[get_db_session] = lambda: db_session
     app.dependency_overrides[get_yahoo_client] = lambda: yahoo
+    app.dependency_overrides[get_openfigi_client] = lambda: openfigi
     return app
 
 

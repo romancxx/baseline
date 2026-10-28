@@ -123,7 +123,11 @@ considering a change done.
 - Database access is async (`AsyncSession`, `await`). **[review]**
 - Services commit, then `refresh()` an object before returning it. **[review]**
 - Enforce uniqueness with a constraint and catch `IntegrityError` on commit; never `SELECT`
-  first. **[review]**
+  first to decide whether to insert. **[review]**
+- When concurrent requests may insert the same row, insert with
+  `postgresql.insert(...).on_conflict_do_nothing(index_elements=[...]).returning(...)`, and
+  read the existing row when nothing comes back. A `SELECT` before it may skip work, never
+  replace it. **[test]**
 - Never build SQL with f-strings or concatenation; bind values. **[review]**
 - Models inherit `Base`, use `Mapped[...]` / `mapped_column()`, and `TimestampMixin` when
   mutable. **[review]**

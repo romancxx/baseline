@@ -16,6 +16,12 @@ ExchangeCode = Annotated[
 Figi = Annotated[
     str, StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Za-z0-9]{12}$")
 ]
+Isin = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, to_upper=True, pattern=r"^[A-Za-z]{2}[A-Za-z0-9]{9}[0-9]$"
+    ),
+]
 SearchQuery = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
 
 
@@ -29,6 +35,12 @@ class InstrumentFilters(BaseModel):
 class InstrumentSearch(BaseModel):
     # A symbol prefix, an ISIN, or words of the name.
     q: SearchQuery
+
+
+class InstrumentResolve(BaseModel):
+    yahoo_symbol: Symbol
+    # Stored with a new instrument; the CSV import knows it, Yahoo does not.
+    isin: Isin | None = None
 
 
 class InstrumentRead(BaseModel):
