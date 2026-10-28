@@ -1,12 +1,11 @@
 import uuid
-from collections.abc import Sequence
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, NotFoundError
-from app.core.pagination import Cursor, PageRequest
+from app.core.pagination import KeysetPage, PageRequest, paginate
 from app.modules.portfolios.models import Portfolio
 from app.modules.portfolios.schemas import PortfolioCreate, PortfolioUpdate
 from app.modules.users.models import User
@@ -32,22 +31,10 @@ async def get_portfolio(session: AsyncSession, user: User, portfolio_id: uuid.UU
 
 async def list_portfolios(
     session: AsyncSession, user: User, page: PageRequest
-) -> tuple[Sequence[Portfolio], Cursor | None]:
-    """Return one page of the user's portfolios, newest first, and the cursor of the next page."""
+) -> KeysetPage[Portfolio]:
+    """One page of the user's portfolios, newest first."""
     statement = select(Portfolio).where(Portfolio.user_id == user.id)
-    if page.after is not None:
-        statement = statement.where(
-            tuple_(Portfolio.created_at, Portfolio.id) < (page.after.created_at, page.after.id)
-        )
-
-    statement = statement.order_by(Portfolio.created_at.desc(), Portfolio.id.desc())
-    # One extra row tells whether a next page exists.
-    rows = (await session.scalars(statement.limit(page.limit + 1))).all()
-    portfolios = rows[: page.limit]
-    if len(rows) <= page.limit:
-        return portfolios, None
-    last = portfolios[-1]
-    return portfolios, Cursor(created_at=last.created_at, id=last.id)
+    return await paginate(session, statement, Portfolio, page)
 
 
 async def update_portfolio(

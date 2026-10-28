@@ -41,6 +41,10 @@ testing.
   total.
 - **`Page[T]`** response and a reusable **`Pagination`** dependency (`limit` 1–100, `cursor`);
   filters are a Pydantic model taken with `Depends()`, so OpenAPI lists each one.
+- **One implementation**: `paginate()` in `core/pagination.py` adds the keyset order, the
+  cursor condition and the `limit + 1` probe to any `select()` of a model with `id` and
+  `created_at` (the `Paginatable` protocol), and returns a `KeysetPage`, whose `to_page()`
+  builds the response. Services only write their filters.
 
 ## Testing
 

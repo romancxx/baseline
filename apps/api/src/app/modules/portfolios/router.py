@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
 from app.core.database import DbSession
-from app.core.pagination import Page, Pagination, encode_cursor
+from app.core.pagination import Page, Pagination
 from app.modules.auth.dependencies import CurrentUser, get_current_user
 from app.modules.portfolios.dependencies import OwnedPortfolio
 from app.modules.portfolios.schemas import PortfolioCreate, PortfolioRead, PortfolioUpdate
@@ -25,11 +25,8 @@ async def create(session: DbSession, user: CurrentUser, data: PortfolioCreate) -
 
 @router.get("")
 async def list_mine(session: DbSession, user: CurrentUser, page: Pagination) -> Page[PortfolioRead]:
-    portfolios, next_cursor = await list_portfolios(session, user, page)
-    return Page[PortfolioRead](
-        items=[PortfolioRead.model_validate(portfolio) for portfolio in portfolios],
-        next_cursor=encode_cursor(next_cursor) if next_cursor else None,
-    )
+    portfolios = await list_portfolios(session, user, page)
+    return portfolios.to_page(PortfolioRead)
 
 
 @router.get("/{portfolio_id}")

@@ -2,12 +2,12 @@ import uuid
 from collections.abc import Sequence
 
 import structlog
-from sqlalchemy import case, func, or_, select, tuple_
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, ProviderUnavailableError
-from app.core.pagination import Cursor, PageRequest
+from app.core.pagination import KeysetPage, PageRequest, paginate
 from app.integrations.openfigi.client import OpenFigiClient
 from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.schemas import QuoteType
@@ -38,8 +38,8 @@ async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Ins
 
 async def list_instruments(
     session: AsyncSession, filters: InstrumentFilters, page: PageRequest
-) -> tuple[Sequence[Instrument], Cursor | None]:
-    """Return one page of instruments, newest first, and the cursor of the next page."""
+) -> KeysetPage[Instrument]:
+    """One page of the instruments matching `filters`, newest first."""
     statement = select(Instrument)
     if filters.type is not None:
         statement = statement.where(Instrument.type == filters.type)
@@ -51,19 +51,7 @@ async def list_instruments(
         )
     if filters.share_class_figi is not None:
         statement = statement.where(Instrument.share_class_figi == filters.share_class_figi)
-    if page.after is not None:
-        statement = statement.where(
-            tuple_(Instrument.created_at, Instrument.id) < (page.after.created_at, page.after.id)
-        )
-
-    statement = statement.order_by(Instrument.created_at.desc(), Instrument.id.desc())
-    # One extra row tells whether a next page exists.
-    rows = (await session.scalars(statement.limit(page.limit + 1))).all()
-    instruments = rows[: page.limit]
-    if len(rows) <= page.limit:
-        return instruments, None
-    last = instruments[-1]
-    return instruments, Cursor(created_at=last.created_at, id=last.id)
+    return await paginate(session, statement, Instrument, page)
 
 
 async def search_instruments(

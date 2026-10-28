@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, status
 
 from app.core.database import DbSession
-from app.core.pagination import Page, Pagination, encode_cursor
+from app.core.pagination import Page, Pagination
 from app.integrations.openfigi.dependencies import OpenFigi
 from app.integrations.yahoo.dependencies import Yahoo
 from app.modules.auth.dependencies import get_current_user
@@ -31,11 +31,8 @@ router = APIRouter(
 async def list_all(
     session: DbSession, filters: Annotated[InstrumentFilters, Depends()], page: Pagination
 ) -> Page[InstrumentRead]:
-    instruments, next_cursor = await list_instruments(session, filters, page)
-    return Page[InstrumentRead](
-        items=[InstrumentRead.model_validate(instrument) for instrument in instruments],
-        next_cursor=encode_cursor(next_cursor) if next_cursor else None,
-    )
+    instruments = await list_instruments(session, filters, page)
+    return instruments.to_page(InstrumentRead)
 
 
 # Declared before /{instrument_id}, which would otherwise take "search" as an id.

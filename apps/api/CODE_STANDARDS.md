@@ -73,11 +73,14 @@ considering a change done.
   list. **[review]**
 - A search with a fixed result limit is not paginated: it takes an `<Entity>Search` model with
   `Depends()` and returns `<Entity>SearchResponse` (`items`), never a bare list. **[review]**
-- Order by `created_at DESC, id DESC`, select rows after the cursor with
-  `tuple_(created_at, id) < (...)`, fetch `limit + 1`. **[test]**
+- A service builds the list's `select()` with its filters and returns
+  `await paginate(session, statement, Model, page)`; the router returns
+  `rows.to_page(<Entity>Read)`. Never write the keyset order, cursor condition or
+  `limit + 1` by hand. **[test]**
 - A paginated table has an index on `(created_at, id)`, led by the column that scopes the list
   when there is one: `(user_id, created_at, id)`. **[review]**
-- Build cursors only with `encode_cursor`; never parse or construct one by hand. **[review]**
+- Cursors are built and read only by `core/pagination.py`; never parse or construct one by
+  hand. **[review]**
 - Filters are an `<Entity>Filters` model in `schemas.py`, taken as
   `Annotated[<Entity>Filters, Depends()]`, never `Query()`. **[test]**
 - Prefix filters use `column.startswith(value, autoescape=True)`. **[test]**
