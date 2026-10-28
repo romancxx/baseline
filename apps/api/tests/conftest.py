@@ -22,6 +22,7 @@ from app.integrations.yahoo.dependencies import get_yahoo_client
 from app.integrations.yahoo.schemas import ListingDetails, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
+from app.modules.portfolios.models import Portfolio
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 from app.modules.users.service import create_user
@@ -166,6 +167,14 @@ async def user(db_session: AsyncSession) -> User:
 
 
 @pytest.fixture
+async def other_user(db_session: AsyncSession) -> User:
+    """A second user, whose rows `user` must never see."""
+    return await create_user(
+        db_session, UserCreate(email="other@example.com", password="fixture password 456")
+    )
+
+
+@pytest.fixture
 async def auth_client(app: FastAPI, user: User) -> AsyncGenerator[AsyncClient]:
     """A client that sends a valid access token for `user`."""
     headers = {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
@@ -216,5 +225,23 @@ def make_instrument(db_session: AsyncSession) -> InstrumentFactory:
         await db_session.commit()
         await db_session.refresh(instrument)
         return instrument
+
+    return make
+
+
+class PortfolioFactory(Protocol):
+    async def __call__(self, owner: User, name: str = ...) -> Portfolio: ...
+
+
+@pytest.fixture
+def make_portfolio(db_session: AsyncSession) -> PortfolioFactory:
+    """A function that inserts a portfolio owned by `owner`."""
+
+    async def make(owner: User, name: str = "Long term") -> Portfolio:
+        portfolio = Portfolio(user_id=owner.id, name=name)
+        db_session.add(portfolio)
+        await db_session.commit()
+        await db_session.refresh(portfolio)
+        return portfolio
 
     return make

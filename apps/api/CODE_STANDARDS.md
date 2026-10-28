@@ -75,7 +75,8 @@ considering a change done.
   `Depends()` and returns `<Entity>SearchResponse` (`items`), never a bare list. **[review]**
 - Order by `created_at DESC, id DESC`, select rows after the cursor with
   `tuple_(created_at, id) < (...)`, fetch `limit + 1`. **[test]**
-- A paginated table has an index on `(created_at, id)`. **[review]**
+- A paginated table has an index on `(created_at, id)`, led by the column that scopes the list
+  when there is one: `(user_id, created_at, id)`. **[review]**
 - Build cursors only with `encode_cursor`; never parse or construct one by hand. **[review]**
 - Filters are an `<Entity>Filters` model in `schemas.py`, taken as
   `Annotated[<Entity>Filters, Depends()]`, never `Query()`. **[test]**
@@ -171,6 +172,11 @@ considering a change done.
   `refresh_token` cookie with the router's fixed flags, never in a body or query string.
   **[test]**
 - A refresh token is used once: rotate through `rotate_refresh_token`. **[test]**
+- Query a user-owned table only with `user_id` = the current user: in list queries, and for
+  one row through the resource's owned dependency (`portfolio: OwnedPortfolio`). Never load
+  one by id alone. **[test]**
+- Another user's row answers 404 with the same message as an unknown id, never 403.
+  **[test]**
 
 ## 10. Logging — [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -186,13 +192,15 @@ considering a change done.
 
 - Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
-  `make_instrument`, `yahoo`, `db_session`, `app`. Never import the module-level `app`.
-  **[review]**
+  `other_user`, `make_instrument`, `make_portfolio`, `yahoo`, `openfigi`, `db_session`, `app`.
+  Never import the module-level `app`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
   `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not
   through the API, unless the API call is what the test covers. **[review]**
 - A protected endpoint has a test that it answers 401 through plain `client`. **[review]**
+- An endpoint on a user-owned resource has a test that `other_user`'s row answers 404 and is
+  left unchanged. **[review]**
 - Replace our own dependencies with `app.dependency_overrides`, never by patching our modules.
   **[review]**
 - Tests never call an external service. An integration's tests replace the library at its

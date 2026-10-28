@@ -113,6 +113,13 @@ the new instrument, or 200 if the symbol was already stored; 404 if Yahoo does n
 503 if Yahoo is down. The share class FIGI is looked up on OpenFIGI; if that fails, the
 instrument is stored without one.
 
+## Portfolios
+
+Each user has their own portfolios, managed under `/api/v1/portfolios`: `POST` creates one
+(`{"name": "Long term"}`, 201), `GET` lists yours (paginated), and `GET`, `PATCH` (rename)
+and `DELETE` act on `/portfolios/{id}`. Names are unique per user (409 otherwise). Another
+user's portfolio answers 404, exactly like an id that does not exist.
+
 ## Project layout
 
 ```

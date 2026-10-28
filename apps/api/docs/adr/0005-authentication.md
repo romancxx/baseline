@@ -22,13 +22,29 @@ outlive a short access token without exposing a long-lived credential to JavaScr
   presenting a used one again revokes all of that user's tokens (reuse detection). Logout
   revokes the current one.
 
+## Authorization
+
+- **Shared data is open to every logged-in user**: the instrument directory has no owner.
+- **User-owned rows carry a `user_id`** (cascade-deleted with the user), and every query on
+  them filters on the current user: in the list query itself, and for one row through a
+  dependency per resource (`get_owned_portfolio`) that loads the path's id with
+  `WHERE id = :id AND user_id = :me`. Endpoints take `OwnedPortfolio` instead of an id, so the
+  ownership check cannot be forgotten on a new route.
+- **Another user's row answers 404**, with the same message as an id that does not exist, so
+  a client cannot tell "not yours" from "not there" and cannot probe for other users' ids.
+- **No roles**: nothing needs one yet.
+
 ## Consequences
 
 A stolen access token works for at most 15 minutes; a stolen refresh token is detected at the
 next refresh by either party. Logout cannot cut short access tokens already issued, and two
-tabs refreshing at the same moment look like reuse.
+tabs refreshing at the same moment look like reuse. A user-owned query that forgets its
+`user_id` filter leaks data, so every such endpoint has a test with a second user.
 
 ## Alternatives considered
 
 bcrypt (not memory-hard); refresh token in the response body (readable by XSS); Argon2 for
-refresh tokens (salted, so not searchable by hash).
+refresh tokens (salted, so not searchable by hash). For ownership: 403 for another user's row
+(tells the client the id exists); loading by id and comparing `user_id` afterwards (one more
+step every endpoint must remember); Postgres row-level security (enforced by the database,
+but needs the user set on each pooled connection).
