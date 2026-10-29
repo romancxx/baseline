@@ -32,16 +32,18 @@
   over the ISIN with letters read as 10 to 35), so a mistyped ISIN is a 422 before any lookup.
   The database constraint checks the format only.
 - **Finding the instrument of an ISIN** (`find_instrument_by_isin`, for the CSV import, with
-  an optional currency): a stored instrument with the ISIN is used as it is, preferably one in
-  that currency. Otherwise OpenFIGI's listings ([0008](0008-security-identifiers.md)) are
+  an optional currency): a stored instrument with the ISIN, in that currency if one is given,
+  is used as it is. Otherwise OpenFIGI's listings ([0008](0008-security-identifiers.md)) are
   ordered by exchange: the issuer's home exchange from the ISIN's country prefix (FR → Paris,
   GB → London, …), then a preferred order (Paris, Amsterdam, Xetra, London, US, Hong Kong),
   which is also the whole order for an ISIN without a home exchange (IE and LU funds, KY
-  companies). The first 5 are checked against Yahoo in that order, and the first Yahoo knows
-  in the given currency, or else in its exchange's main currency, is stored with the ISIN,
-  as by resolve. That drops US OTC lines (LVMHF), RMB counters (80700.HK), London
-  international lines (0R2V.L) and other currency lines. The other listings' symbols, up to
-  3, come back as alternatives.
+  companies). The first 5 not stored are checked against Yahoo in that order, and the first
+  Yahoo knows in the given currency, or else in its exchange's main currency, is stored with
+  the ISIN, as by resolve; a symbol already stored without an ISIN gets it. That drops US OTC
+  lines (LVMHF), RMB counters (80700.HK), London international lines (0R2V.L) and other
+  currency lines. When none fits, a stored instrument in another currency is returned, so the
+  caller can report the mismatch. The other listings' symbols, up to 3, come back as
+  alternatives.
 - **Safe under concurrent resolves**: the insert is `INSERT … ON CONFLICT (yahoo_symbol) DO
   NOTHING RETURNING *`; when it returns no row, another request stored the symbol meanwhile,
   and that row is returned (200). The `SELECT` before it only avoids calling Yahoo for a

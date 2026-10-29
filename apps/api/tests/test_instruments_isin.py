@@ -200,3 +200,58 @@ async def test_find_by_isin_prefers_the_stored_instrument_in_the_given_currency(
 
     assert match.instrument is not None
     assert match.instrument.yahoo_symbol == "LVMHF"
+
+
+async def test_find_by_isin_looks_further_when_no_stored_instrument_is_in_the_currency(
+    db_session: AsyncSession,
+    yahoo: FakeYahoo,
+    openfigi: FakeOpenFigi,
+    make_instrument: InstrumentFactory,
+) -> None:
+    await make_instrument("IWDA.AS", currency="EUR", isin=MSCI_WORLD)
+    openfigi.listings[MSCI_WORLD] = [listing("IWDA.AS", "NA"), listing("IWDA.L", "LN")]
+    yahoo.details = {"IWDA.AS": details("EUR"), "IWDA.L": details("USD")}
+
+    match = await find_instrument_by_isin(db_session, yahoo, openfigi, MSCI_WORLD, "USD")
+
+    assert match.instrument is not None
+    assert (match.instrument.yahoo_symbol, match.instrument.isin) == ("IWDA.L", MSCI_WORLD)
+    assert match.alternatives == ["IWDA.AS"]
+    assert yahoo.details_requested == ["IWDA.L"]
+
+
+async def test_find_by_isin_returns_the_stored_instrument_when_no_listing_is_in_the_currency(
+    db_session: AsyncSession,
+    yahoo: FakeYahoo,
+    openfigi: FakeOpenFigi,
+    make_instrument: InstrumentFactory,
+) -> None:
+    await make_instrument("MC.PA", currency="EUR", isin=LVMH)
+    openfigi.listings[LVMH] = [listing("MC.PA", "FP"), listing("MOH.DE", "GY")]
+    yahoo.details = {"MC.PA": details("EUR"), "MOH.DE": details("EUR")}
+
+    match = await find_instrument_by_isin(db_session, yahoo, openfigi, LVMH, "JPY")
+
+    assert match.instrument is not None
+    assert (match.instrument.yahoo_symbol, match.instrument.currency) == ("MC.PA", "EUR")
+    assert match.alternatives == ["MOH.DE"]
+
+
+async def test_find_by_isin_fills_the_isin_of_a_listing_stored_without_one(
+    db_session: AsyncSession,
+    yahoo: FakeYahoo,
+    openfigi: FakeOpenFigi,
+    make_instrument: InstrumentFactory,
+) -> None:
+    await make_instrument("MC.PA", currency="EUR")
+    openfigi.listings[LVMH] = [listing("MC.PA", "FP")]
+    yahoo.details = {"MC.PA": details("EUR")}
+
+    match = await find_instrument_by_isin(db_session, yahoo, openfigi, LVMH)
+
+    assert match.instrument is not None
+    assert (match.instrument.yahoo_symbol, match.instrument.isin) == ("MC.PA", LVMH)
+    openfigi.isins.clear()
+    again = await find_instrument_by_isin(db_session, yahoo, openfigi, LVMH)
+    assert again.instrument is match.instrument
+    assert openfigi.isins == []

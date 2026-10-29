@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,7 +63,8 @@ MAX_ALTERNATIVES = 3
 
 @dataclass(frozen=True)
 class IsinMatch:
-    # None when no listing Yahoo knows trades in the expected currency.
+    # None when no listing Yahoo knows trades in the expected currency; a stored instrument in
+    # another currency when none does and the ISIN has one.
     instrument: Instrument | None
     # The other listings' Yahoo symbols, in exchange order.
     alternatives: list[str]
@@ -156,16 +157,17 @@ async def find_instrument_by_isin(
     """The instrument of the ISIN's best listing, stored first if needed.
 
     Listings are taken in exchange order (`_exchange_rank`). A stored one is used as it is,
-    preferably in `currency`. Otherwise OpenFIGI's listings are checked against Yahoo, and the
-    first Yahoo knows in `currency`, or in its exchange's main currency, is stored.
+    preferably in `currency`. Otherwise, or when none is in `currency`, OpenFIGI's listings are
+    checked against Yahoo, and the first Yahoo knows in `currency`, or in its exchange's main
+    currency, is stored.
     """
     stored = sorted(
         await _get_by_isin(session, isin), key=lambda i: _exchange_rank(i.yahoo_symbol, isin)
     )
     # Ends the read's transaction, so none stays open while the providers answer.
     await session.commit()
-    if stored:
-        chosen = next((i for i in stored if i.currency == currency), stored[0])
+    chosen = next((i for i in stored if currency is None or i.currency == currency), None)
+    if chosen is not None:
         others = [i.yahoo_symbol for i in stored if i is not chosen]
         return IsinMatch(instrument=chosen, alternatives=others[:MAX_ALTERNATIVES])
 
@@ -173,14 +175,20 @@ async def find_instrument_by_isin(
     symbols = sorted(
         (listing.yahoo_symbol for listing in listings), key=lambda s: _exchange_rank(s, isin)
     )
-    for symbol in symbols[:MAX_YAHOO_CHECKS]:
+    stored_symbols = {i.yahoo_symbol for i in stored}
+    # Stored listings are already known to trade in another currency.
+    unchecked = [s for s in symbols if s not in stored_symbols]
+    for symbol in unchecked[:MAX_YAHOO_CHECKS]:
         details = await yahoo.get_details(symbol)
         if details is None or details.currency != (currency or MAIN_CURRENCIES[_suffix(symbol)]):
             continue
         instrument, _ = await _store_listing(session, openfigi, symbol, details, isin)
         others = [s for s in symbols if s != symbol]
         return IsinMatch(instrument=instrument, alternatives=others[:MAX_ALTERNATIVES])
-    return IsinMatch(instrument=None, alternatives=symbols[:MAX_ALTERNATIVES])
+
+    fallback = stored[0] if stored else None
+    others = [s for s in symbols if fallback is None or s != fallback.yahoo_symbol]
+    return IsinMatch(instrument=fallback, alternatives=others[:MAX_ALTERNATIVES])
 
 
 async def _store_listing(
@@ -209,6 +217,13 @@ async def _store_listing(
         .returning(Instrument)
     )
     created = (await session.scalars(statement)).one_or_none()
+    if created is None and isin is not None:
+        # The symbol may have been stored without an ISIN, from a search.
+        await session.execute(
+            update(Instrument)
+            .where(Instrument.yahoo_symbol == yahoo_symbol, Instrument.isin.is_(None))
+            .values(isin=isin)
+        )
     await session.commit()
     if created is None:
         stored = await _get_by_symbol(session, yahoo_symbol)
