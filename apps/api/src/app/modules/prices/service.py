@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Awaitable, Sequence
 
 import structlog
-from sqlalchemy import Row, exists, select
+from sqlalchemy import Row, exists, select, union
 from sqlalchemy.dialects.postgresql import Insert, insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from app.modules.instruments.service import get_instrument
 from app.modules.positions.models import Position
 from app.modules.prices.models import DailyPrice
 from app.modules.prices.schemas import PriceUpdateSummary
+from app.modules.watchlist.models import WatchlistItem
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -44,7 +45,7 @@ async def backfill(session: AsyncSession, yahoo: YahooClient, instrument_id: uui
 
 
 async def update_prices(session: AsyncSession, yahoo: YahooClient) -> PriceUpdateSummary:
-    """Bring the prices of every instrument held in a portfolio up to date.
+    """Bring the prices of every instrument held in a portfolio or on a watchlist up to date.
 
     An instrument without prices, or with a split in its recent bars, gets its full history;
     the others get their recent bars. One instrument failing does not stop the others.
@@ -107,15 +108,16 @@ async def list_prices(
 async def _followed_instruments(
     session: AsyncSession,
 ) -> Sequence[Row[uuid.UUID, str, bool]]:
-    """The id and Yahoo symbol of every instrument in a position, once, and whether it has
-    stored prices.
+    """The id and Yahoo symbol of every instrument in a position or on a watchlist, once, and
+    whether it has stored prices.
 
     Plain values, not ORM objects: a rollback after a failure expires those.
     """
+    followed = union(select(Position.instrument_id), select(WatchlistItem.instrument_id))
     has_prices = exists().where(DailyPrice.instrument_id == Instrument.id)
     statement = (
         select(Instrument.id, Instrument.yahoo_symbol, has_prices)
-        .where(Instrument.id.in_(select(Position.instrument_id)))
+        .where(Instrument.id.in_(followed))
         .order_by(Instrument.yahoo_symbol)
     )
     return (await session.execute(statement)).all()

@@ -82,6 +82,8 @@ considering a change done.
 
 - A list endpoint takes `page: Pagination` and returns `Page[<Entity>Read]`, never a bare
   list. **[review]**
+- A short list a user curates by hand, on a table without `id` (the watchlist), is not
+  paginated: it returns `<Name>Response` (`items`), newest first. **[review]**
 - A time series is not paginated: it takes a capped date range (`dates: PriceRange`) and
   returns `<Entity>sResponse` (`items`), oldest first. **[test]**
 - A search with a fixed result limit is not paginated: it takes an `<Entity>Search` model with
@@ -155,10 +157,15 @@ considering a change done.
   replace it. **[test]**
 - Never build SQL with f-strings or concatenation; bind values. **[review]**
 - Models inherit `Base`, use `Mapped[...]` / `mapped_column()`, and `TimestampMixin` when
-  mutable, except time series written in bulk (`daily_prices`). **[review]**
+  mutable, except time series written in bulk (`daily_prices`). A row that is only added
+  and removed has `created_at` alone (`watchlist_items`). **[review]**
 - Primary keys: `mapped_column(primary_key=True, server_default=func.uuidv7())`. A time
-  series is keyed by what identifies a row instead: `(instrument_id, date)`, both
-  `primary_key=True`. **[review]**
+  series or a link between two rows is keyed by what identifies a row instead:
+  `(instrument_id, date)`, `(user_id, instrument_id)`, each column `primary_key=True`.
+  **[review]**
+- An add that may find the row already there, and should succeed anyway, inserts with
+  `on_conflict_do_nothing(...).returning(...)` and answers 201 when a row came back, 200
+  otherwise (`/instruments/resolve`, `/watchlist`). **[test]**
 - Bulk writes go through `session.execute(postgresql.insert(Model).on_conflict_do_update(...),
   rows)` in batches of `BATCH_SIZE`, never one ORM object per row. **[test]**
 - Never keep a transaction open while waiting on an external service: read, `commit()`,
@@ -229,7 +236,7 @@ considering a change done.
 - Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
   `other_user`, `make_instrument`, `make_portfolio`, `make_position`, `make_daily_price`,
-  `yahoo`, `openfigi`, `db_session`, `app`. Never import the module-level `app`. **[review]**
+  `make_watchlist_item`, `yahoo`, `openfigi`, `db_session`, `app`. Never import the module-level `app`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
   `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not

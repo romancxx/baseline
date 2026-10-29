@@ -10,6 +10,7 @@ from conftest import (
     InstrumentFactory,
     PortfolioFactory,
     PositionFactory,
+    WatchlistItemFactory,
 )
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -131,7 +132,29 @@ async def test_update_prices_backfills_again_an_instrument_with_a_recent_split(
     }
 
 
-async def test_update_prices_ignores_instruments_no_portfolio_holds(
+async def test_update_prices_follows_watched_instruments_once_even_when_also_held(
+    db_session: AsyncSession,
+    yahoo: FakeYahoo,
+    follow: Follow,
+    make_instrument: InstrumentFactory,
+    make_watchlist_item: WatchlistItemFactory,
+    user: User,
+    other_user: User,
+) -> None:
+    watched = await make_instrument("MSFT")
+    await make_watchlist_item(other_user, watched)
+    await make_watchlist_item(user, await follow("AAPL"))
+    for symbol in ["AAPL", "MSFT"]:
+        yahoo.histories[symbol] = history(bar(days_ago(1)))
+
+    summary = await update_prices(db_session, yahoo)
+
+    assert summary == PriceUpdateSummary(backfilled=["AAPL", "MSFT"], updated=[], failed={})
+    assert yahoo.history_requests == [("AAPL", None), ("MSFT", None)]
+    assert set(await closes(db_session, watched.id)) == {days_ago(1)}
+
+
+async def test_update_prices_ignores_instruments_no_portfolio_holds_or_watchlist_has(
     db_session: AsyncSession, yahoo: FakeYahoo, make_instrument: InstrumentFactory
 ) -> None:
     await make_instrument("AAPL")

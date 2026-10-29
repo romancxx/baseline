@@ -121,7 +121,8 @@ daily bars (open, high, low, close, adj_close, volume), oldest first, both dates
 answers 422. Prices are in the instrument's currency, as JSON strings.
 
 The bars come from `just update-prices` (`python -m app.jobs.update_prices`), run by hand
-for now. It updates every instrument held in a portfolio, from the real Yahoo Finance:
+for now. It updates every instrument held in a portfolio or on a watchlist, from the real
+Yahoo Finance:
 
 - an instrument without stored prices gets its full history;
 - the others get their last 5 days of bars, upserted;
@@ -146,6 +147,15 @@ both numbers optional, positive, up to 8 decimal places), `GET` lists them (pagi
 instrument. Decimals are returned as JSON strings (`"10.50000000"`); send them as strings
 too, to keep every digit. `PATCH` changes only the fields sent, and `null` clears one. An
 unknown instrument answers 404, an instrument already in the portfolio 409.
+
+## Watchlist
+
+`/api/v1/watchlist` holds the instruments you follow without necessarily owning them. `GET`
+returns all of them at once, newest first, each with its instrument (not paginated).
+`POST {"instrument_id": "0193…"}` adds one: 201 the first time, 200 with the existing item if
+it is already there. `DELETE /watchlist/{instrument_id}` removes it (204), or answers 404 if it
+is not on your watchlist. An unknown instrument answers 404. The price job also updates
+watched instruments.
 
 ## Project layout
 
