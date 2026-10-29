@@ -23,7 +23,7 @@ from app.integrations.openfigi.dependencies import get_openfigi_client
 from app.integrations.openfigi.schemas import FigiCandidate
 from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.dependencies import get_yahoo_client
-from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, SearchResult
+from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, QuoteType, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.portfolios.models import Portfolio
@@ -158,6 +158,26 @@ class FakeOpenFigi(OpenFigiClient):
         if self.failure is not None:
             raise self.failure
         return self.listings.get(isin, [])
+
+
+def listing(yahoo_symbol: str, exchange_code: str) -> FigiCandidate:
+    """A listing OpenFIGI returns for an ISIN, on the Bloomberg `exchange_code`."""
+    return FigiCandidate(
+        yahoo_symbol=yahoo_symbol,
+        bloomberg_exchange_code=exchange_code,
+        share_class_figi="BBG000000001",
+    )
+
+
+def details(currency: str) -> ListingDetails:
+    """Yahoo's details of a stock trading in `currency`."""
+    return ListingDetails(
+        name="A listing",
+        exchange_code="XXX",
+        currency=currency,
+        price_factor=Decimal(1),
+        quote_type=QuoteType.EQUITY,
+    )
 
 
 @pytest.fixture

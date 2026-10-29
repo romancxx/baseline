@@ -1,12 +1,8 @@
-from decimal import Decimal
-
 import pytest
-from conftest import FakeOpenFigi, FakeYahoo, InstrumentFactory
+from conftest import FakeOpenFigi, FakeYahoo, InstrumentFactory, details, listing
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.openfigi.schemas import FigiCandidate
-from app.integrations.yahoo.schemas import ListingDetails, QuoteType
 from app.modules.instruments.schemas import Isin
 from app.modules.instruments.service import find_instrument_by_isin
 
@@ -19,24 +15,6 @@ TENCENT = "KYG875721634"
 APPLE = "US0378331005"
 ASTRAZENECA = "GB0009895292"
 ISINS = TypeAdapter(Isin)
-
-
-def listing(yahoo_symbol: str, exchange_code: str) -> FigiCandidate:
-    return FigiCandidate(
-        yahoo_symbol=yahoo_symbol,
-        bloomberg_exchange_code=exchange_code,
-        share_class_figi="BBG000000001",
-    )
-
-
-def details(currency: str) -> ListingDetails:
-    return ListingDetails(
-        name="A listing",
-        exchange_code="XXX",
-        currency=currency,
-        price_factor=Decimal(1),
-        quote_type=QuoteType.EQUITY,
-    )
 
 
 @pytest.mark.parametrize("isin", [LVMH, MSCI_WORLD, SP_500, TENCENT, APPLE, " fr0000121014 "])

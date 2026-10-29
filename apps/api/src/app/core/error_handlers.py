@@ -11,6 +11,8 @@ from starlette.exceptions import HTTPException
 from app.core.exceptions import (
     AppError,
     ConflictError,
+    FileTooLargeError,
+    InvalidFileError,
     NotFoundError,
     ProviderUnavailableError,
     UnauthorizedError,
@@ -34,6 +36,8 @@ STATUS_CODES: dict[type[AppError], int] = {
     NotFoundError: status.HTTP_404_NOT_FOUND,
     ConflictError: status.HTTP_409_CONFLICT,
     ProviderUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
+    InvalidFileError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    FileTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
 }
 
 

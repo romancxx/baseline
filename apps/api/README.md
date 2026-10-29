@@ -149,6 +149,68 @@ instrument. Decimals are returned as JSON strings (`"10.50000000"`); send them a
 too, to keep every digit. `PATCH` changes only the fields sent, and `null` clears one. An
 unknown instrument answers 404, an instrument already in the portfolio 409.
 
+## Importing positions
+
+`POST /api/v1/portfolios/{id}/import` takes a CSV file in the multipart field `file` and adds a
+position for each row, or updates the one already there. With `?dry_run=true`, it returns the
+same report and writes nothing. Each ISIN not stored yet is looked up on OpenFIGI and Yahoo,
+which takes a second or more per row (longer without `OPENFIGI_API_KEY`).
+
+### File format
+
+This section is written to be handed to an AI, along with a broker export, to convert it.
+
+- UTF-8 text, at most 64 KiB, comma-separated, with a header row first.
+- One row per position: an ISIN appears only once in a file.
+- Numbers use a dot as the decimal separator and no thousands separator: `1234.5`, never
+  `1,234.50` or `1234,5`. At most 8 decimal places.
+- The columns below, in any order. Only `isin` is required; any other column makes the whole
+  file rejected.
+
+| Column          | Required                     | Content                                                        |
+| --------------- | ---------------------------- | -------------------------------------------------------------- |
+| `isin`          | yes                          | The security's 12-character ISIN, e.g. `FR0000121014`.        |
+| `quantity`      | no                           | Number of shares or units held, greater than 0.               |
+| `average_price` | no                           | Average purchase price per share, greater than 0, in `currency`. |
+| `currency`      | when `average_price` is set  | ISO 4217 code of the listing bought: `EUR`, `USD`, `GBP`…     |
+
+`currency` also chooses the listing: the same S&P 500 ETF is CSPX.L in `USD` and CSP1.L in
+`GBP`. Without it, the issuer's home exchange is preferred (Paris for an `FR` ISIN), then Paris,
+Amsterdam, Xetra, London, the US and Hong Kong. On a position already there, an empty cell
+clears that value and a column left out of the file leaves it unchanged.
+
+```csv
+isin,quantity,average_price,currency
+FR0000121014,10,650.50,EUR
+IE00B5BMR087,4.5,512.30,USD
+US0378331005,25,,
+```
+
+### Report
+
+```json
+{
+  "dry_run": false,
+  "rows": [
+    { "line": 2, "isin": "FR0000121014", "status": "imported", "symbol": "MC.PA", "alternatives": ["MOH.DE", "LVMHF"], "message": null }
+  ]
+}
+```
+
+`line` is the row's line in the file (the header is line 1), and `alternatives` lists up to 3
+other listings of the ISIN. A bad row does not stop the others.
+
+| Status              | Meaning                                                                          |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `imported`          | A position was added.                                                            |
+| `updated`           | The portfolio already held this instrument; its position was updated.           |
+| `not_found`         | No listing of the ISIN on Yahoo Finance trades in the expected currency.        |
+| `invalid`           | The row breaks the format; `message` says how.                                   |
+| `currency_mismatch` | The ISIN's stored listing trades in another currency, and no other one trades in the row's. |
+
+A file that breaks the format as a whole (not UTF-8, unknown, missing or repeated columns)
+answers 422 with code `invalid_file`; a file over 64 KiB answers 413 (`file_too_large`).
+
 ## Watchlist
 
 `/api/v1/watchlist` holds the instruments you follow without necessarily owning them. `GET`

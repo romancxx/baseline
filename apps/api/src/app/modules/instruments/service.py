@@ -153,13 +153,16 @@ async def find_instrument_by_isin(
     openfigi: OpenFigiClient,
     isin: str,
     currency: str | None = None,
+    *,
+    store: bool = True,
 ) -> IsinMatch:
     """The instrument of the ISIN's best listing, stored first if needed.
 
     Listings are taken in exchange order (`_exchange_rank`). A stored one is used as it is,
     preferably in `currency`. Otherwise, or when none is in `currency`, OpenFIGI's listings are
     checked against Yahoo, and the first Yahoo knows in `currency`, or in its exchange's main
-    currency, is stored.
+    currency, is stored. With `store` False nothing is written, and a listing not stored comes
+    back as an unsaved instrument, without an id.
     """
     stored = sorted(
         await _get_by_isin(session, isin), key=lambda i: _exchange_rank(i.yahoo_symbol, isin)
@@ -182,7 +185,12 @@ async def find_instrument_by_isin(
         details = await yahoo.get_details(symbol)
         if details is None or details.currency != (currency or MAIN_CURRENCIES[_suffix(symbol)]):
             continue
-        instrument, _ = await _store_listing(session, openfigi, symbol, details, isin)
+        if store:
+            instrument, _ = await _store_listing(session, openfigi, symbol, details, isin)
+        else:
+            # dry-run mode
+            stored_symbol = await _get_by_symbol(session, symbol)
+            instrument = stored_symbol or Instrument(**_listing_columns(symbol, details, isin))
         others = [s for s in symbols if s != symbol]
         return IsinMatch(instrument=instrument, alternatives=others[:MAX_ALTERNATIVES])
 
@@ -204,15 +212,7 @@ async def _store_listing(
     # Inserts nothing, and returns no row, if another request stored the symbol meanwhile.
     statement = (
         insert(Instrument)
-        .values(
-            type=INSTRUMENT_TYPES[details.quote_type],
-            name=details.name,
-            yahoo_symbol=yahoo_symbol,
-            exchange_code=details.exchange_code,
-            currency=details.currency,
-            isin=isin,
-            share_class_figi=share_class_figi,
-        )
+        .values(**_listing_columns(yahoo_symbol, details, isin), share_class_figi=share_class_figi)
         .on_conflict_do_nothing(index_elements=[Instrument.yahoo_symbol])
         .returning(Instrument)
     )
@@ -233,6 +233,20 @@ async def _store_listing(
 
     await session.refresh(created)
     return created, True
+
+
+def _listing_columns(
+    yahoo_symbol: str, details: ListingDetails, isin: str | None
+) -> dict[str, object]:
+    """The instrument's columns from Yahoo's details"""
+    return {
+        "type": INSTRUMENT_TYPES[details.quote_type],
+        "name": details.name,
+        "yahoo_symbol": yahoo_symbol,
+        "exchange_code": details.exchange_code,
+        "currency": details.currency,
+        "isin": isin,
+    }
 
 
 async def _get_by_isin(session: AsyncSession, isin: str) -> Sequence[Instrument]:

@@ -43,7 +43,8 @@
   lines (LVMHF), RMB counters (80700.HK), London international lines (0R2V.L) and other
   currency lines. When none fits, a stored instrument in another currency is returned, so the
   caller can report the mismatch. The other listings' symbols, up to 3, come back as
-  alternatives.
+  alternatives. With `store=False` (the import's dry run), nothing is written and a listing
+  not stored comes back as an unsaved `Instrument`.
 - **Safe under concurrent resolves**: the insert is `INSERT … ON CONFLICT (yahoo_symbol) DO
   NOTHING RETURNING *`; when it returns no row, another request stored the symbol meanwhile,
   and that row is returned (200). The `SELECT` before it only avoids calling Yahoo for a

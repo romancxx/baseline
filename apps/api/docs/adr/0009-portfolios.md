@@ -32,6 +32,31 @@
   within that portfolio only.
 - **`PATCH` applies the fields sent**: an omitted field is left unchanged, `null` clears it.
 
+### CSV import
+
+- **`POST /portfolios/{portfolio_id}/import`**, in its own `imports` module: a multipart
+  `UploadFile`, read up to 64 KiB plus one byte, so a larger file is a 413 and never held in
+  memory.
+- **A strict, documented format** (README): UTF-8 (a byte order mark is dropped), commas, a
+  header, dot decimals, columns `isin`, `quantity`, `average_price`, `currency`. An unknown,
+  missing `isin` or repeated column, or a malformed file, is a 422 `invalid_file` before any
+  row is looked up. Rows are validated by the `ImportRow` schema; `average_price` needs
+  `currency`, since a price is meaningless without it.
+- **Every row is reported**: `imported`, `updated`, `not_found`, `invalid` or
+  `currency_mismatch`, with the symbol chosen and up to 3 alternatives. A bad row is reported
+  and skipped; an ISIN repeated in the file is `invalid`, so a dry run and a real import give
+  the same report.
+- **The listing comes from `find_instrument_by_isin`** ([0006](0006-instruments.md)), with
+  the row's currency. A stored instrument in another currency, when no listing trades in the
+  row's, is a `currency_mismatch`: the position's price is in its instrument's currency.
+- **Positions are upserted per row**: `INSERT … ON CONFLICT DO NOTHING RETURNING`, then an
+  `UPDATE` of the file's columns when nothing came back, so `imported` and `updated` are told
+  apart without reading first. As with `PATCH`, an empty cell clears a value and a column the
+  file lacks is left unchanged. Each row commits, so no transaction stays open across the
+  next row's provider calls.
+- **`dry_run` writes nothing**: instruments are looked up but not stored (an unsaved
+  `Instrument` stands in), and an existing position is detected by the listing's symbol.
+
 ## Consequences
 
 `user_id` is never part of the API: it is always the caller. A position has no `user_id`: it
@@ -45,3 +70,10 @@ names unique ignoring case (stricter; plain uniqueness is enough until users tri
 positions as a list of transactions (exact history, but the user must enter every trade;
 a quantity and an average price are what a broker statement shows); positions inside the
 portfolios module (one module fewer, but two entities in each file).
+
+For the import: all-or-nothing (one typo would fail a whole broker export); accepting any
+delimiter or decimal comma (guessing breaks on `1,234`; a strict format an AI can produce is
+simpler); ignoring unknown columns (a misspelt `quantitiy` would silently drop the
+quantities); a dry run that writes and rolls back (instruments are committed inside the ISIN
+lookup); `ON CONFLICT DO UPDATE` (cannot tell `imported` from `updated` without Postgres
+internals).

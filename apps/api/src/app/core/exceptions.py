@@ -25,3 +25,11 @@ class UnauthorizedError(AppError):
 
 class ProviderUnavailableError(AppError):
     code = "provider_unavailable"
+
+
+class InvalidFileError(AppError):
+    code = "invalid_file"
+
+
+class FileTooLargeError(AppError):
+    code = "file_too_large"

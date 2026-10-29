@@ -62,6 +62,9 @@ considering a change done.
   `dependencies=[Depends(get_current_user)]`, or take `user: CurrentUser`. **[test]**
 - Declare a fixed path (`/search`) before a path with a parameter (`/{instrument_id}`) in the
   same router. **[test]**
+- An upload takes `file: UploadFile` and reads at most its size limit plus one byte
+  (`await file.read(MAX_FILE_SIZE + 1)`); the service rejects a longer read with
+  `FileTooLargeError` (413) and a malformed file with `InvalidFileError` (422). **[test]**
 
 ## 3. Errors — [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -237,6 +240,8 @@ considering a change done.
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
   `other_user`, `make_instrument`, `make_portfolio`, `make_position`, `make_daily_price`,
   `make_watchlist_item`, `yahoo`, `openfigi`, `db_session`, `app`. Never import the module-level `app`. **[review]**
+- Give the fakes OpenFIGI listings with `listing(symbol, exchange_code)` and Yahoo details
+  with `details(currency)` from `conftest.py`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
   `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not
