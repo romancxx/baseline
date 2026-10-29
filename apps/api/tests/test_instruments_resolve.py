@@ -146,7 +146,12 @@ async def test_resolve_returns_the_instrument_another_request_stored_meanwhile(
 
 @pytest.mark.parametrize(
     ("payload", "field"),
-    [({"yahoo_symbol": ""}, "yahoo_symbol"), ({"yahoo_symbol": "AZN.L", "isin": "GB00"}, "isin")],
+    [
+        ({"yahoo_symbol": ""}, "yahoo_symbol"),
+        ({"yahoo_symbol": "AZN.L", "isin": "GB00"}, "isin"),
+        ({"yahoo_symbol": "AZN.L", "isin": "GB0009895293"}, "isin"),
+    ],
+    ids=["empty symbol", "malformed isin", "wrong check digit"],
 )
 async def test_resolve_rejects_invalid_input(
     auth_client: AsyncClient, payload: dict[str, str], field: str

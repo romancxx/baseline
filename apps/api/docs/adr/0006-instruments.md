@@ -28,6 +28,20 @@
   OpenFIGI but is best-effort: if OpenFIGI fails or has no single match, the instrument is
   stored without one and `instruments.figi_missing` is logged. A given `isin` (from the CSV
   import) is stored with a new instrument.
+- **ISINs are checked in full** by the `Isin` alias: the format, then the check digit (Luhn
+  over the ISIN with letters read as 10 to 35), so a mistyped ISIN is a 422 before any lookup.
+  The database constraint checks the format only.
+- **Finding the instrument of an ISIN** (`find_instrument_by_isin`, for the CSV import, with
+  an optional currency): a stored instrument with the ISIN is used as it is, preferably one in
+  that currency. Otherwise OpenFIGI's listings ([0008](0008-security-identifiers.md)) are
+  ordered by exchange: the issuer's home exchange from the ISIN's country prefix (FR → Paris,
+  GB → London, …), then a preferred order (Paris, Amsterdam, Xetra, London, US, Hong Kong),
+  which is also the whole order for an ISIN without a home exchange (IE and LU funds, KY
+  companies). The first 5 are checked against Yahoo in that order, and the first Yahoo knows
+  in the given currency, or else in its exchange's main currency, is stored with the ISIN,
+  as by resolve. That drops US OTC lines (LVMHF), RMB counters (80700.HK), London
+  international lines (0R2V.L) and other currency lines. The other listings' symbols, up to
+  3, come back as alternatives.
 - **Safe under concurrent resolves**: the insert is `INSERT … ON CONFLICT (yahoo_symbol) DO
   NOTHING RETURNING *`; when it returns no row, another request stored the symbol meanwhile,
   and that row is returned (200). The `SELECT` before it only avoids calling Yahoo for a
@@ -73,6 +87,10 @@ would need a mapping.
 - For search: `name % q` with `similarity()` (misses short queries on long names: `toyota`,
   `msci world`, `lvmh`); full-text search with `tsvector` (stems words but tolerates no typos
   and splits symbols badly); an external search engine (one more service for a small table).
+- For an ISIN's listing: OpenFIGI's order (US OTC and composite lines often come first);
+  checking every candidate against Yahoo at once (faster, but up to dozens of Yahoo calls when
+  the first one fits); the currency alone (an ISIN trades in EUR on Paris, Amsterdam and
+  Xetra, so the exchange still has to decide).
 - For resolving: check-then-insert (two requests can both see no row and both insert);
   catching `IntegrityError` on commit (works, but the failed insert aborts the transaction
   and needs a rollback before the row can be read); `ON CONFLICT DO UPDATE … RETURNING`

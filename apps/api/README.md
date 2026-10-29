@@ -108,7 +108,8 @@ stored. They are not saved:
 If Yahoo cannot be reached, the stored matches still come back, with `yahoo_unavailable: true`.
 
 To store a Yahoo candidate, `POST /api/v1/instruments/resolve` with
-`{"yahoo_symbol": "AIR.DE", "isin": "NL0000235190"}` (`isin` optional). It answers 201 with
+`{"yahoo_symbol": "AIR.DE", "isin": "NL0000235190"}` (`isin` optional; a wrong check digit
+answers 422). It answers 201 with
 the new instrument, or 200 if the symbol was already stored; 404 if Yahoo does not know it,
 503 if Yahoo is down. The share class FIGI is looked up on OpenFIGI; if that fails, the
 instrument is stored without one.

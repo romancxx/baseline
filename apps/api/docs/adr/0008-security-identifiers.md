@@ -38,8 +38,9 @@ class FIGI ([0006](0006-instruments.md)), and the CSV import for users starts fr
 
 ISIN candidates are built from Bloomberg's tickers, which are not always Yahoo's (LVMH on SIX
 is `LVMH` for Bloomberg, `MC.SW` for Yahoo), and a composite code can point at a listing on
-another venue of the country: the import has to check each candidate with Yahoo. Exchanges
-outside the map get no FIGI until they are added to it.
+another venue of the country, so each candidate is checked with Yahoo before one is stored
+([0006](0006-instruments.md)). Exchanges outside the map get no FIGI until they are added to
+it.
 
 ## Alternatives considered
 

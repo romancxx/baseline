@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import structlog
 from sqlalchemy import case, func, or_, select
@@ -10,7 +11,7 @@ from app.core.exceptions import NotFoundError, ProviderUnavailableError
 from app.core.pagination import KeysetPage, PageRequest, paginate
 from app.integrations.openfigi.client import OpenFigiClient
 from app.integrations.yahoo.client import YahooClient
-from app.integrations.yahoo.schemas import QuoteType
+from app.integrations.yahoo.schemas import ListingDetails, QuoteType
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.instruments.schemas import (
     InstrumentFilters,
@@ -27,6 +28,45 @@ SEARCH_LIMIT = 20
 # Below this many stored matches, the search also asks Yahoo.
 MIN_LOCAL_RESULTS = 5
 INSTRUMENT_TYPES = {QuoteType.EQUITY: InstrumentType.STOCK, QuoteType.ETF: InstrumentType.ETF}
+
+# The Yahoo suffix of the issuer's home exchange, by ISIN country prefix.
+HOME_EXCHANGES = {
+    "US": "",
+    "FR": ".PA",
+    "NL": ".AS",
+    "DE": ".DE",
+    "GB": ".L",
+    "CH": ".SW",
+    "JP": ".T",
+    "HK": ".HK",
+    "KR": ".KS",
+}
+# Tried after the home exchange, and first for an ISIN without one (IE and LU funds, KY
+# companies).
+PREFERRED_EXCHANGES = (".PA", ".AS", ".DE", ".L", "", ".HK")
+# The currency of each exchange's main lines, by Yahoo suffix.
+MAIN_CURRENCIES = {
+    "": "USD",
+    ".PA": "EUR",
+    ".AS": "EUR",
+    ".DE": "EUR",
+    ".L": "GBP",
+    ".SW": "CHF",
+    ".T": "JPY",
+    ".HK": "HKD",
+    ".KS": "KRW",
+}
+# Listings of one ISIN checked against Yahoo, at most.
+MAX_YAHOO_CHECKS = 5
+MAX_ALTERNATIVES = 3
+
+
+@dataclass(frozen=True)
+class IsinMatch:
+    # None when no listing Yahoo knows trades in the expected currency.
+    instrument: Instrument | None
+    # The other listings' Yahoo symbols, in exchange order.
+    alternatives: list[str]
 
 
 async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Instrument:
@@ -103,7 +143,55 @@ async def resolve_instrument(
     details = await yahoo.get_details(data.yahoo_symbol)
     if details is None:
         raise NotFoundError(f"Yahoo Finance has no stock or ETF {data.yahoo_symbol}.")
-    share_class_figi = await _share_class_figi(openfigi, data.yahoo_symbol)
+    return await _store_listing(session, openfigi, data.yahoo_symbol, details, data.isin)
+
+
+async def find_instrument_by_isin(
+    session: AsyncSession,
+    yahoo: YahooClient,
+    openfigi: OpenFigiClient,
+    isin: str,
+    currency: str | None = None,
+) -> IsinMatch:
+    """The instrument of the ISIN's best listing, stored first if needed.
+
+    Listings are taken in exchange order (`_exchange_rank`). A stored one is used as it is,
+    preferably in `currency`. Otherwise OpenFIGI's listings are checked against Yahoo, and the
+    first Yahoo knows in `currency`, or in its exchange's main currency, is stored.
+    """
+    stored = sorted(
+        await _get_by_isin(session, isin), key=lambda i: _exchange_rank(i.yahoo_symbol, isin)
+    )
+    # Ends the read's transaction, so none stays open while the providers answer.
+    await session.commit()
+    if stored:
+        chosen = next((i for i in stored if i.currency == currency), stored[0])
+        others = [i.yahoo_symbol for i in stored if i is not chosen]
+        return IsinMatch(instrument=chosen, alternatives=others[:MAX_ALTERNATIVES])
+
+    listings = await openfigi.find_by_isin(isin)
+    symbols = sorted(
+        (listing.yahoo_symbol for listing in listings), key=lambda s: _exchange_rank(s, isin)
+    )
+    for symbol in symbols[:MAX_YAHOO_CHECKS]:
+        details = await yahoo.get_details(symbol)
+        if details is None or details.currency != (currency or MAIN_CURRENCIES[_suffix(symbol)]):
+            continue
+        instrument, _ = await _store_listing(session, openfigi, symbol, details, isin)
+        others = [s for s in symbols if s != symbol]
+        return IsinMatch(instrument=instrument, alternatives=others[:MAX_ALTERNATIVES])
+    return IsinMatch(instrument=None, alternatives=symbols[:MAX_ALTERNATIVES])
+
+
+async def _store_listing(
+    session: AsyncSession,
+    openfigi: OpenFigiClient,
+    yahoo_symbol: str,
+    details: ListingDetails,
+    isin: str | None,
+) -> tuple[Instrument, bool]:
+    """Store the listing Yahoo described; True if this call stored it."""
+    share_class_figi = await _share_class_figi(openfigi, yahoo_symbol)
 
     # Inserts nothing, and returns no row, if another request stored the symbol meanwhile.
     statement = (
@@ -111,10 +199,10 @@ async def resolve_instrument(
         .values(
             type=INSTRUMENT_TYPES[details.quote_type],
             name=details.name,
-            yahoo_symbol=data.yahoo_symbol,
+            yahoo_symbol=yahoo_symbol,
             exchange_code=details.exchange_code,
             currency=details.currency,
-            isin=data.isin,
+            isin=isin,
             share_class_figi=share_class_figi,
         )
         .on_conflict_do_nothing(index_elements=[Instrument.yahoo_symbol])
@@ -123,13 +211,31 @@ async def resolve_instrument(
     created = (await session.scalars(statement)).one_or_none()
     await session.commit()
     if created is None:
-        stored = await _get_by_symbol(session, data.yahoo_symbol)
+        stored = await _get_by_symbol(session, yahoo_symbol)
         if stored is None:
-            raise RuntimeError(f"{data.yahoo_symbol} conflicted on insert but is not stored.")
+            raise RuntimeError(f"{yahoo_symbol} conflicted on insert but is not stored.")
         return stored, False
 
     await session.refresh(created)
     return created, True
+
+
+async def _get_by_isin(session: AsyncSession, isin: str) -> Sequence[Instrument]:
+    return (await session.scalars(select(Instrument).where(Instrument.isin == isin))).all()
+
+
+def _exchange_rank(yahoo_symbol: str, isin: str) -> int:
+    """The listing's place in the ISIN's exchange order: its home exchange (from the country
+    prefix), then PREFERRED_EXCHANGES, then every other exchange."""
+    order = [HOME_EXCHANGES.get(isin[:2]), *PREFERRED_EXCHANGES]
+    suffix = _suffix(yahoo_symbol)
+    return order.index(suffix) if suffix in order else len(order)
+
+
+def _suffix(yahoo_symbol: str) -> str:
+    """The exchange suffix of a Yahoo symbol: ".PA" for MC.PA, "" for AAPL."""
+    _, dot, exchange = yahoo_symbol.rpartition(".")
+    return dot + exchange if dot else ""
 
 
 async def _get_by_symbol(session: AsyncSession, yahoo_symbol: str) -> Instrument | None:

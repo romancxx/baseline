@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
 from app.modules.instruments.models import InstrumentType
 
@@ -16,11 +16,28 @@ ExchangeCode = Annotated[
 Figi = Annotated[
     str, StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Za-z0-9]{12}$")
 ]
+
+
+def _check_isin_digit(isin: str) -> str:
+    """Raise ValueError unless the ISIN's last digit is the Luhn check digit of the others."""
+    # int(char, 36) reads 0-9 as themselves and A-Z as 10-35: "FR" becomes "1527".
+    digits = "".join(str(int(char, 36)) for char in isin)
+    total = 0
+    # From the right, every second digit is doubled; a two-digit result counts as its digit sum.
+    for position, digit in enumerate(reversed(digits)):
+        value = int(digit) * 2 if position % 2 else int(digit)
+        total += value - 9 if value > 9 else value
+    if total % 10 != 0:
+        raise ValueError("Invalid ISIN check digit.")
+    return isin
+
+
 Isin = Annotated[
     str,
     StringConstraints(
         strip_whitespace=True, to_upper=True, pattern=r"^[A-Za-z]{2}[A-Za-z0-9]{9}[0-9]$"
     ),
+    AfterValidator(_check_isin_digit),
 ]
 SearchQuery = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
 

@@ -20,6 +20,7 @@ from app.core.exceptions import ProviderUnavailableError
 from app.core.security import create_access_token
 from app.integrations.openfigi.client import OpenFigiClient
 from app.integrations.openfigi.dependencies import get_openfigi_client
+from app.integrations.openfigi.schemas import FigiCandidate
 from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.dependencies import get_yahoo_client
 from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, SearchResult
@@ -136,18 +137,27 @@ class FakeYahoo(YahooClient):
 
 
 class FakeOpenFigi(OpenFigiClient):
-    """Answers `get_share_class_figi` from `figis`, or raises `failure`; records each symbol."""
+    """Answers `get_share_class_figi` from `figis` and `find_by_isin` from `listings`, or raises
+    `failure`; records each symbol and ISIN."""
 
     def __init__(self) -> None:
         self.figis: dict[str, str] = {}
+        self.listings: dict[str, list[FigiCandidate]] = {}
         self.failure: Exception | None = None
         self.symbols: list[str] = []
+        self.isins: list[str] = []
 
     async def get_share_class_figi(self, yahoo_symbol: str) -> str | None:
         self.symbols.append(yahoo_symbol)
         if self.failure is not None:
             raise self.failure
         return self.figis.get(yahoo_symbol)
+
+    async def find_by_isin(self, isin: str) -> list[FigiCandidate]:
+        self.isins.append(isin)
+        if self.failure is not None:
+            raise self.failure
+        return self.listings.get(isin, [])
 
 
 @pytest.fixture
