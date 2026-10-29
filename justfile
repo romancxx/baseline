@@ -21,6 +21,10 @@ api-typecheck:
 api-test:
     {{api}} run pytest
 
+# Fetch the latest prices of every instrument held in a portfolio, from the real Yahoo Finance
+update-prices:
+    {{api}} run python -m app.jobs.update_prices
+
 # Search the real Yahoo Finance, e.g. just yahoo-search "MSCI World"
 yahoo-search QUERY:
     {{api}} run python scripts/yahoo_search.py {{quote(QUERY)}}

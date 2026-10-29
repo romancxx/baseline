@@ -22,9 +22,14 @@ system to enforce boundaries the way NestJS modules do.
 - **App factory**: `create_app()` builds a fresh app (logging, error handlers, middleware,
   routers included in one router prefixed with `API_PREFIX`, `/api/v1`); the module-level
   `app` exists only for uvicorn.
-- **One-way imports**: `main` → `modules` → `integrations` → `core`. Modules may use each
-  other's service, schemas and dependencies, never routers. `core/` importing `modules/` or
-  `integrations/`, and `integrations/` importing `modules/`, are lint errors: ruff's
+- **Jobs run outside FastAPI**: `jobs/<name>.py` is a command (`python -m app.jobs.<name>`)
+  that configures logging, opens a session from `session_factory`, builds the clients it
+  needs, calls a service function and disposes the engine. It is wiring only, like a router;
+  the logic lives in the service, where tests call it with the test session and fakes.
+- **One-way imports**: `main` and `jobs` → `modules` → `integrations` → `core`. Modules may
+  use each other's service, schemas and dependencies, never routers. `core/` importing
+  `modules/`, `integrations/` or `jobs/`, and `integrations/` importing `modules/` or `jobs/`,
+  are lint errors: ruff's
   `banned-api` list is per config file, so each of those two directories has a `ruff.toml`
   that extends `pyproject.toml` with its own bans.
 - **Thin routers, HTTP-free services**: routers parse, call a service, return a schema; services

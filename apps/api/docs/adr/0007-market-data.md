@@ -24,7 +24,8 @@ every exchange tried, and no throttling on a burst of 25 requests.
   noise: 417.79998779296875 for 417.8) before the pence factor is applied.
 - **Recent bars come from one `history()` call per symbol, run concurrently**, not from
   `yf.download`: that makes one request per symbol too, but swallows each symbol's errors and
-  drops the currency that tells pence apart.
+  drops the currency that tells pence apart. A symbol Yahoo fails on is reported in `failed`
+  with the error's message; the other symbols' bars are still returned.
 - **yfinance raises instead of hiding errors** (`yf.config.debug.hide_exceptions = False`), so
   an outage cannot pass for a symbol without data. A 404 means Yahoo does not know the symbol;
   `YFTickerMissingError` means it has no bars in the window. Both are "no data", not failures.
@@ -54,6 +55,18 @@ every exchange tried, and no throttling on a burst of 25 requests.
 - **`GET /instruments/{id}/prices?from=&to=`** returns the bars of a date range, both ends
   included, oldest first. It is not paginated: `to` defaults to today, `from` to one year
   before `to`, and a range longer than five years (1,830 days) is a 422.
+- **`update_prices()` keeps followed instruments current**, followed meaning held in any
+  position. One with no stored bar is backfilled. The others share one `get_recent_bars`
+  call over the last 5 days, and their bars are upserted. One with a split in those bars is
+  backfilled again, since Yahoo divides every earlier close. It returns, and logs as one
+  `prices.update_finished` line, the symbols `backfilled`, `updated` and `failed` (with the
+  reason).
+- **One symbol failing does not stop the others**: a Yahoo failure or a database error on
+  one symbol is rolled back and reported in `failed`. Each instrument is written in its own
+  transaction, so one failure undoes nothing else. A symbol with no bar in 5 days (delisted,
+  renamed) is reported as failed too, so it gets noticed.
+- **It runs as a command**, `python -m app.jobs.update_prices` (`just update-prices`), with
+  its own session; there is no endpoint and no scheduler yet.
 
 ## Consequences
 

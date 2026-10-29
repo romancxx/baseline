@@ -120,8 +120,17 @@ daily bars (open, high, low, close, adj_close, volume), oldest first, both dates
 `to` defaults to today and `from` to one year before `to`; a range longer than 1,830 days
 answers 422. Prices are in the instrument's currency, as JSON strings.
 
-The bars come from `backfill(instrument_id)` in the prices service, which stores the full
-history Yahoo has for the instrument; running it again updates the stored bars.
+The bars come from `just update-prices` (`python -m app.jobs.update_prices`), run by hand
+for now. It updates every instrument held in a portfolio, from the real Yahoo Finance:
+
+- an instrument without stored prices gets its full history;
+- the others get their last 5 days of bars, upserted;
+- an instrument with a split in those days gets its full history again, since Yahoo
+  adjusts every earlier close.
+
+A symbol that fails does not stop the others. The run ends with one log line,
+`prices.update_finished`, listing the symbols `backfilled`, `updated` and `failed` (with
+the reason).
 
 ## Portfolios
 
@@ -149,13 +158,14 @@ scripts/           # commands run by hand, such as yahoo_search.py
 src/app/
 ├── main.py        # create_app(): builds the FastAPI app and mounts module routers
 ├── core/          # app-wide code shared by all modules (settings, database, errors, logging)
+├── jobs/          # commands run outside FastAPI, e.g. python -m app.jobs.update_prices
 ├── integrations/
 │   └── <provider>/ # one client per external service: client.py, schemas.py, dependencies.py
 └── modules/
     └── <feature>/ # one package per feature
 ```
 
-Imports go one way: `main` → `modules` → `integrations` → `core`. The `ruff.toml` files in
+Imports go one way: `main` and `jobs` → `modules` → `integrations` → `core`. The `ruff.toml` files in
 `core/` and `integrations/` make the other direction a lint error.
 
 Each module contains only the files it needs, from this set:

@@ -66,18 +66,39 @@ class YahooClient:
         return await _call(_fetch_history, yahoo_symbol, start)
 
     async def get_recent_bars(self, yahoo_symbols: Sequence[str], days: int = 5) -> RecentBars:
-        """The daily bars of the last `days` calendar days, for every symbol at once."""
+        """The daily bars of the last `days` calendar days, for every symbol at once.
+
+        A symbol Yahoo fails on is reported in `failed`; the others are still returned.
+        """
         start = dt.date.today() - dt.timedelta(days=days)
-        histories = await asyncio.gather(
-            *(self.get_history(yahoo_symbol, start) for yahoo_symbol in yahoo_symbols)
+        results = await asyncio.gather(
+            *(self._history_or_error(yahoo_symbol, start) for yahoo_symbol in yahoo_symbols)
         )
 
         # gather returns results in the order of the calls, so zip pairs each symbol with its own.
-        by_symbol = dict(zip(yahoo_symbols, histories, strict=True))
+        by_symbol = dict(zip(yahoo_symbols, results, strict=True))
+        fetched = {
+            symbol: result
+            for symbol, result in by_symbol.items()
+            if isinstance(result, PriceHistory)
+        }
         return RecentBars(
-            histories={symbol: history for symbol, history in by_symbol.items() if history.bars},
-            missing=[symbol for symbol, history in by_symbol.items() if not history.bars],
+            histories={symbol: history for symbol, history in fetched.items() if history.bars},
+            missing=[symbol for symbol, history in fetched.items() if not history.bars],
+            failed={
+                symbol: result.message
+                for symbol, result in by_symbol.items()
+                if isinstance(result, ProviderUnavailableError)
+            },
         )
+
+    async def _history_or_error(
+        self, yahoo_symbol: str, start: dt.date
+    ) -> PriceHistory | ProviderUnavailableError:
+        try:
+            return await self.get_history(yahoo_symbol, start)
+        except ProviderUnavailableError as exc:
+            return exc
 
 
 async def _call[**P, T](fetch: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:

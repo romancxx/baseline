@@ -241,6 +241,19 @@ async def test_get_recent_bars_reports_symbols_without_bars(
     assert recent.missing == ["ZZZZNOTREAL"]
 
 
+async def test_get_recent_bars_reports_symbols_yahoo_fails_on_and_returns_the_others(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    toyota = FakeTicker(history=price_frame(("2026-10-20", 3087.0, 0)))
+    fake_tickers(monkeypatch, {"7203.T": toyota, "MC.PA": FakeTicker(history=YFRateLimitError())})
+
+    recent = await YahooClient().get_recent_bars(["7203.T", "MC.PA"])
+
+    assert list(recent.histories) == ["7203.T"]
+    assert recent.missing == []
+    assert recent.failed == {"MC.PA": "Yahoo Finance is unavailable. Try again later."}
+
+
 @pytest.mark.parametrize(
     "failure",
     [
@@ -262,8 +275,7 @@ async def test_yahoo_failures_raise_provider_unavailable(
         await client.get_details("MC.PA")
     with pytest.raises(ProviderUnavailableError):
         await client.get_history("MC.PA")
-    with pytest.raises(ProviderUnavailableError):
-        await client.get_recent_bars(["MC.PA"])
+    assert list((await client.get_recent_bars(["MC.PA"])).failed) == ["MC.PA"]
 
 
 async def test_responses_of_the_wrong_shape_raise_provider_unavailable(

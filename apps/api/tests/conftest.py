@@ -16,6 +16,7 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.core.database import get_db_session
+from app.core.exceptions import ProviderUnavailableError
 from app.core.security import create_access_token
 from app.integrations.openfigi.client import OpenFigiClient
 from app.integrations.openfigi.dependencies import get_openfigi_client
@@ -92,12 +93,16 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
 
 class FakeYahoo(YahooClient):
     """Answers `search` with `results`, `get_details` from `details` and `get_history` from
-    `histories`, or raises `failure`."""
+    `histories`, or raises `failure`. `get_recent_bars` is the real one, over `get_history`."""
 
     def __init__(self) -> None:
         self.results: list[SearchResult] = []
         self.details: dict[str, ListingDetails] = {}
         self.histories: dict[str, PriceHistory] = {}
+        # Symbols whose history raises ProviderUnavailableError.
+        self.unavailable: set[str] = set()
+        # (symbol, start) of each get_history call; start is None for a full history.
+        self.history_requests: list[tuple[str, dt.date | None]] = []
         self.failure: Exception | None = None
         self.queries: list[str] = []
         self.details_requested: list[str] = []
@@ -119,8 +124,11 @@ class FakeYahoo(YahooClient):
         return self.details.get(yahoo_symbol)
 
     async def get_history(self, yahoo_symbol: str, start: dt.date | None = None) -> PriceHistory:
+        self.history_requests.append((yahoo_symbol, start))
         if self.failure is not None:
             raise self.failure
+        if yahoo_symbol in self.unavailable:
+            raise ProviderUnavailableError("Yahoo Finance is unavailable. Try again later.")
         history = self.histories.get(yahoo_symbol, PriceHistory(bars=[], splits=[]))
         bars = [bar for bar in history.bars if start is None or bar.date >= start]
         return PriceHistory(bars=bars, splits=history.splits)

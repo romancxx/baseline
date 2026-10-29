@@ -27,8 +27,16 @@ considering a change done.
   thing: `router.py`, `schemas.py`, `models.py`, `service.py`, `dependencies.py`. No empty
   files or modules for future features. **[review]**
 - Imports are absolute: `from app.modules.health.schemas import HealthResponse`. **[lint]**
-- `core/` never imports from `modules/` or `integrations/`; `integrations/` never imports from
-  `modules/`. **[lint]**
+- `core/` never imports from `modules/`, `integrations/` or `jobs/`; `integrations/` never
+  imports from `modules/` or `jobs/`. **[lint]**
+- A command run outside FastAPI is `src/app/jobs/<name>.py`, run with
+  `python -m app.jobs.<name>` and a `just` recipe. Only its `if __name__ == "__main__":`
+  block configures logging. Its `main()` opens a session with `session_factory()`, builds the
+  clients, calls one service function and disposes the engine. Its logic lives in that
+  service function. **[review]**
+- A job that loops over items catches each item's expected failures
+  (`ProviderUnavailableError`, `DBAPIError`), rolls back, records the reason and goes on. It
+  never lets one item stop the run. **[test]**
 - A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
   `router.py`. **[review]**
 - Routers are mounted only in `create_app()`, on the `api` router, whose prefix is

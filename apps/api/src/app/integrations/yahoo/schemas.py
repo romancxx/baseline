@@ -62,3 +62,5 @@ class RecentBars(BaseModel):
     histories: dict[str, PriceHistory]
     # The requested symbols Yahoo returned no bar for.
     missing: list[str]
+    # The error message, by requested symbol Yahoo failed on.
+    failed: dict[str, str]
