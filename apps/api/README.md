@@ -246,9 +246,9 @@ Each module contains only the files it needs, from this set:
 | File              | Contents                                                                  |
 | ----------------- | ------------------------------------------------------------------------- |
 | `router.py`       | The `APIRouter` and its endpoints.                                        |
-| `schemas.py`      | Pydantic models for request and response bodies: the module's API contract. |
+| `schemas.py`      | Pydantic models: request and response bodies (the module's API contract), and the data it exchanges with jobs and sources. |
 | `models.py`       | Database-facing types: table rows as the database stores them.          |
-| `service.py`      | Business logic and data access.                                           |
+| `service.py`      | Business logic and data access, and the protocols it needs implemented (`NewsSource`). |
 | `dependencies.py` | Functions injected with `Depends()` in the router, such as loading a resource or checking access. |
 
 ## Code standards

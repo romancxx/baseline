@@ -32,9 +32,6 @@ project needs. This version keeps one source and one model call per security; th
 leaves out are in [improvements.md](../improvements.md), each with when it becomes worth
 doing.
 
-Nothing is built yet. Each implementation step at the end updates this record with what it
-decided and measured.
-
 ## Sources
 
 | Source | Gives | Limits | Terms |
@@ -108,12 +105,17 @@ CLI's default model with this record's rules.
 - **One source in v1: Google News RSS**, in English (`hl=en-US&gl=US&ceid=US:en`). It covers
   European and Asian companies, which Finnhub's free plan and Yahoo do not. Other languages
   are out of scope.
-- **Sources sit behind a `NewsSource` protocol** (a `typing.Protocol`) in the news module: a
-  `name` and `async fetch(group) -> list[NewsItem]`, a `NewsItem` being URL, title, publisher,
-  publisher domain and publication time. `integrations/google_news/` speaks Google's language
-  (a query and a locale in, parsed feed items out, with feedparser);
-  `GoogleNewsSource` in the news module builds the query and maps the items. Each article
-  records its source.
+- **Sources sit behind a `NewsSource` protocol** (a `typing.Protocol`) in the news module's
+  `service.py`: one method, `async fetch(query: NewsQuery) -> list[RawArticle]`. A `NewsQuery`
+  is a security's name and a start time; a `RawArticle` is URL, title, publisher and
+  publication time. A source matches the protocol by having that method, without inheriting
+  from it, and raises `ProviderUnavailableError` when it cannot be reached. Tests use a
+  `FakeNewsSource` from `tests/conftest.py`.
+- **A source is a client and an adapter.** `integrations/google_news/` speaks Google's
+  language (a query and a locale in, parsed feed items out, with feedparser).
+  `GoogleNewsSource`, in the news module's `sources.py`, builds the query and maps the items
+  to `RawArticle`s. Integrations cannot import from modules, so the adapter is what lets the
+  client stay unaware of `NewsQuery` and `RawArticle`. Each article records its source.
 - **Finnhub is the planned second source**, deferred. Its loose tags make it a source of
   candidates that the model would have to confirm.
 - **Requests are few and spaced.** One request per security group, one after another, a
@@ -127,6 +129,11 @@ first version). NewsAPI (its free plan is for development only). Paid feeds such
 Marketaux or EODHD (a cost for a personal app). Social media (noisy, and their APIs cost
 money). All five sources at once, as in the earlier draft (most of the work for recall a
 personal app can do without).
+
+For the adapter: inside `service.py` (Google-specific code beside the ingest logic), or the
+protocol and its models in `core/` with the adapter in `integrations/` (`core/` would know
+about news). The publisher's domain in `RawArticle`, filtered in the news module (a field for
+one source's problem; a source with real URLs has none).
 
 ## Queries
 
@@ -152,20 +159,23 @@ handling anyway). Queries in the home market's language (out of scope).
 
 ### Decision
 
-- **Junk is dropped before storage**, by constants in the news module:
-  - a short list of excluded publisher domains, starting with ad-hoc-news.de;
-  - title patterns for quote, chart, option and derivative pages ("Stock Price, News, Quote",
-    "Seasonal Returns Chart", "interactive stock chart", option symbols such as
-    `ASML261120P01060000`, "Tokenized Stock", `META_TITLE_QUOTE`).
-
-  Links are not decoded, so URL patterns only see the publisher's domain.
+- **Junk is dropped before storage:**
+  - excluded publisher domains, starting with ad-hoc-news.de, in the `google_news`
+    integration. Links are not decoded, so the domain is known only from the feed item's
+    `<source url="…">`, and `RawArticle` does not carry it;
+  - title patterns for quote, chart, option and derivative pages, in the news module
+    ("Stock Price, News, Quote", "Seasonal Returns Chart", "interactive stock chart", option
+    symbols such as `ASML261120P01060000`, "Tokenized Stock", `META_TITLE_QUOTE`).
 - **Google's links are stored as they are**, not decoded: decoding takes a request per item
   to an endpoint that rate-limits.
 - **Duplicates are not stored twice:**
   - `articles.url` is unique.
-  - `title_key` is the title casefolded and accent-folded, without Google's " - Publisher"
-    suffix or punctuation. An article whose `title_key` matches one published within 3 days
-    is the same article.
+  - `title_key(title, publisher)` is the title casefolded and accent-folded (Unicode NFKD,
+    combining marks dropped), without Google's " - Publisher" suffix, with each run of
+    punctuation and spaces made one space: "Apple’s Q3 Beats Estimates - Reuters" gives
+    "apple s q3 beats estimates". The suffix is matched folded too, so "LES ÉCHOS" strips
+    " - Les Echos". An article whose `title_key` matches one published within 3 days is the
+    same article.
 
   A duplicate adds its links to the stored article instead of a row.
 - **Runs are idempotent.** Inserts use `ON CONFLICT DO NOTHING` on the URL and on the links'
@@ -206,8 +216,9 @@ need its links moved).
 ### Decision
 
 - **`articles`**: `id`, `source` (a Postgres enum, `google_news` for now), `url` (unique),
-  `title`, `title_key`, `publisher`, `publisher_domain`, `published_at` and `created_at`. An
-  index on `(title_key, published_at)` serves the duplicate check.
+  `title`, `title_key`, `publisher`, `published_at` and `created_at`. The text columns are
+  `text`: a feed's values have no natural length. An index on `(title_key, published_at)`
+  serves the duplicate check.
 - **`article_instruments`**: `(article_id, instrument_id)` as the key, plus `created_at`.
   Deleting either side deletes the link.
 - **`briefs`**: `id`, `model`, `prompt_version`, `text`, `tone` (a Postgres enum), token
@@ -279,7 +290,7 @@ summaries). A JSON column of links (no foreign keys, no index for "news of this 
   about 10 s a call, and a command tied to a signed-in CLI.
 - A local model through Ollama: free and private, but slow on a laptop.
 - Sonnet 5.5: 20 times the price for a task Haiku should handle. Switch if Haiku fails the
-  evaluation at step 23.
+  [evaluation](#evaluation).
 - Storing rejected briefs (a status column for rows nothing shows).
 
 ## Running
@@ -298,6 +309,15 @@ summaries). A JSON column of links (no foreign keys, no index for "news of this 
 A scheduler process, digests and email, as in the earlier draft (deferred). A `GET /news`
 feed over every followed security (deferred until the web app has a home feed).
 
+## Evaluation
+
+### Decision
+
+- **A week of daily runs is checked before the design is relied on.** This record gets the
+  articles per group, how many were dropped and merged, brief failures and token cost, and a
+  hand check of about 20 briefs on Haiku: facts not in their cited headlines, and material
+  stories missed against a plain query.
+
 ## Out of scope for v1
 
 - News in other languages, and duplicates across languages.
@@ -309,8 +329,8 @@ feed over every followed security (deferred until the web app has a home feed).
 ## Consequences
 
 - **Material stories without finance words can be missed**, such as Reuters on Toyota and
-  Waymo's robotaxi deal. The probes measured this gap; step 23 checks how often it hides
-  something that matters.
+  Waymo's robotaxi deal. The probes measured this gap; the [evaluation](#evaluation)
+  checks how often it hides something that matters.
 - **Recall depends on one name per security.** Official names can be longer than what the
   press writes ("LVMH Moët Hennessy - Louis Vuitton" for "LVMH", "ASML Holding" for "ASML"),
   and an exact phrase then finds little.
@@ -321,21 +341,3 @@ feed over every followed security (deferred until the web app has a home feed).
   articles arrive.
 - Google News RSS has no API contract. When it changes, ingestion stops and the logs say
   so; stored articles and briefs remain.
-
-## Implementation steps
-
-- **Step 18: News storage.** Models and migration for `articles` and `article_instruments`;
-  `title_key` and the legal-form stripping as pure functions, with tests.
-- **Step 19: Google News source.** The `google_news` client, the `NewsSource` protocol and
-  `GoogleNewsSource` (query, locale, junk filter), tested on recorded feeds.
-- **Step 20: Ingestion.** Followed stocks grouped by share class, the ingest service
-  (duplicates, links, a failed group skipped), its log line, and `just ingest-news`.
-- **Step 21: Briefs.** The `anthropic` client, the `briefs`, `brief_instruments` and
-  `brief_articles` tables, the prompt and its version, the checks with one retry, the
-  regeneration rule, and `just brief`.
-- **Step 22: News API.** `GET /instruments/{id}/news` with the latest brief, its provenance
-  line and the disclaimer.
-- **Step 23: Evaluation.** Run daily for a week; record here the articles per group, how many
-  were dropped and merged, brief failures and token cost, and a hand check of about 20 briefs
-  on Haiku: facts not in their cited headlines, and material stories missed against a plain
-  query.

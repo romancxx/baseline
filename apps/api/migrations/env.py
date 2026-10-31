@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 import app.modules.auth.models  # noqa: F401  (registers its tables on Base.metadata)
 import app.modules.instruments.models  # noqa: F401
+import app.modules.news.models  # noqa: F401
 import app.modules.portfolios.models  # noqa: F401
 import app.modules.positions.models  # noqa: F401
 import app.modules.prices.models  # noqa: F401

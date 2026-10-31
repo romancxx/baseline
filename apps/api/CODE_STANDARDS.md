@@ -39,6 +39,9 @@ considering a change done.
   never lets one item stop the run. **[test]**
 - A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
   `router.py`. **[review]**
+- Something a module needs that several implementations can provide (a news source) is a
+  `typing.Protocol` in that module's `service.py`. Implementations do not inherit from it.
+  **[review]**
 - Routers are mounted only in `create_app()`, on the `api` router, whose prefix is
   `API_PREFIX` (`/api/v1`). A path the code needs in full is built from `API_PREFIX`, never
   written out. **[review]**
@@ -174,6 +177,8 @@ considering a change done.
 - Never keep a transaction open while waiting on an external service: read, `commit()`,
   call the service, then write. **[review]**
 - Every `datetime` column is `DateTime(timezone=True)`. **[review]**
+- Text from an external source with no natural length (URLs, headlines) is `Text`; a value
+  with a known length is `String(n)`. **[review]**
 - Enum columns: `Enum(PyEnum, name="<snake_case>", values_callable=enum_values)`. **[review]**
 - Every `ForeignKey` sets `ondelete`: `"CASCADE"` for a row that belongs to its parent,
   `"RESTRICT"` for a row that only refers to it. Index a foreign key column unless an index
@@ -244,6 +249,8 @@ considering a change done.
   with `details(currency)` from `conftest.py`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through
   `app.dependency_overrides`, so no endpoint test can reach the provider. **[review]**
+- A fake of a `Protocol` (`FakeNewsSource`) lives in `conftest.py`, never in `src/`, and a
+  test assigns it to the protocol's type so pyright checks that it matches. **[pyright]**
 - Insert the rows a test needs through a `make_<entity>` factory fixture in `conftest.py`, not
   through the API, unless the API call is what the test covers. **[review]**
 - A protected endpoint has a test that it answers 401 through plain `client`. **[review]**
