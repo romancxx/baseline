@@ -6,9 +6,9 @@
 ## Context
 
 StockNews should tell a user what was reported about the securities they hold
-([0009](0009-portfolios.md)) or watch ([0010](0010-watchlist.md)): 2–3 line summaries with a
-tone, gathered into a daily or weekly digest. Like market data ([0007](0007-market-data.md)),
-it runs on one local machine, for personal use, at almost no cost.
+([0009](0009-portfolios.md)) or watch ([0010](0010-watchlist.md)): a short brief per security
+with a tone, and the headlines behind it. Like market data ([0007](0007-market-data.md)), it
+runs on one local machine, for personal use, at almost no cost.
 
 The web prototype (`apps/web`) built a first pipeline. Its records hold what live runs taught,
 and this design starts from them:
@@ -26,459 +26,316 @@ and this design starts from them:
 - Summarising on a small model costs cents a day. Batching and prompt caching did not pay
   ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
 
-Nothing is built yet. This record proposes the design. Each implementation step at the end
-updates it with what that step decided and measured.
+An earlier draft of this record proposed five sources, links confirmed by the model, article
+text, per-article summaries, a scheduler and email digests. That is more than a personal
+project needs. This version keeps one source and one model call per security; the parts it
+leaves out are in [improvements.md](../improvements.md), each with when it becomes worth
+doing.
+
+Nothing is built yet. Each implementation step at the end updates this record with what it
+decided and measured.
 
 ## Sources
 
 | Source | Gives | Limits | Terms |
 | --- | --- | --- | --- |
-| Finnhub company news | Articles per ticker: headline, outlet, time, short summary, a `finnhub.io/api/news?id=` link that redirects to the publisher | Free plan: North American companies only, 60 calls a minute, about a year of history; needs a key | Free plan for personal, non-commercial use |
+| Google News RSS search | Up to about 100 items per query and locale (`hl`, `gl`, `ceid`), with `when:1d`; each item names its publisher (`<source url="…">`) | Links are `news.google.com/rss/articles/…` tokens: the publisher URL takes another request to an internal Google endpoint, which rate-limits (429). No API; it can change without notice | No terms published for this use; Google's Terms of Service apply. Keep the volume low |
+| Finnhub company news | Articles per ticker: headline, outlet, time, short summary, a `finnhub.io/api/news?id=` link that redirects to the publisher | Free plan: North American listings only (including the US listings of foreign companies, such as `TM` or `SAP`), 60 calls a minute, about a year of history; needs a key. Tags are loose (see probes) | Free plan for personal, non-commercial use |
 | GDELT DOC 2.0 API | Articles matching a full-text query over worldwide online news: URL, title, domain, language, country, time | At most 250 records a query; dates within the last 3 months; no article text; an unofficial limit of about one request every 5 seconds; noisy | Open data, free to use with citation; the articles remain their publishers' |
-| Google News RSS search | Up to about 100 items per query and locale (`hl`, `gl`, `ceid`), with `when:1d` | Links are `news.google.com/rss/articles/…` tokens: the publisher URL takes another request to an internal Google endpoint, which rate-limits (429). No API; it can change without notice | No terms published for this use; Google's Terms of Service apply. Keep the volume low |
 | Publisher RSS feeds | Headline, teaser, link and time per item, not aimed at any company | Teasers only; some pages are paywalled | Each publisher's own: personal reading with a link back. Reusing their text is not granted |
-| Yahoo search news | `yf.Search(query, news_count=…)`: title, publisher, link, time, sometimes related tickers | A handful of items, mostly US; unofficial | Unofficial, personal use, as in [0007](0007-market-data.md) |
+| Yahoo search news | `yf.Search(query, news_count=…)`: title, publisher, link, time, sometimes related tickers | Nothing for non-US symbols, and a mostly stale or noisy list by name (see probes); unofficial | Unofficial, personal use, as in [0007](0007-market-data.md) |
+
+### Probes
+
+Two throwaway scripts queried six stocks (AAPL, MC.PA, TTE.PA, SAP.DE, ASML.AS, 7203.T) on
+2026-10-30, over the last 3 days.
+
+- **Yahoo search news is unusable outside the US.** Each of the five non-US symbols
+  returned 0 items. By name, "SAP" returned 0 too, and "LVMH" 45 items of which 2 were from
+  the last 3 days. For Apple, 18 of 48 items were GuruFocus fund-flow posts ("iShares MSCI
+  World ETF Buys $17.3 Million More Apple").
+- **A plain name query is mostly not finance.** The share of titles with a finance word
+  (shares, earnings, revenue, analyst, …) for `"<name>"` in English, then with finance terms
+  added to the query:
+
+  | Stock | Plain: items (finance share) | With finance terms |
+  | --- | --- | --- |
+  | Apple | 100 (15%) | 100 (76%) |
+  | Toyota | 100 (10%) | 30 (56%) |
+  | LVMH | 39 (41%) | 18 (66%) |
+  | SAP | 100 (19%) | 36 (63%) |
+  | ASML | 45 (48%) | 62 (87%) |
+  | TotalEnergies | 100 (43%) | 100 (70%) |
+
+  Plain queries return gadget, car, sports-arena and local news: "SAP Center", "TOYOTA ARENA",
+  iPad reviews. The finance words in the query and in the check are the same, so the gain is
+  an upper bound. Plain queries hit Google's 100-item cap over 3 days for four of the six.
+- **Material stories without finance words fall out.** The top plain results included
+  Reuters on Toyota and Waymo's robotaxi deal, Reuters on SAP replacing costly AI models to
+  save over €2bn, and TotalEnergies cutting diesel prices in France. None was among the first
+  12 results with finance terms.
+- **Finance terms bring their own junk:** Yahoo pages for option contracts ("ASML Nov 2026
+  1060.000 put", 6 of ASML's first 12), tokenized-stock pages, quote and seasonal-chart pages,
+  and a title that reads `META_TITLE_QUOTE`. One aggregator, ad-hoc-news.de, appeared for
+  LVMH, SAP and ASML (16 of SAP's 36).
+- **Finnhub's tags are loose.** Under `TM`: PACCAR, Lithia and Holley. Under `SAP`: Rimini
+  Street, New Relic and partners' press releases. Under `ASML`: Samsung, TSMC and SK hynix.
+  Under `TTE`: Capgemini. Under `AAPL`: 155 items in 3 days, including Berkshire's portfolio.
+  42% to 70% of its titles had a finance word. It names the outlet "Yahoo" for 113 of
+  Apple's 155, so its `source` field cannot rank publishers.
+
+A third script tried headline-only briefs on 2026-10-31: the first 40 results of the finance
+query (over 3 days) for Apple, TotalEnergies, SAP and LVMH, numbered, sent to the `claude`
+CLI's default model with this record's rules.
+
+- **They are usable.** Each brief was 4 sentences, 505 to 595 characters, attributed, with no
+  advice, citing 5 to 9 headlines, and no ID outside the input. The default model is
+  stronger than Haiku at effort `low`, so this is an upper bound.
+- **SAP's AI-model story was in the brief.** Seeking Alpha and GuruFocus covered it with
+  finance words, though Reuters' headline had none.
+- **ad-hoc-news.de carried SAP's brief**: 5 of its 9 citations, including the only source for
+  the raised 2026 guidance, and 2 of LVMH's 5. Excluding it leaves those briefs thinner.
+- **Conflicting headlines got one side.** Investing.com reported TotalEnergies' revenue
+  "topped estimates", 24/7 Wall St. a "revenue miss"; the brief gave only the miss.
+- **Not every fact maps to a cited headline.** "Monday, Nov. 2" for Apple's results came from
+  "this Monday" and the date, or from a headline it did not cite. The ID check cannot see
+  this.
+- **Near-duplicates reach the input:** Bloomberg's and Yahoo Finance UK's "Apple overtakes
+  Nvidia" differ by a few words, so their `title_key`s differ, and both were cited.
 
 ### Decision
 
-- **All five sources**, each a client in `integrations/`: `finnhub`, `gdelt`, `google_news`
-  and `rss` (publisher feeds), plus a `search_news` method on `YahooClient`. RSS and Atom are
-  parsed with feedparser, which Google News uses too.
-- **Queries go per security, not per listing.** A run groups followed instruments by
-  `share_class_figi`, and an instrument without one is its own group. Each source is queried
-  once per group:
-  - Finnhub with the group's US or Canadian listing, and skipped when it has none.
-  - Yahoo with any listing's symbol.
-  - Google News and GDELT with the security's names (see matching).
-
-  MC.PA and MOH.DE cost one set of queries.
-- **Google News and GDELT query each name as an exact phrase, over the last day.** Each
-  query runs in English and in the language of the security's home exchange (`PAR` gives
-  `hl=fr&gl=FR`), from a map of exchange codes to locales.
-- **Stocks only.** ETFs get no news in v1: nothing reports on "an MSCI World ETF", and a feed
-  tag is only a proxy ([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)).
-- **Publishers and tiers live in one file**, `publishers.toml` in the news module. Each
-  publisher has a name, its domains, a tier and optionally its feeds (URL, language):
-  - **Tier 1:** wires, regulators, company press releases, the leading financial press.
-  - **Tier 2:** general and business press.
-  - **Tier 3:** aggregators and content sites. A domain not in the file is tier 3.
-  - **`excluded`:** the article is dropped when it arrives.
-
-  An article's tier comes from its domain, whatever source found it. Finnhub's and GDELT's
-  articles are ranked the same way as the feeds'. Tiers decide which duplicate is kept,
-  which articles are summarised first under the cap, and the order in digests. The file is
-  reviewed in git like code, and changing it needs no migration.
-- **Google News items are filtered before decoding.** Each item names its publisher
-  (`<source url="…">`). Items from excluded domains, and titles already stored, are not
-  decoded, which saves requests to the endpoint that rate-limits.
-- **Each run looks back 3 days**, so a missed run loses nothing. Unique keys absorb the
-  overlap (see deduplication).
-- **`FINNHUB_API_KEY` is optional.** Without it, Finnhub is skipped and the run says so.
+- **One source in v1: Google News RSS**, in English (`hl=en-US&gl=US&ceid=US:en`). It covers
+  European and Asian companies, which Finnhub's free plan and Yahoo do not. Other languages
+  are out of scope.
+- **Sources sit behind a `NewsSource` protocol** (a `typing.Protocol`) in the news module: a
+  `name` and `async fetch(group) -> list[NewsItem]`, a `NewsItem` being URL, title, publisher,
+  publisher domain and publication time. `integrations/google_news/` speaks Google's language
+  (a query and a locale in, parsed feed items out, with feedparser);
+  `GoogleNewsSource` in the news module builds the query and maps the items. Each article
+  records its source.
+- **Finnhub is the planned second source**, deferred. Its loose tags make it a source of
+  candidates that the model would have to confirm.
+- **Requests are few and spaced.** One request per security group, one after another, a
+  second apart, with a User-Agent that names the app.
 
 ### Alternatives considered
 
-Finnhub alone (its free plan leaves European and Asian holdings without news). NewsAPI (its
-free plan is for development only). Paid feeds such as Benzinga, Marketaux or EODHD news (a
-cost for a personal app). Social media: X, Reddit, StockTwits (noisy, and their APIs cost
-money). Regulatory filings such as SEC EDGAR or AMF (primary sources, but each regulator
-needs its own parser; they can join as tier 1 feeds where an RSS feed exists). Feeds in a
-database table, as in the web app (editable without a deploy, but there is no admin role and
-one user; a file is reviewed).
+Finnhub alone (its free plan leaves European and Asian holdings without news). Yahoo search
+news (nothing outside the US). GDELT and publisher feeds (more parsers and more noise for a
+first version). NewsAPI (its free plan is for development only). Paid feeds such as Benzinga,
+Marketaux or EODHD (a cost for a personal app). Social media (noisy, and their APIs cost
+money). All five sources at once, as in the earlier draft (most of the work for recall a
+personal app can do without).
+
+## Queries
+
+### Decision
+
+- **One query per security, not per listing.** Followed stocks, held in any position or on
+  any watchlist, are grouped by `share_class_figi`; an instrument without one is its own
+  group. MC.PA and MOH.DE cost one query.
+- **The query is the name as an exact phrase, plus finance terms, over the last day:**
+  `"LVMH Moët Hennessy - Louis Vuitton" (shares OR stock OR earnings OR results OR revenue OR
+  analyst OR investors) when:1d`. The name is that of the group's earliest-followed listing,
+  without its legal form ("Inc.", "SE", "N.V.", "Société Européenne", …).
+- **Stocks only.** ETFs get no news: nothing reports on "an MSCI World ETF".
+
+### Alternatives considered
+
+The plain name (mostly not finance, see probes). Plain and finance queries both (twice the
+requests, and the plain one's results are mostly what a brief should leave out). A longer
+lookback (`when:3d` hit the 100-item cap; duplicates across runs would need the same
+handling anyway). Queries in the home market's language (out of scope).
+
+## Filtering and deduplication
+
+### Decision
+
+- **Junk is dropped before storage**, by constants in the news module:
+  - a short list of excluded publisher domains, starting with ad-hoc-news.de;
+  - title patterns for quote, chart, option and derivative pages ("Stock Price, News, Quote",
+    "Seasonal Returns Chart", "interactive stock chart", option symbols such as
+    `ASML261120P01060000`, "Tokenized Stock", `META_TITLE_QUOTE`).
+
+  Links are not decoded, so URL patterns only see the publisher's domain.
+- **Google's links are stored as they are**, not decoded: decoding takes a request per item
+  to an endpoint that rate-limits.
+- **Duplicates are not stored twice:**
+  - `articles.url` is unique.
+  - `title_key` is the title casefolded and accent-folded, without Google's " - Publisher"
+    suffix or punctuation. An article whose `title_key` matches one published within 3 days
+    is the same article.
+
+  A duplicate adds its links to the stored article instead of a row.
+- **Runs are idempotent.** Inserts use `ON CONFLICT DO NOTHING` on the URL and on the links'
+  key, so a second run with nothing new changes nothing. No transaction stays open during a
+  network call (CODE_STANDARDS §1 and §8).
+- **A group that fails is logged and skipped**; the others carry on. The run logs one
+  `news.ingest_finished` line with the groups fetched and failed and the articles stored,
+  merged and dropped.
+
+### Alternatives considered
+
+Decoding the links and normalising publisher URLs (a request per item, and it rate-limits).
+Near-duplicate titles by trigram similarity, or a hash of the text (needs a labelled sample
+to tune; titles are enough for one source). Embeddings
+([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)). Publisher tiers in a file
+(they decide which copy to keep and what to summarise first, choices a brief over 40
+headlines does not need).
 
 ## Matching articles to securities
 
 ### Decision
 
-- **Every link records how it was made** (`method`), so a bad rule shows up in the data
-  ([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)):
-  - `ticker`: the source tagged the article with a listing's symbol (the symbol queried at
-    Finnhub, Yahoo's related tickers).
-  - `query`: a name query for this security returned the article (Google News, GDELT).
-  - `name`: one of the security's names appears in the title or teaser. This covers
-    publisher feeds, and every source's articles checked against the other followed
-    securities.
-- **Names:**
-  - The instrument's name without its legal form: "LVMH Moët Hennessy - Louis Vuitton,
-    Société Européenne" gives "LVMH Moët Hennessy - Louis Vuitton".
-  - Aliases from a hand-kept `aliases.toml`, keyed by the Yahoo symbol of any listing: "LVMH"
-    and "Louis Vuitton"; "Alphabet" and "Google".
-  - Names match on word boundaries, case-sensitive, with accents folded.
-- **Tickers match only in explicit forms** (`$AAPL`, `(NASDAQ: AAPL)`, `(EPA: MC)`), never as
-  bare words: `MC`, `OR` and `KO` are ordinary words.
-- **A link is a candidate until the model confirms it.** The summarisation call receives the
-  article and its candidate securities. For each candidate it returns a relevance:
-  - `primary`: the article is about it.
-  - `secondary`: it matters to the story.
-  - `none`: a passing mention, another entity with the same name, or unrelated.
-
-  News lists show `primary` and `secondary` links, and digests only `primary`. This filters
-  Finnhub's loose tags, and names like "Orange", "Shell" or "Next" that are also ordinary
-  words.
-- **The model chooses only among the candidates**; it cannot add a security. With a closed
-  set it cannot invent a link, and every link still has a rule behind it.
-- **A link points to one listing, and news is read through the share class.** A link stores
-  the listing the group was queried or matched as (its earliest-followed listing). News for
-  any listing is read through `share_class_figi`, so MOH.DE shows the LVMH news found through
-  MC.PA.
+- **An article is linked to every followed instrument of the group it was fetched for.** The
+  query is the match: no name matching across groups, and no model confirming links.
+- **A link is `(article_id, instrument_id)`** with `created_at`. A security's news is read
+  through any of its listings' links.
 
 ### Alternatives considered
 
-- Letting the model tag every ingested article with the companies it covers: better recall
-  ("Instagram" → Meta) for a few dollars a month at Haiku 5.5 prices. Worth adding if the
-  name and alias recall measured at step 26 is poor.
-- Embeddings: on short text they could not separate stories
-  ([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)).
-- Matching bare tickers.
-- Trusting ticker tags ([web 0006](../../../web/docs/adr/0006-home-feed.md)).
-- A `securities` table now: a cleaner key, but an instrument whose FIGI arrives late would
-  need its links moved. [0006](0006-instruments.md) keeps this table for when a second
-  feature needs it.
-- A link per listing: duplicate rows, and a listing added later would have none.
-
-## Deduplication and idempotent runs
-
-### Decision
-
-- **Where an item was seen is recorded** in `article_sources`, keyed by
-  `(source, external_id)`: the Finnhub id, the Yahoo uuid, the RSS guid (or link), the GDELT
-  URL or the Google News token. A re-run recognises an item before making any request for it.
-- **URL normalisation:**
-  - Follow redirects first: Finnhub's link answers 302, and a Google News token is decoded.
-  - Prefer the page's `<link rel="canonical">` once the page is fetched.
-  - Lowercase the scheme and host, and drop the fragment.
-  - Remove tracking parameters (`utm_*`, `fbclid`, `gclid`, `ocid`, …), sort the remaining
-    ones, and drop the trailing slash. courlan, a trafilatura dependency, does most of this.
-
-  `articles.url` is unique, so the same article found by three sources is one row with three
-  `article_sources`.
-- **Same title.** `title_key` is the title casefolded and accent-folded, without its
-  publisher suffix (" - Reuters", " | Les Echos") or punctuation. Two articles with the same
-  `title_key` within 3 days are the same story.
-- **Near-duplicate titles.** Two articles linked to the same security within 48 hours are
-  duplicates when the trigram similarity of their `title_key`s is at least 0.9 (pg_trgm is
-  already installed). The bar is strict on purpose: "Apple shares rise after results" and
-  "Apple shares fall after results" are close by any string measure, and a false merge hides
-  a story. Pairs between 0.6 and 0.9 are logged (`news.near_duplicate_candidate`) so a
-  labelled sample can tune the threshold.
-- **Same text.** A hash of the normalised extracted text catches wire copy syndicated under
-  different titles.
-- **Duplicates are kept**, with `duplicate_of_id` pointing at the canonical copy: highest
-  tier first, then the copy with text, then the earliest. Only canonical articles are
-  summarised; the others show as "also reported by". A wrong merge can be undone.
-- **Idempotency comes from unique keys**, with inserts `ON CONFLICT DO NOTHING`, on:
-  - `article_sources (source, external_id)` and `articles.url`;
-  - links `(article_id, instrument_id)`;
-  - summaries `(article_id, model, prompt_version)`;
-  - digests `(user_id, period_end)`.
-- **Stages read their work from the database.** The stages are fetch, then resolve and
-  deduplicate, link, extract text and summarise. Each selects the rows that still need it, so
-  a crashed run resumes where it stopped, and a second run with nothing new does nothing.
-  - A failed item is recorded and skipped.
-  - No transaction stays open during a network call (CODE_STANDARDS §1 and §8).
-
-### Alternatives considered
-
-Embeddings ([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)). MinHash or SimHash
-over the text (right for grouping articles into stories, which is later work). Deleting
-duplicates (loses "also reported by", and a wrong merge cannot be undone). Deduplicating by
-URL only (misses syndicated copies).
-
-## Article text
-
-### Decision
-
-- **Fetching:** our own `httpx2` client fetches the page, with:
-  - timeouts and a size cap;
-  - a User-Agent that names the app;
-  - a per-domain rate limit (`aiolimiter`);
-  - robots.txt checked and cached per domain.
-- **Extraction:** trafilatura (Apache-2.0 since 1.8) extracts the text and its metadata
-  (canonical URL, date, language), in a worker thread.
-- **Which pages are fetched:** canonical articles with at least one candidate link,
-  published within the 3-day lookback, from domains that are not excluded. Unmatched feed
-  items keep their headline and teaser only.
-- **`text_status`** is one of `pending`, `extracted`, `paywalled`, `blocked` (robots.txt, 401
-  or 403) or `failed`. A `failed` page is retried once, on the next run.
-- **Paywalls are respected, never bypassed.** A page is `paywalled` when its JSON-LD says
-  `isAccessibleForFree: false`, or when the extracted text is shorter than a threshold set
-  at step 25. Paywalled articles keep their headline and teaser. The pipeline uses no archive
-  mirrors, no crawler User-Agent and no cookie tricks.
-- **No text, no summary.** A teaser is shorter than any summary of it
-  ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)). The model still
-  judges relevance and tone from the headline and teaser, and the publisher's teaser is shown,
-  labelled as theirs.
-- **Text is kept for 30 days, then cleared.** The API never serves it. 30 days is long enough
-  to summarise again with a new prompt, and keeps little copied text on disk.
-
-### Alternatives considered
-
-newspaper4k or readability-lxml (both work; trafilatura is maintained, permissively licensed,
-and also returns metadata). A headless browser for pages rendered by JavaScript (heavy, and
-few news pages need it). Summarising teasers
-([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)). Getting past paywalls
-(breaks the publishers' terms).
+Name and ticker matching across all articles, links confirmed by the model, and a `method`
+recorded per link, as in the earlier draft (needed once there are several sources or
+untargeted feeds; one targeted query per group needs none). Linking one listing and reading
+through `share_class_figi` (no row per listing, but a listing whose FIGI arrives late would
+need its links moved).
 
 ## Storage
 
 ### Decision
 
-- **`articles`**:
-  - `id`, `url` (unique), `title`, `title_key` (trigram index), `publisher`, `domain`, `tier`
-    and `language`;
-  - `published_at`, `teaser`, `text`, `text_status` and `text_hash`;
-  - `duplicate_of_id` (a self foreign key, `SET NULL`), and timestamps.
-- **`article_sources`**: `(source, external_id)` as the key, plus `article_id` (`CASCADE`),
-  the URL as received and `seen_at`.
-- **`article_instruments`**: `(article_id, instrument_id)` as the key, plus `method` and
-  `created_at`. Deleting either side deletes the link.
-- **`summaries`**:
-  - `id`, `article_id` (`CASCADE`), `model` and `prompt_version`;
-  - `input` (`text` or `teaser`), `text` (null when the input was a teaser) and `status`
-    (`ok` or `rejected`);
-  - token counts and `generated_at`.
-
-  `(article_id, model, prompt_version)` is unique.
-- **`summary_instruments`**: `(summary_id, instrument_id)` as the key, plus `relevance` and
-  `tone`. Tone belongs to one security, because a story can be good for Airbus and bad for
-  Boeing.
-- **Enums are Postgres enums**: source, link method, text status, relevance and tone.
-- **The provenance line is built when a summary is read**, from the publisher and
-  `generated_at`, not stored:
-  - "Generated from Reuters on 2026-10-29 at 06:12 UTC" for a summary;
-  - "Tone assessed from the Reuters headline and teaser on 2026-10-29 at 06:12 UTC" when
-    there was no text.
-
-  It claims only what was generated ([web 0006](../../../web/docs/adr/0006-home-feed.md)).
-  The model and prompt version are in the response, not in the line.
-- **Read endpoints:** `GET /instruments/{id}/news` and `GET /news` (every followed security),
-  both keyset-paginated on `(published_at, id)`. `paginate()` orders on `created_at` today,
-  so it gains an ordering column.
+- **`articles`**: `id`, `source` (a Postgres enum, `google_news` for now), `url` (unique),
+  `title`, `title_key`, `publisher`, `publisher_domain`, `published_at` and `created_at`. An
+  index on `(title_key, published_at)` serves the duplicate check.
+- **`article_instruments`**: `(article_id, instrument_id)` as the key, plus `created_at`.
+  Deleting either side deletes the link.
+- **`briefs`**: `id`, `model`, `prompt_version`, `text`, `tone` (a Postgres enum), token
+  counts and `created_at`.
+- **`brief_instruments`**: `(brief_id, instrument_id)`, the group's followed instruments when
+  the brief was written. **`brief_articles`**: `(brief_id, article_id)`, the articles it
+  cites. Both cascade from either side.
+- **No article text and no teasers are stored.** Google's teaser repeats the title.
 
 ### Alternatives considered
 
-Storing the provenance string (changing its wording would need a backfill). Tone on the link
-(a new prompt version would overwrite it, so versions could not be compared). A summary per
-article and security (pays for the same text once per security). A JSON column of links on
-`articles` (no foreign keys, no index for "news of this security").
+Tone on each article (one call per article, the cost the earlier draft paid for per-article
+summaries). A JSON column of links (no foreign keys, no index for "news of this security").
 
-## Scheduling
+## Briefs
 
 ### Decision
 
-- **APScheduler 3.x (`AsyncIOScheduler`) in its own process:** `python -m app.jobs.scheduler`,
-  run with `just scheduler`. APScheduler 4.0 is still a pre-release. Scheduled jobs call the
-  same service functions as the commands.
-- **The scheduler stays out of the API process.** `--reload` would restart it on every save,
-  several workers would each run every job, and a long job would hold up shutdown.
-- **Schedule.** The times are constants in code; the time zone is a setting
-  (`SCHEDULER_TIMEZONE`):
-  - Prices: weekdays at 23:00, after the US close. The price job from
-    [0007](0007-market-data.md) moves here; its "no scheduler yet" changes.
-  - News, from fetch to summaries: 06:30, 12:30 and 18:30.
-  - Digests: daily at 07:00, and weekly on Mondays at 07:00.
-- **Every run is recorded in `job_runs`:** job, trigger (`scheduled`, `manual` or
-  `catch_up`), start, end, status (`ok`, `partial` or `failed`), and a JSON result such as
-  today's `prices.update_finished` lists. A run where some items failed is `partial`,
-  instead of exiting 0 with the failures only in a log line.
-- **Missed runs catch up.** Jobs use `coalesce=True`, `max_instances=1` and a one-hour
-  `misfire_grace_time`. At start, a job whose last successful run is older than its period
-  runs once. A laptop asleep at 23:00 updates prices when the scheduler next runs.
-- **One run at a time per job.** A Postgres advisory lock keyed on the job's name is taken
-  around each run. A command started during a scheduled run exits and says a run is in
-  progress.
-- **The commands stay** as manual triggers: `just update-prices`, `just ingest-news`,
-  `just summarise-news` and `just send-digests`. Their runs are recorded with the trigger
-  `manual`.
+- **One Anthropic call per security group**, over its most recent stored articles: at most
+  40, each with its ID, headline, publisher and publication time. No article text.
+  - An `integrations/anthropic/` client, `claude-haiku-5-5` ($0.10 per million input tokens,
+    $0.50 per million output) at effort `low`.
+  - Structured output (`output_config.format`), checked again with Pydantic.
 
-### Alternatives considered
-
-- The scheduler inside the API's lifespan (see above).
-- Celery: a broker, a worker and beat are three processes plus Redis, for jobs that fit in
-  one process.
-- Dramatiq: needs a broker, and periodic jobs need another library anyway.
-- ARQ: needs Redis, and is in maintenance-only mode.
-- Procrastinate: a Postgres-backed queue with periodic tasks, and no new service. Right once
-  the API must hand long work to a worker, such as a full news run started from the web app.
-- launchd or cron: no code, and launchd even runs calendar jobs missed during sleep. But it
-  is macOS-only, lives outside the repo, and has no shared lock or run history.
-- APScheduler 4: still a pre-release.
-
-## Summarisation
-
-### Decision
-
-- **Summarisation runs in the news job**, after text extraction, through the Anthropic
-  Messages API:
-  - an `integrations/anthropic/` client;
-  - `claude-haiku-5-5` ($0.10 per million input tokens, $0.50 per million output), at effort
-    `low`;
-  - structured output (`output_config.format`), checked again with Pydantic.
-
-  Without `ANTHROPIC_API_KEY`, summarisation is skipped and the run says so; articles then
-  show their headline and teaser.
-- **One call per canonical article**, however many securities or users it concerns:
-  - Input: publisher, publication time, headline, text (or teaser), and the candidate
-    securities with their names.
-  - Output: the summary (null when the input was a teaser), and a relevance and tone for each
-    candidate.
-- **Format:**
-  - 2–3 sentences and at most about 320 characters, enforced by the schema;
-  - what happened and the figures that matter, attributed ("Reuters reports…", "the company
-    said…").
-
-  A summary that breaks the format gets one corrective retry with the reason. A second
-  failure stores it as `rejected`.
-- **Tone, per security,** is `positive`, `negative`, `neutral` or `mixed`: how the reported
-  facts bear on the company, as reported at the time. It is not about the share price and not
-  a forecast, which is why "bullish" and "bearish" are not used. The web app shows it as a
-  coloured marker with its word.
-- **Summaries interpret news at a point in time and never advise.** The prompt forbids
-  recommending, rating or predicting in the summary's own voice: no buy, sell or hold, no
-  price direction or target, no "investors should".
-  - Facts the article reports are kept with their source. An analyst's rating change is
-    reported as such, for example "Jefferies raised its rating to buy" (see open questions).
+  Without `ANTHROPIC_API_KEY`, the command says so and does nothing; news shows headlines
+  only.
+- **Output:**
+  - a brief of 3–5 sentences, at most about 600 characters: what was reported, attributed
+    ("Reuters reports…", "the company said…"), using only what the headlines say, and
+    saying so when outlets disagree;
+  - a tone;
+  - the IDs of the articles it used. An ID not in the input fails the check.
+- **Tone** is `positive`, `negative`, `neutral` or `mixed`: how the reported facts bear on
+  the company, as reported at the time. It is not about the share price and not a forecast,
+  which is why "bullish" and "bearish" are not used.
+- **Briefs describe news at a point in time and never advise.** The prompt forbids
+  recommending, rating or predicting in the brief's own voice: no buy, sell or hold, no price
+  direction or target, no "investors should".
+  - Facts the headlines report are kept with their source. An analyst's rating change is
+    reported as such, for example "Jefferies raised its rating to buy".
   - A deny-list check on the output looks for second person, "should buy", "will rise",
-    "is set to climb" and similar. A hit gets the corrective retry; a second failure is
-    `rejected`, and nothing is shown.
-  - Digests and news lists carry one line: "Summaries describe news as it was published.
-    They are not investment advice."
-- **The prompt is versioned.** `PROMPT_VERSION` in code is part of the summary's key, so a
-  new version writes new rows instead of overwriting
+    "is set to climb" and similar.
+  - News responses carry one line: "Briefs describe news as it was published. They are not
+    investment advice."
+- **A brief that fails a check** (format, unknown IDs, deny-list) gets one corrective retry
+  with the reason. A second failure is logged and nothing is stored; the previous brief
+  stays.
+- **A brief is regenerated only when new articles arrived**: a group gets a new one when an
+  article was linked to one of its instruments after its latest brief. Older briefs are kept.
+- **The prompt is versioned.** `PROMPT_VERSION` in code is stored with each brief
   ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
-- **Cost control:**
-  - Each article is summarised once, never per user or per listing.
-  - Only canonical articles are summarised, published within the lookback, with a candidate
-    link.
-  - At most 8 articles per security per run, highest tier first, then newest.
-  - Text is capped at 20,000 characters (news puts the facts first); a cut is logged.
-  - A run makes at most 200 calls. `SUMMARY_MONTHLY_BUDGET_USD` is checked against the
-    stored token counts; past it, the job stops summarising and records why in `job_runs`.
-
-  Estimate: 30 securities give about 150 summaries a day, at about 3,500 input and 400
-  output tokens each (thinking included). That is about $0.08 a day, or $2.50 a month.
-- **No batches or caching.** The Batch API's 50% saving is not worth polling for results
-  later. Prompt caching only applies from 512 tokens on Haiku 5.5, and the system prompt is
-  likely shorter; it applies by itself if the prompt grows.
+- **The provenance line is built when a brief is read**, from its cited articles and
+  `created_at`, not stored: "Generated on 2026-10-30 at 06:12 UTC from 9 headlines (Reuters,
+  WSJ, Les Echos and 6 others)". It claims only what was generated: headlines, not articles
+  ([web 0006](../../../web/docs/adr/0006-home-feed.md)). The model and prompt version are in
+  the response, not in the line.
+- **Cost:** 40 headlines and the instructions come to about 2,500 input tokens, and the
+  output with thinking to about 400. That is about $0.0005 a brief, or 1.5 cents for 30
+  securities.
 
 ### Alternatives considered
 
-- A synthesis per security per day: one paragraph that reads better in a digest, but it must
-  be regenerated as articles arrive, and its provenance spans several sources. It can be
-  built later on top of article summaries.
+- Per-article summaries from extracted text, as in the earlier draft: better briefs, but a
+  fetcher, trafilatura, robots.txt and paywall handling, and a call per article.
+- Summarising teasers ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)):
+  Google's teaser repeats the title.
 - The `claude` CLI on a Claude subscription
   ([web 0007](../../../web/docs/adr/0007-local-summarization-backend.md)): no API bill, but
-  it uses the subscription's limits, takes about 10 s a call, and ties a background job to a
-  signed-in CLI.
-- A local model through Ollama: free and private, but weaker on French and German text and
-  slow on a laptop.
+  about 10 s a call, and a command tied to a signed-in CLI.
+- A local model through Ollama: free and private, but slow on a laptop.
 - Sonnet 5.5: 20 times the price for a task Haiku should handle. Switch if Haiku fails the
-  evaluation at step 30.
-- The Batch API (see above).
-- Summarising when a user reads: latency, and a cost per view.
+  evaluation at step 23.
+- Storing rejected briefs (a status column for rows nothing shows).
 
-## Notifications
+## Running
 
 ### Decision
 
-- **Each user gets a digest.** A `digest_frequency` setting on users (`off`, `daily` or
-  `weekly`) chooses how often. A digest covers the time since the user's last one, at most 7
-  days:
-  - For each followed security, holdings first: its `primary` articles with summary, tone,
-    provenance and link.
-  - Securities with nothing new get one line.
-
-  A digest is built from stored rows only; no model is called.
-- **Digests are stored, then delivered.** The `digests` table holds user, period, content as
-  JSON, `created_at`, `sent_at` and channel. `(user_id, period_end)` is unique, so a re-run
-  never sends twice. `GET /digests` and `GET /digests/{id}` show them in the app.
-- **Email over SMTP** (`SMTP_*` settings), with Mailpit in `docker-compose.yml` for
-  development. Without SMTP settings, digests are stored but not sent.
-- **Manual trigger:** `POST /digests` builds and sends the current user's digest now, for the
-  time since the last one. `just send-digests` does the same for every user who is due.
+- **Commands only:** `python -m app.jobs.ingest_news` (`just ingest-news`) and
+  `python -m app.jobs.generate_briefs` (`just brief`), wired as in
+  [0002](0002-api-architecture.md). No scheduler, no digests, no email.
+- **Read endpoint:** `GET /instruments/{id}/news` returns the security's latest brief with its
+  provenance line and cited article IDs, and its 40 most recent articles, newest first. It is
+  not paginated: the 40 are what the brief was written from.
 
 ### Alternatives considered
 
-An alert per article (noisy, and real-time is out of scope). Push through ntfy or a Telegram
-bot (no email setup, and it reaches a phone; a good second channel). macOS notifications (only
-reach that machine). In-app only (nothing reaches the user). A hosted email API such as Resend
-(an account and a domain, for one recipient).
+A scheduler process, digests and email, as in the earlier draft (deferred). A `GET /news`
+feed over every followed security (deferred until the web app has a home feed).
 
 ## Out of scope for v1
 
+- News in other languages, and duplicates across languages.
 - News for ETFs and indices; market-wide and macro news.
-- Real-time or intraday alerts.
-- A synthesis per security per day, grouping articles into stories, and duplicates across
-  languages.
-- Connecting news to price moves ("the stock fell because…"), sentiment scores and signals.
-- Social media, paid news APIs, and parsers for regulatory filings.
-- Getting past paywalls, or rendering pages with a headless browser.
-- Feeds or aliases edited by users; news search; read and unread state.
-- History older than the 3-day lookback.
-- Translation, unless the summary language requires it (see open questions).
-- Running on more than one machine.
+- Real-time or intraday alerts; connecting news to price moves; sentiment scores.
+- Social media, paid news APIs and regulatory filings.
+- Getting past paywalls.
 
 ## Consequences
 
-- Securities with a US or Canadian listing get ticker-tagged news from Finnhub. European and
-  Asian ones depend on name queries, feeds and Yahoo. Their recall depends on the aliases,
-  and is weakest for names that are ordinary words.
-- Google News decoding is the most fragile part. When it fails, that source's items are
-  skipped and logged, and the other sources carry on.
-- The model's relevance check is on the path to showing anything. Without an API key or past
-  the budget, links stay candidates and articles show without summaries.
-- Model spend has a monthly ceiling, and a run missed during sleep catches up.
-- The scheduler is one more process to keep running.
+- **Material stories without finance words can be missed**, such as Reuters on Toyota and
+  Waymo's robotaxi deal. The probes measured this gap; step 23 checks how often it hides
+  something that matters.
+- **Recall depends on one name per security.** Official names can be longer than what the
+  press writes ("LVMH Moët Hennessy - Louis Vuitton" for "LVMH", "ASML Holding" for "ASML"),
+  and an exact phrase then finds little.
+- **Briefs know only headlines.** They say what was reported, not why or how much beyond
+  what the title gives.
+- **A run looks back one day.** Running less than daily loses the days in between.
+- **A listing followed later** has no links to articles fetched before it, until the next
+  articles arrive.
+- Google News RSS has no API contract. When it changes, ingestion stops and the logs say
+  so; stored articles and briefs remain.
 
 ## Implementation steps
 
-- **Step 18: Scheduler.** `app.jobs.scheduler` on APScheduler 3.x, the `job_runs` table,
-  advisory locks, catch-up at start, `SCHEDULER_TIMEZONE`, `just scheduler`. Move
-  `update_prices` under it. Update [0007](0007-market-data.md) and the price rows in
-  `improvements.md`.
-- **Step 19: News storage.** Models and migration for `articles`, `article_sources` and
-  `article_instruments`, plus the URL normaliser and `title_key` as pure functions, with
-  tests.
-- **Step 20: Publisher feeds.** `publishers.toml` with tiers, the `rss` client, and an
-  ingestion service that stores articles and sources, deduplicated by URL. Add
-  `just ingest-news`.
-- **Step 21: Name matching.** Names without legal forms, `aliases.toml`, explicit ticker
-  forms, and `name` links for followed securities, grouped by share class.
-- **Step 22: Finnhub.** Client, choice of the North American listing, redirect resolution,
-  and `ticker` links.
-- **Step 23: Google News.** Client, locale map, filtering by publisher before decoding, and
-  `query` links.
-- **Step 24: GDELT and Yahoo news.** The GDELT client (confirm its rate limit) and
-  `YahooClient.search_news`.
-- **Step 25: Article text.** Fetcher (robots.txt, per-domain limits, size cap),
-  trafilatura, `text_status`, paywall detection with a measured threshold, text hash, and
-  clearing text after 30 days.
-- **Step 26: Near-duplicates.** Same title, title similarity and same text; choosing the
-  canonical copy; logging candidate pairs. Measure on a week of real articles and record the
-  numbers here.
-- **Step 27: Summarisation.** The Anthropic client, `summaries` and `summary_instruments`,
-  the prompt and its version, format and deny-list checks with one retry, caps and budget,
-  and `just summarise-news`. Scheduled after ingestion.
-- **Step 28: News API.** `GET /instruments/{id}/news` and `GET /news`, the provenance line
-  in the read schema, and `paginate()` taking an ordering column.
-- **Step 29: Digests.** `digest_frequency`, the `digests` table and builder, the SMTP sender
-  with Mailpit, `GET`/`POST /digests`, `just send-digests`, and the schedule.
-- **Step 30: Evaluation.** Hand-label about 100 articles for relevance, tone and duplicates;
-  measure agreement and alias recall, and record the results in this ADR.
-
-## Open questions
-
-1. **Summary language:** English, French, or the article's own language?
-2. **Model backend:** the Anthropic API (about $2–3 a month, needs a key), or the `claude`
-   CLI on your subscription, as the web app allows?
-3. **Notification channel:** email (and through which SMTP account?), push through ntfy or
-   Telegram, or in-app only for now?
-4. **Publishers:** which outlets do you read and trust, and in which markets (France,
-   Germany, UK, US, Asia)? This seeds `publishers.toml` and the Google News locales.
-5. **Analyst ratings:** may summaries report rating and price-target changes with their
-   source ("Jefferies raised its rating to buy"), or should they leave them out?
-6. **Times:** are the proposed run times right for your time zone, and is the machine usually
-   on at 06:30 and 23:00 (or should it catch up at login)?
-7. **ETFs:** is "no ETF news in v1" acceptable, or should an ETF at least show its index's
-   headlines?
-8. **Users:** is this only for you? If so, digest settings could be a single setting instead
-   of a field on each user.
+- **Step 18: News storage.** Models and migration for `articles` and `article_instruments`;
+  `title_key` and the legal-form stripping as pure functions, with tests.
+- **Step 19: Google News source.** The `google_news` client, the `NewsSource` protocol and
+  `GoogleNewsSource` (query, locale, junk filter), tested on recorded feeds.
+- **Step 20: Ingestion.** Followed stocks grouped by share class, the ingest service
+  (duplicates, links, a failed group skipped), its log line, and `just ingest-news`.
+- **Step 21: Briefs.** The `anthropic` client, the `briefs`, `brief_instruments` and
+  `brief_articles` tables, the prompt and its version, the checks with one retry, the
+  regeneration rule, and `just brief`.
+- **Step 22: News API.** `GET /instruments/{id}/news` with the latest brief, its provenance
+  line and the disclaimer.
+- **Step 23: Evaluation.** Run daily for a week; record here the articles per group, how many
+  were dropped and merged, brief failures and token cost, and a hand check of about 20 briefs
+  on Haiku: facts not in their cited headlines, and material stories missed against a plain
+  query.
