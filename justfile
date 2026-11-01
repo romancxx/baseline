@@ -29,6 +29,10 @@ update-prices:
 yahoo-search QUERY:
     {{api}} run python scripts/yahoo_search.py {{quote(QUERY)}}
 
+# Store the last day's Google News articles of every stock held in a portfolio or on a watchlist
+ingest-news:
+    {{api}} run python -m app.jobs.ingest_news
+
 # Search the real Google News for a security's last day of headlines, e.g. just news-search "ASML Holding N.V."
 news-search NAME:
     {{api}} run python scripts/news_search.py {{quote(NAME)}}

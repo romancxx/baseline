@@ -23,3 +23,21 @@ class FetchResult(BaseModel):
     articles: list[RawArticle]
     # How many items the source dropped, by reason (e.g. "excluded_domain").
     dropped: dict[str, int]
+
+
+class NewsIngestSummary(BaseModel):
+    """What one news ingestion did."""
+
+    # Followed stocks, and the queries sent for them: one per share class.
+    instruments: int
+    queries: int
+    # Articles the source returned, and the items it dropped, by reason.
+    fetched: int
+    dropped: dict[str, int]
+    # Articles stored for the first time, and links added between articles and instruments.
+    new: int
+    linked: int
+    # Articles deleted for being older than the retention period.
+    deleted: int
+    # Why a query's articles were not stored, by the name it searched.
+    failed: dict[str, str]

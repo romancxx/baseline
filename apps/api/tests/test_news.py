@@ -57,7 +57,7 @@ def test_title_key_is_the_same_for_copies_from_two_publishers() -> None:
 
 async def test_fake_news_source_answers_with_its_articles() -> None:
     fake = FakeNewsSource()
-    fake.articles = [
+    fake.articles["Apple"] = [
         RawArticle(
             url="https://news.google.com/rss/articles/abc",
             title="Apple beats estimates - Reuters",
@@ -67,11 +67,11 @@ async def test_fake_news_source_answers_with_its_articles() -> None:
     ]
     fake.dropped = {"excluded_domain": 2}
     query = NewsQuery(name="Apple", since=dt.datetime(2026, 10, 30, tzinfo=dt.UTC))
-    # pyright checks here that FakeNewsSource has NewsSource's methods.
+    # pyright checks here that FakeNewsSource has NewsSource's attributes and methods.
     source: NewsSource = fake
 
     result = await source.fetch(query)
 
-    assert result.articles == fake.articles
+    assert result.articles == fake.articles["Apple"]
     assert result.dropped == {"excluded_domain": 2}
     assert fake.queries == [query]

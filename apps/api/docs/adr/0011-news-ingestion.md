@@ -106,7 +106,8 @@ CLI's default model with this record's rules.
   European and Asian companies, which Finnhub's free plan and Yahoo do not. Other languages
   are out of scope.
 - **Sources sit behind a `NewsSource` protocol** (a `typing.Protocol`) in the news module's
-  `service.py`: one method, `async fetch(query: NewsQuery) -> FetchResult`. A `NewsQuery` is
+  `service.py`: a `source` attribute, the `ArticleSource` recorded on each of its articles,
+  and one method, `async fetch(query: NewsQuery) -> FetchResult`. A `NewsQuery` is
   a security's name and a start time; a `FetchResult` holds the `RawArticle`s (URL, title,
   publisher and publication time) and how many items the source dropped, by reason, for the
   run's log line. A source matches the protocol by having that method, without inheriting
@@ -151,8 +152,8 @@ one source's problem; a source with real URLs has none).
   group. MC.PA and MOH.DE cost one query.
 - **The query is the name as an exact phrase, plus finance terms, over the last day:**
   `"LVMH Moët Hennessy - Louis Vuitton" (shares OR stock OR earnings OR results OR revenue OR
-  analyst OR investors) when:1d`. The name is that of the group's earliest-followed listing,
-  without its legal forms: `news_name` removes them from the end, with the comma or `&`
+  analyst OR investors) when:1d`. The name is that of the group's first-stored listing
+  (earliest `instruments.created_at`), without its legal forms: `news_name` removes them from the end, with the comma or `&`
   before them, until none is left ("Samsung Electronics Co., Ltd." gives "Samsung
   Electronics"; "JPMorgan Chase & Co." gives "JPMorgan Chase").
 - **Stocks only.** ETFs get no news: nothing reports on "an MSCI World ETF".
@@ -202,9 +203,10 @@ handling anyway). Queries in the home market's language (out of scope).
 - **Runs are idempotent.** Inserts use `ON CONFLICT DO NOTHING` on the URL and on the links'
   key, so a second run with nothing new changes nothing. No transaction stays open during a
   network call (CODE_STANDARDS §1 and §8).
-- **A group that fails is logged and skipped**; the others carry on. The run logs one
-  `news.ingest_finished` line with the groups fetched and failed and the articles stored,
-  merged and dropped.
+- **A group that fails is logged and skipped**; the others carry on. Each group's articles
+  and links are stored in one transaction. The run logs one `news.ingest_finished` line: the
+  followed stocks, the queries sent, the articles fetched, new and deleted, the links added,
+  the items dropped by reason, and the failed queries with their reason.
 
 ### Alternatives considered
 
@@ -248,6 +250,8 @@ need its links moved).
   the brief was written. **`brief_articles`**: `(brief_id, article_id)`, the articles it
   cites. Both cascade from either side.
 - **No article text and no teasers are stored.** Google's teaser repeats the title.
+- **Articles are kept 30 days.** Each ingest run ends by deleting those published earlier,
+  with their links.
 
 ### Alternatives considered
 
@@ -363,5 +367,7 @@ feed over every followed security (deferred until the web app has a home feed).
 - **A run looks back one day.** Running less than daily loses the days in between.
 - **A listing followed later** has no links to articles fetched before it, until the next
   articles arrive.
+- **A brief older than 30 days loses its cited articles** when they are deleted; its text
+  remains.
 - Google News RSS has no API contract. When it changes, ingestion stops and the logs say
   so; stored articles and briefs remain.

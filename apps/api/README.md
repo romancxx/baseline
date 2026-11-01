@@ -28,7 +28,7 @@ From the repo root, the same commands are available as `just api-install`, `just
 found with its exchange code and currency. It is the only command that calls Yahoo; tests
 never do.
 
-`just news-search "ASML Holding N.V."` searches the real Google News the way ingestion will:
+`just news-search "ASML Holding N.V."` searches the real Google News the way ingestion does:
 the name without its legal form, finance terms, the last day, junk dropped. It prints the query,
 each article (time, publisher, headline) and what was dropped. Tests never call Google News:
 they read real feeds, recorded and trimmed, from `tests/fixtures/google_news/`.
@@ -224,6 +224,23 @@ returns all of them at once, newest first, each with its instrument (not paginat
 it is already there. `DELETE /watchlist/{instrument_id}` removes it (204), or answers 404 if it
 is not on your watchlist. An unknown instrument answers 404. The price job also updates
 watched instruments.
+
+## News
+
+`just ingest-news` (`python -m app.jobs.ingest_news`), run by hand, stores the last day's
+Google News headlines of every stock held in a portfolio or on a watchlist. ETFs get none.
+
+- Listings of one share class (MC.PA and MOH.DE) are searched once, under the name of the
+  first one stored, and each article is linked to all of them.
+- An article already stored under the same URL, or under the same headline published within 3
+  days, is not stored again; it gets the new links. Running the command twice in a row adds
+  nothing.
+- Articles published more than 30 days ago are deleted at the end of the run.
+
+A query that fails does not stop the others. The run ends with one log line,
+`news.ingest_finished`: the followed stocks (`instruments`), the `queries` sent, the articles
+`fetched`, what the source `dropped` by reason, the `new` articles and links (`linked`), the
+articles `deleted`, and the queries that `failed` (with the reason).
 
 ## Project layout
 

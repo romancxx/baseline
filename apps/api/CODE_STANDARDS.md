@@ -38,6 +38,8 @@ considering a change done.
 - A job that loops over items catches each item's expected failures
   (`ProviderUnavailableError`, `DBAPIError`), rolls back, records the reason and goes on. It
   never lets one item stop the run. **[test]**
+- A job that works on the instruments users follow selects them with
+  `Instrument.id.in_(followed_instrument_ids())`; never rewrite that union. **[review]**
 - A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
   `router.py`. **[review]**
 - Something a module needs that several implementations can provide (a news source) is a

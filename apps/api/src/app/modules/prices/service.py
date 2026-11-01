@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Awaitable, Sequence
 
 import structlog
-from sqlalchemy import Row, exists, select, union
+from sqlalchemy import Row, exists, select
 from sqlalchemy.dialects.postgresql import Insert, insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +13,9 @@ from app.core.exceptions import ProviderUnavailableError
 from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.schemas import DailyBar
 from app.modules.instruments.models import Instrument
-from app.modules.instruments.service import get_instrument
-from app.modules.positions.models import Position
+from app.modules.instruments.service import followed_instrument_ids, get_instrument
 from app.modules.prices.models import DailyPrice
 from app.modules.prices.schemas import PriceUpdateSummary
-from app.modules.watchlist.models import WatchlistItem
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -113,11 +111,10 @@ async def _followed_instruments(
 
     Plain values, not ORM objects: a rollback after a failure expires those.
     """
-    followed = union(select(Position.instrument_id), select(WatchlistItem.instrument_id))
     has_prices = exists().where(DailyPrice.instrument_id == Instrument.id)
     statement = (
         select(Instrument.id, Instrument.yahoo_symbol, has_prices)
-        .where(Instrument.id.in_(followed))
+        .where(Instrument.id.in_(followed_instrument_ids()))
         .order_by(Instrument.yahoo_symbol)
     )
     return (await session.execute(statement)).all()

@@ -2,6 +2,7 @@ import re
 
 from app.integrations.google_news.client import GoogleNewsClient, drop_junk
 from app.integrations.google_news.schemas import FeedItem
+from app.modules.news.models import ArticleSource
 from app.modules.news.schemas import FetchResult, NewsQuery, RawArticle
 from app.modules.news.service import fold
 
@@ -78,6 +79,8 @@ def search_query(name: str) -> str:
 
 class GoogleNewsSource:
     """The NewsSource over Google News RSS search."""
+
+    source = ArticleSource.GOOGLE_NEWS
 
     def __init__(self, client: GoogleNewsClient) -> None:
         self._client = client
