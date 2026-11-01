@@ -26,7 +26,7 @@ from app.integrations.yahoo.dependencies import get_yahoo_client
 from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, QuoteType, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
-from app.modules.news.schemas import NewsQuery, RawArticle
+from app.modules.news.schemas import FetchResult, NewsQuery, RawArticle
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
 from app.modules.prices.models import DailyPrice
@@ -162,15 +162,17 @@ class FakeOpenFigi(OpenFigiClient):
 
 
 class FakeNewsSource:
-    """A NewsSource that answers every query with `articles` and records each query."""
+    """A NewsSource that answers every query with `articles` and `dropped`, and records each
+    query."""
 
     def __init__(self) -> None:
         self.articles: list[RawArticle] = []
+        self.dropped: dict[str, int] = {}
         self.queries: list[NewsQuery] = []
 
-    async def fetch(self, query: NewsQuery) -> list[RawArticle]:
+    async def fetch(self, query: NewsQuery) -> FetchResult:
         self.queries.append(query)
-        return self.articles
+        return FetchResult(articles=self.articles, dropped=self.dropped)
 
 
 def listing(yahoo_symbol: str, exchange_code: str) -> FigiCandidate:

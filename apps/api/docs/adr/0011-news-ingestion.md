@@ -106,15 +106,22 @@ CLI's default model with this record's rules.
   European and Asian companies, which Finnhub's free plan and Yahoo do not. Other languages
   are out of scope.
 - **Sources sit behind a `NewsSource` protocol** (a `typing.Protocol`) in the news module's
-  `service.py`: one method, `async fetch(query: NewsQuery) -> list[RawArticle]`. A `NewsQuery`
-  is a security's name and a start time; a `RawArticle` is URL, title, publisher and
-  publication time. A source matches the protocol by having that method, without inheriting
+  `service.py`: one method, `async fetch(query: NewsQuery) -> FetchResult`. A `NewsQuery` is
+  a security's name and a start time; a `FetchResult` holds the `RawArticle`s (URL, title,
+  publisher and publication time) and how many items the source dropped, by reason, for the
+  run's log line. A source matches the protocol by having that method, without inheriting
   from it, and raises `ProviderUnavailableError` when it cannot be reached. Tests use a
   `FakeNewsSource` from `tests/conftest.py`.
 - **A source is a client and an adapter.** `integrations/google_news/` speaks Google's
-  language (a query and a locale in, parsed feed items out, with feedparser).
-  `GoogleNewsSource`, in the news module's `sources.py`, builds the query and maps the items
-  to `RawArticle`s. Integrations cannot import from modules, so the adapter is what lets the
+  language (a query and a locale in, parsed feed items out, with feedparser). The client
+  fetches with `httpx2` and hands feedparser the body as a stream: given bytes or a string,
+  feedparser first tries to open it as a file path or a URL. An item missing a field is
+  skipped and counted in a log line; an answer that is not a feed raises
+  `ProviderUnavailableError`. Nothing in the API uses the client, so it is not created in the
+  lifespan; the command that uses it creates and closes it.
+  `GoogleNewsSource`, in the news module's `sources.py`, builds the query, drops the junk and
+  the off-topic items, and maps the rest to `RawArticle`s; items published before the query's
+  start time are dropped as `too_old`. Integrations cannot import from modules, so the adapter is what lets the
   client stay unaware of `NewsQuery` and `RawArticle`. Each article records its source.
 - **Finnhub is the planned second source**, deferred. Its loose tags make it a source of
   candidates that the model would have to confirm.
@@ -145,7 +152,9 @@ one source's problem; a source with real URLs has none).
 - **The query is the name as an exact phrase, plus finance terms, over the last day:**
   `"LVMH Moët Hennessy - Louis Vuitton" (shares OR stock OR earnings OR results OR revenue OR
   analyst OR investors) when:1d`. The name is that of the group's earliest-followed listing,
-  without its legal form ("Inc.", "SE", "N.V.", "Société Européenne", …).
+  without its legal forms: `news_name` removes them from the end, with the comma or `&`
+  before them, until none is left ("Samsung Electronics Co., Ltd." gives "Samsung
+  Electronics"; "JPMorgan Chase & Co." gives "JPMorgan Chase").
 - **Stocks only.** ETFs get no news: nothing reports on "an MSCI World ETF".
 
 ### Alternatives considered
@@ -159,13 +168,25 @@ handling anyway). Queries in the home market's language (out of scope).
 
 ### Decision
 
-- **Junk is dropped before storage:**
-  - excluded publisher domains, starting with ad-hoc-news.de, in the `google_news`
-    integration. Links are not decoded, so the domain is known only from the feed item's
-    `<source url="…">`, and `RawArticle` does not carry it;
-  - title patterns for quote, chart, option and derivative pages, in the news module
-    ("Stock Price, News, Quote", "Seasonal Returns Chart", "interactive stock chart", option
-    symbols such as `ASML261120P01060000`, "Tokenized Stock", `META_TITLE_QUOTE`).
+- **Junk is dropped before storage**, by `drop_junk` in the `google_news` integration, which
+  returns the items it kept and a count per reason:
+  - `excluded_domain`: ad-hoc-news.de, youtube.com, imdb.com and cryptorank.io, with their
+    subdomains. Links are not decoded, so the domain is known only from the item's
+    `<source url="…">`, and `RawArticle` does not carry it.
+  - Pages that are not articles, recognised by their titles for the same reason:
+    `quote_page` ("Stock Price, News, Quote", `META_TITLE_QUOTE`, and Boursorama's quote
+    pages, titled "<name> - Boursorama - Boursorama"), `chart_page` ("Seasonal Returns
+    Chart", "Charts, Data & News", "Interactive Stock Chart"), `option_page` ("Nov 2026
+    1060.000 put", symbols such as `ASML261120P01060000`) and `derivative_page` ("Tokenized
+    Stock").
+
+  The patterns come from feeds recorded on 2026-10-31; no option page appeared that day, so
+  that rule is checked only on the earlier probes' titles.
+- **An item whose title does not name the security is dropped as `off_topic`.** Google
+  matches the query's phrase anywhere in the article, so a market roundup that mentions the
+  company in passing comes back too. The title must contain the first word of the news name
+  as a whole word, ignoring case and accents: "ASML" for "ASML Holding N.V.", which "ASM
+  International" does not match.
 - **Google's links are stored as they are**, not decoded: decoding takes a request per item
   to an endpoint that rate-limits.
 - **Duplicates are not stored twice:**
@@ -334,6 +355,9 @@ feed over every followed security (deferred until the web app has a home feed).
 - **Recall depends on one name per security.** Official names can be longer than what the
   press writes ("LVMH Moët Hennessy - Louis Vuitton" for "LVMH", "ASML Holding" for "ASML"),
   and an exact phrase then finds little.
+- **A title that names the company another way is dropped.** One that says only "TSMC",
+  "AAPL" or "the iPhone maker" fails the off-topic check, and a first word shared with other
+  companies ("Deutsche" in "Deutsche Telekom") lets some of their headlines through.
 - **Briefs know only headlines.** They say what was reported, not why or how much beyond
   what the title gives.
 - **A run looks back one day.** Running less than daily loses the days in between.

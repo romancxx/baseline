@@ -19,13 +19,14 @@ considering a change done.
 - A feature is a package in `src/app/modules/<feature>/`; code every feature uses goes in
   `src/app/core/`. **[review]**
 - A client for an external service is a package in `src/app/integrations/<provider>/` with
-  `client.py`, `schemas.py` and `dependencies.py`. It returns its own Pydantic models, never
-  the library's dicts or DataFrames. **[review]**
+  `client.py` and `schemas.py`, plus `dependencies.py` when an endpoint uses it. It returns
+  its own Pydantic models, never the library's dicts or DataFrames. **[review]**
 - A client that holds connections (an `httpx2.AsyncClient`) is created once in the lifespan,
-  stored on `app.state` and closed after `yield`; never one per request. **[review]**
+  stored on `app.state` and closed after `yield`; never one per request. A client only
+  commands use is created in their `main()` and closed there with `aclose()`. **[review]**
 - A module uses only these file names, each only when needed, and each always for the same
-  thing: `router.py`, `schemas.py`, `models.py`, `service.py`, `dependencies.py`. No empty
-  files or modules for future features. **[review]**
+  thing: `router.py`, `schemas.py`, `models.py`, `service.py`, `dependencies.py`,
+  `sources.py`. No empty files or modules for future features. **[review]**
 - Imports are absolute: `from app.modules.health.schemas import HealthResponse`. **[lint]**
 - `core/` never imports from `modules/`, `integrations/` or `jobs/`; `integrations/` never
   imports from `modules/` or `jobs/`. **[lint]**
@@ -40,8 +41,9 @@ considering a change done.
 - A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
   `router.py`. **[review]**
 - Something a module needs that several implementations can provide (a news source) is a
-  `typing.Protocol` in that module's `service.py`. Implementations do not inherit from it.
-  **[review]**
+  `typing.Protocol` in that module's `service.py`. Implementations do not inherit from it;
+  one built on an integration's client goes in the module's `sources.py`
+  (`GoogleNewsSource`). **[review]**
 - Routers are mounted only in `create_app()`, on the `api` router, whose prefix is
   `API_PREFIX` (`/api/v1`). A path the code needs in full is built from `API_PREFIX`, never
   written out. **[review]**
@@ -228,6 +230,8 @@ considering a change done.
   (`position: OwnedPosition`, inside `OwnedPortfolio`). **[test]**
 - Another user's row answers 404 with the same message as an unknown id, never 403.
   **[test]**
+- A provider's response goes to a parser as a stream (`feedparser.parse(io.BytesIO(content))`),
+  never as bytes or a string the library may open as a file path or a URL. **[test]**
 
 ## 10. Logging — [ADR 0003](docs/adr/0003-api-conventions.md)
 
@@ -262,6 +266,9 @@ considering a change done.
   boundary, never our own functions: `monkeypatch.setattr(yf, "Search", fake)` for a library,
   `httpx2.MockTransport(handler)` passed as the client's `transport` for an HTTP API.
   **[review]**
+- A provider that answers with a document (a feed) is tested on real answers, recorded and
+  trimmed, in `tests/fixtures/<provider>/`. Each file says in a comment what was recorded,
+  when, and what was trimmed. **[review]**
 - Override settings with `monkeypatch.setenv` and `get_settings.cache_clear()` before and
   after. **[review]**
 - Test settings live in `[tool.pytest_env]`; the test database name ends in `_test`. **[test]**

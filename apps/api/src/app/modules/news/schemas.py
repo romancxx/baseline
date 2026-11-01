@@ -15,3 +15,11 @@ class RawArticle(BaseModel):
     title: str
     publisher: str
     published_at: AwareDatetime
+
+
+class FetchResult(BaseModel):
+    """What a news source returned for one query."""
+
+    articles: list[RawArticle]
+    # How many items the source dropped, by reason (e.g. "excluded_domain").
+    dropped: dict[str, int]

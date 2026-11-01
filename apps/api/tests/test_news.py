@@ -65,9 +65,13 @@ async def test_fake_news_source_answers_with_its_articles() -> None:
             published_at=dt.datetime(2026, 10, 30, 14, 0, tzinfo=dt.UTC),
         )
     ]
+    fake.dropped = {"excluded_domain": 2}
     query = NewsQuery(name="Apple", since=dt.datetime(2026, 10, 30, tzinfo=dt.UTC))
     # pyright checks here that FakeNewsSource has NewsSource's methods.
     source: NewsSource = fake
 
-    assert await source.fetch(query) == fake.articles
+    result = await source.fetch(query)
+
+    assert result.articles == fake.articles
+    assert result.dropped == {"excluded_domain": 2}
     assert fake.queries == [query]

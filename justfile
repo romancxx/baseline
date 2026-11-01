@@ -29,6 +29,10 @@ update-prices:
 yahoo-search QUERY:
     {{api}} run python scripts/yahoo_search.py {{quote(QUERY)}}
 
+# Search the real Google News for a security's last day of headlines, e.g. just news-search "ASML Holding N.V."
+news-search NAME:
+    {{api}} run python scripts/news_search.py {{quote(NAME)}}
+
 db-up:
     docker compose up -d --wait
 

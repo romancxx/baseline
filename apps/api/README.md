@@ -28,6 +28,11 @@ From the repo root, the same commands are available as `just api-install`, `just
 found with its exchange code and currency. It is the only command that calls Yahoo; tests
 never do.
 
+`just news-search "ASML Holding N.V."` searches the real Google News the way ingestion will:
+the name without its legal form, finance terms, the last day, junk dropped. It prints the query,
+each article (time, publisher, headline) and what was dropped. Tests never call Google News:
+they read real feeds, recorded and trimmed, from `tests/fixtures/google_news/`.
+
 Tests need Postgres running. Each run recreates a separate `stocknews_test` database, migrates
 it to head, and migrates it back to base at the end; the development database is not touched.
 Test settings are in `[tool.pytest_env]` in `pyproject.toml`, so tests do not need a `.env`.
@@ -249,6 +254,7 @@ Each module contains only the files it needs, from this set:
 | `schemas.py`      | Pydantic models: request and response bodies (the module's API contract), and the data it exchanges with jobs and sources. |
 | `models.py`       | Database-facing types: table rows as the database stores them.          |
 | `service.py`      | Business logic and data access, and the protocols it needs implemented (`NewsSource`). |
+| `sources.py`      | Implementations of those protocols over an integration's client (`GoogleNewsSource`). |
 | `dependencies.py` | Functions injected with `Depends()` in the router, such as loading a resource or checking access. |
 
 ## Code standards
