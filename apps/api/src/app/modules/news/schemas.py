@@ -1,4 +1,16 @@
+import uuid
+
 from pydantic import AwareDatetime, BaseModel
+
+
+class SecurityGroup(BaseModel):
+    """The followed stocks of one share class, or one followed stock without its FIGI."""
+
+    # The share class FIGI, or the stock's id.
+    key: str
+    # The name of its first stored listing.
+    name: str
+    instrument_ids: list[uuid.UUID]
 
 
 class NewsQuery(BaseModel):

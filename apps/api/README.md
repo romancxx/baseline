@@ -234,6 +234,17 @@ A query that fails does not stop the others. The run ends with one log line,
 `fetched`, what the source `dropped` by reason, the `new` articles and links (`linked`), the
 articles `deleted`, and the queries that `failed` (with the reason).
 
+`just brief` (`python -m app.jobs.generate_briefs`) then writes a brief, with the real
+Anthropic API, for each security that has articles published after the newest headline of
+its latest brief. It sends the security's name and its 40 most recent headlines of the last 3
+days, and stores the brief (1 to 5 sentences, a tone, the headlines it cites) with the model,
+the prompt version and the tokens it cost. When no headline bears on the business, the model
+writes nothing and no brief is stored (`no_news`). A brief that fails a check (unknown
+citations, length, advice) is asked for once more with the reason; failing again, it is
+logged and not stored; each rejected draft is logged as `briefs.draft_rejected`, with its
+text and the reason. Without `ANTHROPIC_API_KEY`, the command does nothing. It ends with one
+log line, `briefs.run_finished`.
+
 ## Project layout
 
 ```

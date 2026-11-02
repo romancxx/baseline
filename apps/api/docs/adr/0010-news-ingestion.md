@@ -244,11 +244,13 @@ need its links moved).
   serves the duplicate check.
 - **`article_instruments`**: `(article_id, instrument_id)` as the key, plus `created_at`.
   Deleting either side deletes the link.
-- **`briefs`**: `id`, `model`, `prompt_version`, `text`, `tone` (a Postgres enum), token
-  counts and `created_at`.
-- **`brief_instruments`**: `(brief_id, instrument_id)`, the group's followed instruments when
-  the brief was written. **`brief_articles`**: `(brief_id, article_id)`, the articles it
-  cites. Both cascade from either side.
+- **`briefs`**: `id`, `group_key` (the group's share class FIGI, or the id of an instrument
+  without one), `text`, `tone` (a Postgres enum), `model`, `prompt_version`, `input_tokens`
+  and `output_tokens` (summed over the attempts), `period_start` and `period_end` (the
+  publication times of the oldest and newest headline sent) and `generated_at`. An index on
+  `(group_key, generated_at)` serves the lookup of a group's latest brief.
+- **`brief_articles`**: `(brief_id, article_id)`, the articles a brief cites. It cascades
+  from either side.
 - **No article text and no teasers are stored.** Google's teaser repeats the title.
 - **Articles are kept 30 days.** Each ingest run ends by deleting those published earlier,
   with their links.
@@ -257,13 +259,18 @@ need its links moved).
 
 Tone on each article (one call per article, the cost the earlier draft paid for per-article
 summaries). A JSON column of links (no foreign keys, no index for "news of this security").
+A `brief_instruments` table of the group's instruments (a row per listing for what
+`group_key` says in one column).
 
 ## Briefs
 
 ### Decision
 
-- **One Anthropic call per security group**, over its most recent stored articles: at most
-  40, each with its ID, headline, publisher and publication time. No article text.
+- **One Anthropic call per security group**, over its most recent stored articles of the
+  last 3 days: at most 40, newest first, each with a number from 1, its headline, publisher
+  and publication time, after the security's name. No article text. The model cites the
+  numbers, which are mapped back to article IDs: short numbers are cheaper and harder to
+  garble than UUIDs.
   - An `integrations/anthropic/` client over the official `anthropic` SDK,
     `claude-haiku-5-5` ($0.10 per million input tokens, $0.50 per million output) at effort
     `low`. The model is the `ANTHROPIC_MODEL` setting.
@@ -275,12 +282,13 @@ summaries). A JSON column of links (no foreign keys, no index for "news of this 
     with exponential backoff and jitter, or after the API's `retry-after`. What still fails
     raises `ProviderUnavailableError`; a rejected key says so in its message.
 
-  Without `ANTHROPIC_API_KEY`, the command says so and does nothing; news shows headlines
-  only.
+  Without `ANTHROPIC_API_KEY`, the command logs `skipped: "no API key"` and exits 0; news
+  shows headlines only.
 - **Output:**
-  - a brief of 3–5 sentences, at most about 600 characters: what was reported, attributed
+  - a brief of 1–5 sentences, at most about 600 characters: what was reported, attributed
     ("Reuters reports…", "the company said…"), using only what the headlines say, and
-    saying so when outlets disagree;
+    saying so when outlets disagree. It is empty when no headline bears on the business, and
+    then nothing is stored: no brief is better than filler;
   - a tone;
   - the IDs of the articles it used. An ID not in the input fails the check.
 - **Tone** is `positive`, `negative`, `neutral` or `mixed`: how the reported facts bear on
@@ -291,19 +299,34 @@ summaries). A JSON column of links (no foreign keys, no index for "news of this 
   direction or target, no "investors should".
   - Facts the headlines report are kept with their source. An analyst's rating change is
     reported as such, for example "Jefferies raised its rating to buy".
-  - A deny-list check on the output looks for second person, "should buy", "will rise",
-    "is set to climb" and similar.
+  - A deny-list check on the output looks for second person, "should buy" and similar, and
+    "investors should".
   - News responses carry one line: "Briefs describe news as it was published. They are not
     investment advice."
-- **A brief that fails a check** (format, unknown IDs, deny-list) gets one corrective retry
-  with the reason. A second failure is logged and nothing is stored; the previous brief
-  stays.
-- **A brief is regenerated only when new articles arrived**: a group gets a new one when an
-  article was linked to one of its instruments after its latest brief. Older briefs are kept.
+- **The prompt's rules** come from what the headline-only probe got wrong: only what the
+  headlines say; dates and figures repeated as written, never computed ("this Monday" stays
+  so); disagreeing outlets named both; headlines not about the company ignored; claims
+  attributed; no advice or forecast; tone from the main story, `mixed` only when both sides
+  carry weight. A first live run (prompt version 1) padded thin input with items that do not
+  bear on the business (Toyota's basketball team, a fund's share sale) and with comments
+  about the headlines themselves ("a routine explainer"), so version 2 allows one or two
+  sentences, or none, and forbids both.
+- **Checks in code**, after the schema's: at least one citation, every cited number in the
+  list, 40 to 700 characters (the prompt asks for at most 600), and a deny-list of second
+  person, "should buy" and the like, and "investors should": phrases attributed reporting
+  does not use. An empty text passes, as no news. Forecasts and price targets are left to
+  the prompt: "the company said sales will rise" or "Jefferies set a price target of $250"
+  is reported, and a phrase cannot tell it from the brief's own voice.
+- **A brief that fails a check**, or an answer that is not a brief, gets one corrective
+  retry: the same message, plus the rejected text and every reason. A second failure is
+  logged and nothing is stored; the previous brief stays.
+- **A brief is regenerated only when new articles arrived**: a group gets a new one when one
+  of its articles was published after the newest headline of its latest brief. Older briefs
+  are kept.
 - **The prompt is versioned.** `PROMPT_VERSION` in code is stored with each brief
   ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
 - **The provenance line is built when a brief is read**, from its cited articles and
-  `created_at`, not stored: "Generated on 2026-10-30 at 06:12 UTC from 9 headlines (Reuters,
+  `generated_at`, not stored: "Generated on 2026-10-30 at 06:12 UTC from 9 headlines (Reuters,
   WSJ, Les Echos and 6 others)". It claims only what was generated: headlines, not articles
   ([web 0006](../../../web/docs/adr/0006-home-feed.md)). The model and prompt version are in
   the response, not in the line.

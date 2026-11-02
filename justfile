@@ -33,6 +33,10 @@ yahoo-search QUERY:
 ingest-news:
     {{api}} run python -m app.jobs.ingest_news
 
+# Write a brief, with the real Anthropic API, for every followed security with new articles
+brief:
+    {{api}} run python -m app.jobs.generate_briefs
+
 # Search the real Google News for a security's last day of headlines, e.g. just news-search "ASML Holding N.V."
 news-search NAME:
     {{api}} run python scripts/news_search.py {{quote(NAME)}}

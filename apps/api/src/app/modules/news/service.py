@@ -2,7 +2,7 @@ import datetime as dt
 import re
 import unicodedata
 import uuid
-from collections import Counter, defaultdict
+from collections import Counter
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -16,7 +16,13 @@ from app.core.exceptions import ProviderUnavailableError
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.instruments.service import followed_instrument_ids
 from app.modules.news.models import Article, ArticleInstrument, ArticleSource
-from app.modules.news.schemas import FetchResult, NewsIngestSummary, NewsQuery, RawArticle
+from app.modules.news.schemas import (
+    FetchResult,
+    NewsIngestSummary,
+    NewsQuery,
+    RawArticle,
+    SecurityGroup,
+)
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -52,23 +58,14 @@ async def ingest_news(session: AsyncSession, source: NewsSource) -> NewsIngestSu
     RETENTION are deleted at the end.
     """
     now = dt.datetime.now(dt.UTC)
-    stocks = await _followed_stocks(session)
+    groups = await followed_groups(session)
     await session.commit()
-
-    # Listings of one share class share a FIGI; a stock without one is its own group.
-    groups: defaultdict[str, list[uuid.UUID]] = defaultdict(list)
-    names: dict[str, str] = {}
-    for stock_id, name, share_class_figi in stocks:
-        key = share_class_figi or str(stock_id)
-        groups[key].append(stock_id)
-        # The group's name is its first listing's.
-        names.setdefault(key, name)
 
     fetched = new = linked = 0
     dropped: Counter[str] = Counter()
     failed: dict[str, str] = {}
-    for key, stock_ids in groups.items():
-        name = names[key]
+    for group in groups:
+        name, stock_ids = group.name, group.instrument_ids
         try:
             result = await source.fetch(NewsQuery(name=name, since=now - LOOKBACK))
         except ProviderUnavailableError as exc:
@@ -96,7 +93,7 @@ async def ingest_news(session: AsyncSession, source: NewsSource) -> NewsIngestSu
     await session.commit()
 
     summary = NewsIngestSummary(
-        instruments=len(stocks),
+        instruments=sum(len(group.instrument_ids) for group in groups),
         queries=len(groups),
         fetched=fetched,
         dropped=dict(dropped),
@@ -107,6 +104,20 @@ async def ingest_news(session: AsyncSession, source: NewsSource) -> NewsIngestSu
     )
     logger.info("news.ingest_finished", **summary.model_dump())
     return summary
+
+
+async def followed_groups(session: AsyncSession) -> list[SecurityGroup]:
+    """The stocks held in a portfolio, grouped by share class, in the order they were stored."""
+    stocks = await _followed_stocks(session)
+
+    # Listings of one share class share a FIGI; a stock without one is its own group.
+    groups: dict[str, SecurityGroup] = {}
+    for stock_id, name, share_class_figi in stocks:
+        key = share_class_figi or str(stock_id)
+        # The stocks come oldest first: the group's name is its first listing's.
+        group = groups.setdefault(key, SecurityGroup(key=key, name=name, instrument_ids=[]))
+        group.instrument_ids.append(stock_id)
+    return list(groups.values())
 
 
 def title_key(title: str, publisher: str) -> str:

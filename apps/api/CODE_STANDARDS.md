@@ -83,6 +83,9 @@ considering a change done.
 - A model's answer is read only through `AnthropicClient.generate` with a Pydantic output
   model, never parsed from text by hand. An invalid answer raises `InvalidOutputError`, which
   the caller handles apart from `ProviderUnavailableError`. **[test]**
+- A rule a model's answer must follow is checked in code too, when code can check it
+  (`check_brief`); the prompt alone is not a check. A change to a prompt raises its
+  `PROMPT_VERSION`. **[review]**
 - A service catches `ProviderUnavailableError` only when it can still answer without the
   provider, and then says so in the response (`yahoo_unavailable: true`). **[review]**
 - A new kind of error gets a `code` and an entry in `STATUS_CODES`. **[review]**
@@ -251,7 +254,8 @@ considering a change done.
 - Async tests are marked at module level: `pytestmark = pytest.mark.anyio`. **[test]**
 - Use the `conftest.py` fixtures: `client`, `auth_client` for protected endpoints, `user`,
   `other_user`, `make_instrument`, `make_portfolio`, `make_position`, `make_daily_price`,
-  `yahoo`, `openfigi`, `db_session`, `app`. Never import the module-level `app`. **[review]**
+  `make_article`, `yahoo`, `openfigi`, `anthropic`, `db_session`, `app`. Never import the
+  module-level `app`. **[review]**
 - Give the fakes OpenFIGI listings with `listing(symbol, exchange_code)` and Yahoo details
   with `details(currency)` from `conftest.py`. **[review]**
 - A new external client gets a fake in `conftest.py`, installed by the `app` fixture through

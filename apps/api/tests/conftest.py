@@ -1,5 +1,6 @@
 import asyncio
 import datetime as dt
+import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterator
 from decimal import Decimal
 from pathlib import Path
@@ -10,6 +11,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
 from httpx2 import ASGITransport, AsyncClient
+from pydantic import BaseModel
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -18,6 +20,8 @@ from app.core.config import get_settings
 from app.core.database import get_db_session
 from app.core.exceptions import ProviderUnavailableError
 from app.core.security import create_access_token
+from app.integrations.anthropic.client import AnthropicClient
+from app.integrations.anthropic.schemas import Generation
 from app.integrations.openfigi.client import OpenFigiClient
 from app.integrations.openfigi.dependencies import get_openfigi_client
 from app.integrations.openfigi.schemas import FigiCandidate
@@ -26,8 +30,9 @@ from app.integrations.yahoo.dependencies import get_yahoo_client
 from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, QuoteType, SearchResult
 from app.main import create_app
 from app.modules.instruments.models import Instrument, InstrumentType
-from app.modules.news.models import ArticleSource
+from app.modules.news.models import Article, ArticleInstrument, ArticleSource
 from app.modules.news.schemas import FetchResult, NewsQuery, RawArticle
+from app.modules.news.service import title_key
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
 from app.modules.prices.models import DailyPrice
@@ -181,6 +186,31 @@ class FakeNewsSource:
         return FetchResult(articles=self.articles.get(query.name, []), dropped=self.dropped)
 
 
+class FakeAnthropic(AnthropicClient):
+    """Answers `generate` with `answers` in order, raising those that are exceptions, and
+    records each message; it has a key unless `has_key` is False."""
+
+    def __init__(self) -> None:
+        super().__init__(api_key=None, model="claude-haiku-5-5")
+        self.has_key = True
+        self.answers: list[BaseModel | Exception] = []
+        self.messages: list[str] = []
+
+    @property
+    def available(self) -> bool:
+        return self.has_key
+
+    async def generate[T: BaseModel](
+        self, system: str, message: str, output: type[T]
+    ) -> Generation[T]:
+        self.messages.append(message)
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        assert isinstance(answer, output)
+        return Generation(output=answer, input_tokens=1000, output_tokens=100)
+
+
 def listing(yahoo_symbol: str, exchange_code: str) -> FigiCandidate:
     """A listing OpenFIGI returns for an ISIN, on the Bloomberg `exchange_code`."""
     return FigiCandidate(
@@ -211,6 +241,12 @@ def yahoo() -> FakeYahoo:
 def openfigi() -> FakeOpenFigi:
     """The OpenFIGI client the app uses in tests: no test reaches the real OpenFIGI."""
     return FakeOpenFigi()
+
+
+@pytest.fixture
+def anthropic() -> FakeAnthropic:
+    """An Anthropic client with no answers queued: no test reaches the real API."""
+    return FakeAnthropic()
 
 
 @pytest.fixture
@@ -383,5 +419,47 @@ def make_daily_price(db_session: AsyncSession) -> DailyPriceFactory:
         await db_session.commit()
         await db_session.refresh(price)
         return price
+
+    return make
+
+
+class ArticleFactory(Protocol):
+    async def __call__(
+        self,
+        *instruments: Instrument,
+        title: str = ...,
+        publisher: str = ...,
+        published_at: dt.datetime | None = ...,
+    ) -> Article: ...
+
+
+@pytest.fixture
+def make_article(db_session: AsyncSession) -> ArticleFactory:
+    """A function that inserts an article linked to each of `instruments`, published an hour
+    ago unless `published_at` is given."""
+
+    async def make(
+        *instruments: Instrument,
+        title: str = "Apple shares rise",
+        publisher: str = "Reuters",
+        published_at: dt.datetime | None = None,
+    ) -> Article:
+        article = Article(
+            source=ArticleSource.GOOGLE_NEWS,
+            url=f"https://news.google.com/rss/articles/{uuid.uuid4()}",
+            title=title,
+            title_key=title_key(title, publisher),
+            publisher=publisher,
+            published_at=published_at or dt.datetime.now(dt.UTC) - dt.timedelta(hours=1),
+        )
+        db_session.add(article)
+        await db_session.flush()
+        db_session.add_all(
+            ArticleInstrument(article_id=article.id, instrument_id=instrument.id)
+            for instrument in instruments
+        )
+        await db_session.commit()
+        await db_session.refresh(article)
+        return article
 
     return make

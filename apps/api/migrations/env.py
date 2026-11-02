@@ -7,6 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 import app.modules.auth.models  # noqa: F401  (registers its tables on Base.metadata)
+import app.modules.briefs.models  # noqa: F401
 import app.modules.instruments.models  # noqa: F401
 import app.modules.news.models  # noqa: F401
 import app.modules.portfolios.models  # noqa: F401
