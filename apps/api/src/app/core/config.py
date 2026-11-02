@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=15, gt=0)
     refresh_token_expire_days: int = Field(default=30, gt=0)
     openfigi_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str = "claude-haiku-5-5"
 
 
 @lru_cache

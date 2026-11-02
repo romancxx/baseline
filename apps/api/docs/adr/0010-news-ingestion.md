@@ -264,9 +264,16 @@ summaries). A JSON column of links (no foreign keys, no index for "news of this 
 
 - **One Anthropic call per security group**, over its most recent stored articles: at most
   40, each with its ID, headline, publisher and publication time. No article text.
-  - An `integrations/anthropic/` client, `claude-haiku-5-5` ($0.10 per million input tokens,
-    $0.50 per million output) at effort `low`.
-  - Structured output (`output_config.format`), checked again with Pydantic.
+  - An `integrations/anthropic/` client over the official `anthropic` SDK,
+    `claude-haiku-5-5` ($0.10 per million input tokens, $0.50 per million output) at effort
+    `low`. The model is the `ANTHROPIC_MODEL` setting.
+  - Structured output (`output_config.format`, from the Pydantic model's JSON schema through
+    the SDK's `transform_schema`), checked again with Pydantic. An answer that does not
+    validate, or did not end normally (`max_tokens`, `refusal`), raises `InvalidOutputError`
+    with the reason, which the caller can send back in its retry.
+  - The SDK retries rate limits, overloads, server errors and dropped connections twice,
+    with exponential backoff and jitter, or after the API's `retry-after`. What still fails
+    raises `ProviderUnavailableError`; a rejected key says so in its message.
 
   Without `ANTHROPIC_API_KEY`, the command says so and does nothing; news shows headlines
   only.

@@ -80,6 +80,9 @@ considering a change done.
 - Routers never catch `AppError`. **[review]**
 - An integration catches its library's and the network's failures and raises
   `ProviderUnavailableError`; no third-party exception leaves it. **[test]**
+- A model's answer is read only through `AnthropicClient.generate` with a Pydantic output
+  model, never parsed from text by hand. An invalid answer raises `InvalidOutputError`, which
+  the caller handles apart from `ProviderUnavailableError`. **[test]**
 - A service catches `ProviderUnavailableError` only when it can still answer without the
   provider, and then says so in the response (`yahoo_unavailable: true`). **[review]**
 - A new kind of error gets a `code` and an entry in `STATUS_CODES`. **[review]**

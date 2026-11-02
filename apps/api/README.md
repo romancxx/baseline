@@ -5,7 +5,9 @@ Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
 Settings are read from environment variables, then from `.env`. Start from the example:
 `cp .env.example .env`, then set `JWT_SECRET` to the output of `openssl rand -hex 32`.
 `OPENFIGI_API_KEY` is optional: without it, OpenFIGI allows 25 requests per minute instead
-of 250.
+of 250. `ANTHROPIC_API_KEY` is optional too: without it, news has headlines but no briefs.
+`ANTHROPIC_MODEL` picks the model that writes them (`claude-haiku-5-5` by default). Only
+this key is used, not an `ant auth login` profile.
 
 Postgres runs in Docker and reads its credentials from the same `.env`. From the repo root,
 `just db-up` starts it and waits until it is healthy; `just db-down` stops it and keeps the data.
