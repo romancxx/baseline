@@ -34,7 +34,6 @@ from app.modules.prices.models import DailyPrice
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 from app.modules.users.service import create_user
-from app.modules.watchlist.models import WatchlistItem
 
 ALEMBIC_INI = Path(__file__).parents[1] / "alembic.ini"
 
@@ -384,23 +383,5 @@ def make_daily_price(db_session: AsyncSession) -> DailyPriceFactory:
         await db_session.commit()
         await db_session.refresh(price)
         return price
-
-    return make
-
-
-class WatchlistItemFactory(Protocol):
-    async def __call__(self, owner: User, instrument: Instrument) -> WatchlistItem: ...
-
-
-@pytest.fixture
-def make_watchlist_item(db_session: AsyncSession) -> WatchlistItemFactory:
-    """A function that puts `instrument` on the watchlist of `owner`."""
-
-    async def make(owner: User, instrument: Instrument) -> WatchlistItem:
-        item = WatchlistItem(user_id=owner.id, instrument_id=instrument.id)
-        db_session.add(item)
-        await db_session.commit()
-        await db_session.refresh(item)
-        return item
 
     return make

@@ -4,7 +4,6 @@
 -- stay editable.
 
 drop policy "own positions" on public.portfolio_positions;
-drop policy "own watchlist" on public.watchlist_items;
 
 create policy "read own positions"
   on public.portfolio_positions for select to authenticated
@@ -26,26 +25,4 @@ create policy "edit own positions"
 
 create policy "remove own positions"
   on public.portfolio_positions for delete to authenticated
-  using ((select auth.uid()) = user_id);
-
-create policy "read own watchlist"
-  on public.watchlist_items for select to authenticated
-  using ((select auth.uid()) = user_id);
-
-create policy "add own watchlist"
-  on public.watchlist_items for insert to authenticated
-  with check (
-    (select auth.uid()) = user_id
-    and exists (
-      select 1 from public.instruments i where i.id = instrument_id and i.active
-    )
-  );
-
-create policy "edit own watchlist"
-  on public.watchlist_items for update to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
-create policy "remove own watchlist"
-  on public.watchlist_items for delete to authenticated
   using ((select auth.uid()) = user_id);

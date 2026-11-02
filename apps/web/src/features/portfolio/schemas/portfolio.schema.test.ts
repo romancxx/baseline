@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  PositionInputSchema,
-  WatchlistInputSchema,
-} from "@/features/portfolio/schemas/portfolio.schema";
+import { PositionInputSchema } from "@/features/portfolio/schemas/portfolio.schema";
 
 const INSTRUMENT_ID = "6f1a3a1e-4a7f-4c19-9f5e-2d2d0f2a1b3c";
 
@@ -53,23 +50,6 @@ describe("PositionInputSchema", () => {
       instrumentId: "AAPL",
       quantity: "1",
       costBasis: "",
-    });
-
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("WatchlistInputSchema", () => {
-  it("treats an empty note as absent", () => {
-    const parsed = WatchlistInputSchema.parse({ instrumentId: INSTRUMENT_ID, note: "  " });
-
-    expect(parsed.note).toBeNull();
-  });
-
-  it("rejects a note over 280 characters", () => {
-    const result = WatchlistInputSchema.safeParse({
-      instrumentId: INSTRUMENT_ID,
-      note: "x".repeat(281),
     });
 
     expect(result.success).toBe(false);

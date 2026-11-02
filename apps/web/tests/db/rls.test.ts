@@ -40,7 +40,7 @@ afterAll(async () => {
   await cleanupShared(admin, shared);
 });
 
-const USER_TABLES = ["portfolio_positions", "watchlist_items", "digests"] as const;
+const USER_TABLES = ["portfolio_positions", "digests"] as const;
 const SHARED_TABLES = ["instruments", "articles", "article_instruments", "summaries"] as const;
 
 describe("anonymous access", () => {
@@ -127,20 +127,20 @@ describe("cross-user writes", () => {
     expect(Number(untouched?.quantity)).toBe(10);
   });
 
-  it("bob cannot delete alice's watchlist item", async () => {
+  it("bob cannot delete alice's position", async () => {
     const { data, error } = await bob.db
-      .from("watchlist_items")
+      .from("portfolio_positions")
       .delete()
-      .eq("id", aliceRows.watchlistItemId)
+      .eq("id", aliceRows.positionId)
       .select("id");
 
     expect(error).toBeNull();
     expect(data).toEqual([]);
 
     const { count } = await admin
-      .from("watchlist_items")
+      .from("portfolio_positions")
       .select("id", { count: "exact", head: true })
-      .eq("id", aliceRows.watchlistItemId);
+      .eq("id", aliceRows.positionId);
     expect(count).toBe(1);
   });
 
@@ -167,13 +167,13 @@ describe("cross-user writes", () => {
 });
 
 describe("own rows", () => {
-  it("bob can create, update and delete his own watchlist item", async () => {
+  it("bob can create, update and delete his own position", async () => {
     const { data: created, error: insertError } = await bob.db
-      .from("watchlist_items")
+      .from("portfolio_positions")
       .insert({
         user_id: bob.id,
         instrument_id: shared.otherActiveInstrumentId,
-        note: "mine",
+        quantity: 1,
       })
       .select("id")
       .single();
@@ -182,25 +182,25 @@ describe("own rows", () => {
     expect(created?.id).toBeDefined();
 
     const { data: updated } = await bob.db
-      .from("watchlist_items")
-      .update({ note: "still mine" })
+      .from("portfolio_positions")
+      .update({ quantity: 2 })
       .eq("id", created?.id ?? "")
-      .select("note");
-    expect(updated).toEqual([{ note: "still mine" }]);
+      .select("quantity");
+    expect(updated?.map((row) => Number(row.quantity))).toEqual([2]);
 
     const { data: deleted } = await bob.db
-      .from("watchlist_items")
+      .from("portfolio_positions")
       .delete()
       .eq("id", created?.id ?? "")
       .select("id");
     expect(deleted).toHaveLength(1);
   });
 
-  it("bob cannot track an inactive instrument", async () => {
-    const { error } = await bob.db.from("watchlist_items").insert({
+  it("bob cannot hold an inactive instrument", async () => {
+    const { error } = await bob.db.from("portfolio_positions").insert({
       user_id: bob.id,
       instrument_id: shared.inactiveInstrumentId,
-      note: "delisted",
+      quantity: 1,
     });
 
     expect(error?.message).toMatch(/row-level security/i);

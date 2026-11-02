@@ -6,7 +6,7 @@
 
 ## Context
 
-The dashboard had to show what happened to the user's holdings and watchlist, with provenance
+The dashboard had to show what happened to the user's holdings, with provenance
 on every card and a disclaimer, built so theme cards can join the same feed later.
 
 ## Decision
@@ -17,7 +17,7 @@ on every card and a disclaimer, built so theme cards can join the same feed late
   published {stamp} · tonality by {model}, {stamp}", and "not yet classified" when no summary
   exists. The spec's "Generated from {source}" would claim generation that did not happen.
 - **The route resolves the user's instruments, not the feed.** `page.tsx` calls
-  `portfolio/server` and passes `FeedInstrument[]` into `listFeed`, avoiding a
+  `portfolio/server` and passes `Instrument[]` into `listFeed`, avoiding a
   `news → portfolio` edge and keeping one owner per table. The only new edge is
   `news → summarization`, for `TonalityBadge`, pointing at the feature that owns tonality.
 - **Cards are a discriminated union on `kind`.** `FeedItemSchema` has one member today;
@@ -25,8 +25,6 @@ on every card and a disclaimer, built so theme cards can join the same feed late
   member plus a renderer, with no change to the feed.
 - **One card per article**, listing every matched instrument the caller asked about. The
   mapper reports only the instruments passed in, not every match on the row.
-- **Holdings and watchlist differ by existing tokens** — a filled chip against an outlined
-  `· watching` one. A new colour would mean the three-place `globals.css` change.
 - **Two empty states**, because "you own nothing yet" and "nothing published today" need
   different answers.
 - **`listFeedWith(reader, query)` exists alongside `listFeed(query)`** so the db suite can

@@ -14,7 +14,6 @@ its date says when it last changed.
 | [0007](0007-market-data.md) | Market data | Yahoo Finance through yfinance, in worker threads, behind one client returning Pydantic models with `Decimal` prices; daily bars stored per instrument and day, backfilled by upsert |
 | [0008](0008-security-identifiers.md) | Security identifiers | OpenFIGI share class FIGIs and ISIN lookups through one rate-limited `httpx2` client per app |
 | [0009](0009-portfolios.md) | Portfolios | Several per user, names unique per user, CRUD scoped to the owner; positions of one instrument each, with optional quantity and average price; CSV import of ISINs with a per-row report and a dry run |
-| [0010](0010-watchlist.md) | Watchlist | One per user, keyed by `(user_id, instrument_id)`; adding an item already there answers 200; not paginated; watched instruments get prices |
-| [0011](0011-news-ingestion.md) | News ingestion (proposed) | Google News RSS behind a `NewsSource` protocol, one English finance query per security; junk and duplicate titles dropped; one Haiku brief per security over its last 40 headlines, with tone, cited articles and provenance; commands only |
+| [0010](0010-news-ingestion.md) | News ingestion (proposed) | Google News RSS behind a `NewsSource` protocol, one English finance query per security; junk and duplicate titles dropped; one Haiku brief per security over its last 40 headlines, with tone, cited articles and provenance; commands only |
 
 Known gaps and planned work are in [improvements.md](../improvements.md).

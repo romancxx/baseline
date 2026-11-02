@@ -8,7 +8,7 @@ reading a decision rather than guessing at an omission.
 
 **Optimistic UI on mutations.** Add, edit and remove currently round-trip to the server and
 wait for `revalidatePath` before the list changes, so every keystroke-to-confirmation is a
-full request. `useOptimistic` around the position and watchlist lists would make the row
+full request. `useOptimistic` around the position list would make the row
 appear, change or disappear immediately and roll back if the action returns an error. Worth
 doing once the list is long enough that the reflow is noticeable, or on a slow connection —
 not before, because the rollback path is real code and real tests for a list of eight rows.
@@ -140,9 +140,8 @@ one-line hint on the feed when no summaries exist at all.
 fixed 224px column. A collapsed or top-bar variant is needed before the app is used on a
 phone.
 
-**Watchlist, Themes and Settings are disabled nav entries.** The watchlist still lives on
-the Portfolio screen. Each becomes a link when its screen exists — one `href` in
-`(app)/layout.tsx`.
+**Themes and Settings are disabled nav entries.** Each becomes a link when its screen
+exists — one `href` in `(app)/layout.tsx`.
 
 **The Review screen has no time window.** The mockup reads "7 / 214 articles kept this
 morning": what reached you out of everything ingested since the last run. Today the screen

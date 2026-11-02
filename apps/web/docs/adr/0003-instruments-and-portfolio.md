@@ -6,8 +6,8 @@
 
 ## Context
 
-A real portfolio and watchlist had to be enterable, over a universe that will eventually come
-from a directory API rather than a hand-written file.
+A real portfolio had to be enterable, over a universe that will eventually come from a
+directory API rather than a hand-written file.
 
 ## Decision
 
@@ -19,10 +19,10 @@ from a directory API rather than a hand-written file.
 - **Users pick from the seeded universe only** — and that is enforced in the database. Foreign
   keys are checked *without* RLS, so an inactive instrument was still referenceable by a
   hand-made request. `20260909120000_active_instrument_writes.sql` splits the blanket
-  `for all` policies so INSERT can require `active` while UPDATE cannot — a position stays
+  `for all` policy so INSERT can require `active` while UPDATE cannot — a position stays
   editable after its instrument is deactivated.
 - **Reads are RSC, mutations are server actions** with `revalidatePath`. No client fetching.
-- **One page, two sections** (`/portfolio`), inside an `(app)` route group whose layout carries
+- **One page** (`/portfolio`), inside an `(app)` route group whose layout carries
   the nav, so `/login` stays chrome-free.
 - **Routes are centralised** in `src/shared/routes.ts`; no hand-written path strings.
 - **Form numbers are coerced by Zod at the action boundary**, empty cost basis becomes null.

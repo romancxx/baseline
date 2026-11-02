@@ -5,4 +5,4 @@ export {
   listFeed,
   listFeedWith,
 } from "@/features/news/data/feed-queries";
-export { ReviewScreen, type ReviewScreenProps } from "@/features/news/screens/review-screen";
+export { ReviewScreen } from "@/features/news/screens/review-screen";

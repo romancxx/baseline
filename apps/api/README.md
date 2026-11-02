@@ -127,8 +127,7 @@ daily bars (open, high, low, close, adj_close, volume), oldest first, both dates
 answers 422. Prices are in the instrument's currency, as JSON strings.
 
 The bars come from `just update-prices` (`python -m app.jobs.update_prices`), run by hand
-for now. It updates every instrument held in a portfolio or on a watchlist, from the real
-Yahoo Finance:
+for now. It updates every instrument held in a portfolio, from the real Yahoo Finance:
 
 - an instrument without stored prices gets its full history;
 - the others get their last 5 days of bars, upserted;
@@ -216,19 +215,10 @@ other listings of the ISIN. A bad row does not stop the others.
 A file that breaks the format as a whole (not UTF-8, unknown, missing or repeated columns)
 answers 422 with code `invalid_file`; a file over 64 KiB answers 413 (`file_too_large`).
 
-## Watchlist
-
-`/api/v1/watchlist` holds the instruments you follow without necessarily owning them. `GET`
-returns all of them at once, newest first, each with its instrument (not paginated).
-`POST {"instrument_id": "0193…"}` adds one: 201 the first time, 200 with the existing item if
-it is already there. `DELETE /watchlist/{instrument_id}` removes it (204), or answers 404 if it
-is not on your watchlist. An unknown instrument answers 404. The price job also updates
-watched instruments.
-
 ## News
 
 `just ingest-news` (`python -m app.jobs.ingest_news`), run by hand, stores the last day's
-Google News headlines of every stock held in a portfolio or on a watchlist. ETFs get none.
+Google News headlines of every stock held in a portfolio. ETFs get none.
 
 - Listings of one share class (MC.PA and MOH.DE) are searched once, under the name of the
   first one stored, and each article is linked to all of them.

@@ -27,7 +27,7 @@ let alice: TestUser;
 const instrumentIds: string[] = [];
 const articleIds: string[] = [];
 
-type Seeded = { held: string; watched: string; other: string };
+type Seeded = { held: string; alsoHeld: string; other: string };
 let instruments: Seeded;
 
 async function seedInstrument(name: string) {
@@ -98,7 +98,7 @@ beforeAll(async () => {
 
   instruments = {
     held: await seedInstrument("Held Co"),
-    watched: await seedInstrument("Watched Co"),
+    alsoHeld: await seedInstrument("Also Held Co"),
     other: await seedInstrument("Unrelated Co"),
   };
 });
@@ -110,24 +110,21 @@ afterAll(async () => {
 });
 
 /** Reads run as a real signed-in user, so RLS applies exactly as it does in a request. */
-async function feedFor(entries: readonly { id: string; relation: "holding" | "watchlist" }[]) {
+async function feedFor(ids: readonly string[]) {
   return listFeedWith(alice.db, {
-    instruments: entries.map((entry) => ({
-      instrument: {
-        id: entry.id,
-        ticker: "TEST",
-        isin: null,
-        name: "Test",
-        type: "stock" as const,
-        macroBucket: null,
-      },
-      relation: entry.relation,
+    instruments: ids.map((id) => ({
+      id,
+      ticker: "TEST",
+      isin: null,
+      name: "Test",
+      type: "stock" as const,
+      macroBucket: null,
     })),
   });
 }
 
 describe("listFeed", () => {
-  it("returns nothing when the user holds and watches nothing", async () => {
+  it("returns nothing when the user holds nothing", async () => {
     await expect(listFeedWith(alice.db, { instruments: [] })).resolves.toEqual([]);
   });
 
@@ -141,9 +138,7 @@ describe("listFeed", () => {
       publishedAt: new Date("2026-09-20T11:00:00Z"),
     });
 
-    const ids = (await feedFor([{ id: instruments.held, relation: "holding" }])).map(
-      (item) => item.id,
-    );
+    const ids = (await feedFor([instruments.held])).map((item) => item.id);
 
     expect(ids).toContain(wanted);
     expect(ids).not.toContain(unwanted);
@@ -160,9 +155,7 @@ describe("listFeed", () => {
       canonicalId: canonical,
     });
 
-    const ids = (await feedFor([{ id: instruments.held, relation: "holding" }])).map(
-      (item) => item.id,
-    );
+    const ids = (await feedFor([instruments.held])).map((item) => item.id);
 
     expect(ids).toContain(canonical);
     expect(ids).not.toContain(duplicate);
@@ -178,30 +171,23 @@ describe("listFeed", () => {
       publishedAt: new Date("2026-09-30T10:00:00Z"),
     });
 
-    const ids = (await feedFor([{ id: instruments.held, relation: "holding" }])).map(
-      (item) => item.id,
-    );
+    const ids = (await feedFor([instruments.held])).map((item) => item.id);
 
     expect(ids.indexOf(newer)).toBeLessThan(ids.indexOf(older));
   });
 
   it("returns one item carrying both instruments when an article matched two", async () => {
     const id = await seedArticle({
-      instrumentIds: [instruments.held, instruments.watched],
+      instrumentIds: [instruments.held, instruments.alsoHeld],
       publishedAt: new Date("2026-09-22T10:00:00Z"),
     });
 
-    const items = await feedFor([
-      { id: instruments.held, relation: "holding" },
-      { id: instruments.watched, relation: "watchlist" },
-    ]);
+    const items = await feedFor([instruments.held, instruments.alsoHeld]);
     const item = items.find((candidate) => candidate.id === id);
 
-    expect(item?.instruments).toHaveLength(2);
-    expect(item?.instruments.map((entry) => entry.relation).sort()).toEqual([
-      "holding",
-      "watchlist",
-    ]);
+    expect(item?.instruments.map((instrument) => instrument.id).sort()).toEqual(
+      [instruments.held, instruments.alsoHeld].sort(),
+    );
   });
 
   it("only reports instruments the caller asked for, not every match on the article", async () => {
@@ -210,11 +196,10 @@ describe("listFeed", () => {
       publishedAt: new Date("2026-09-23T10:00:00Z"),
     });
 
-    const items = await feedFor([{ id: instruments.held, relation: "holding" }]);
+    const items = await feedFor([instruments.held]);
     const item = items.find((candidate) => candidate.id === id);
 
-    expect(item?.instruments).toHaveLength(1);
-    expect(item?.instruments[0]?.relation).toBe("holding");
+    expect(item?.instruments.map((instrument) => instrument.id)).toEqual([instruments.held]);
   });
 
   it("carries tonality and the model that produced it when a summary exists", async () => {
@@ -224,7 +209,7 @@ describe("listFeed", () => {
       tonality: "bearish",
     });
 
-    const items = await feedFor([{ id: instruments.held, relation: "holding" }]);
+    const items = await feedFor([instruments.held]);
     const item = items.find((candidate) => candidate.id === id);
 
     expect(item?.tonality).toBe("bearish");
@@ -246,7 +231,7 @@ describe("listFeed", () => {
     });
     if (error) throw new Error(error.message);
 
-    const items = await feedFor([{ id: instruments.held, relation: "holding" }]);
+    const items = await feedFor([instruments.held]);
 
     expect(items.find((candidate) => candidate.id === id)?.tonality).toBeNull();
   });
@@ -257,7 +242,7 @@ describe("listFeed", () => {
       publishedAt: new Date("2026-09-25T10:00:00Z"),
     });
 
-    const items = await feedFor([{ id: instruments.held, relation: "holding" }]);
+    const items = await feedFor([instruments.held]);
     const item = items.find((candidate) => candidate.id === id);
 
     expect(item?.tonality).toBeNull();
@@ -271,7 +256,7 @@ describe("listFeed", () => {
       teaser: "   ",
     });
 
-    const items = await feedFor([{ id: instruments.held, relation: "holding" }]);
+    const items = await feedFor([instruments.held]);
 
     expect(items.find((candidate) => candidate.id === id)?.teaser).toBeNull();
   });

@@ -1,7 +1,7 @@
 """add articles
 
 Revision ID: 9e071900c601
-Revises: b0f6c07316f5
+Revises: fc7a6e3139f7
 Create Date: 2026-10-31 07:53:44.855721
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "9e071900c601"
-down_revision: str | Sequence[str] | None = "b0f6c07316f5"
+down_revision: str | Sequence[str] | None = "fc7a6e3139f7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

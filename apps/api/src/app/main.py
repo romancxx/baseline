@@ -17,7 +17,6 @@ from app.modules.portfolios.router import router as portfolios_router
 from app.modules.positions.router import router as positions_router
 from app.modules.prices.router import router as prices_router
 from app.modules.users.router import router as users_router
-from app.modules.watchlist.router import router as watchlist_router
 
 
 @asynccontextmanager
@@ -50,7 +49,6 @@ def create_app() -> FastAPI:
     api.include_router(positions_router)
     api.include_router(imports_router)
     api.include_router(prices_router)
-    api.include_router(watchlist_router)
     app.include_router(api)
 
     return app

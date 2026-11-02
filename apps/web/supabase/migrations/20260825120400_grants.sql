@@ -12,8 +12,7 @@ grant select on
 to authenticated;
 
 grant select, insert, update, delete on
-  public.portfolio_positions,
-  public.watchlist_items
+  public.portfolio_positions
 to authenticated;
 
 grant all on all tables in schema public to service_role;

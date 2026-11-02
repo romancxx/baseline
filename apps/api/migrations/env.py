@@ -13,7 +13,6 @@ import app.modules.portfolios.models  # noqa: F401
 import app.modules.positions.models  # noqa: F401
 import app.modules.prices.models  # noqa: F401
 import app.modules.users.models  # noqa: F401
-import app.modules.watchlist.models  # noqa: F401
 from app.core.config import get_settings
 from app.core.database import Base
 

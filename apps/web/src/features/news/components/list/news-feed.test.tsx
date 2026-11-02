@@ -12,7 +12,7 @@ const instrument = {
   macroBucket: "big-tech",
 };
 
-const watched = {
+const nvidia = {
   id: "b2222222-2222-4222-8222-222222222222",
   ticker: "NVDA",
   isin: null,
@@ -28,7 +28,7 @@ function articleItem(overrides: Record<string, unknown> = {}): FeedItem {
     title: "Apple beats estimates",
     url: "https://example.com/apple",
     teaser: "Revenue came in ahead of guidance.",
-    instruments: [{ instrument, relation: "holding" }],
+    instruments: [instrument],
     tonality: "bullish",
     confidence: 0.8,
     provenance: {
@@ -41,15 +41,9 @@ function articleItem(overrides: Record<string, unknown> = {}): FeedItem {
   });
 }
 
-const watchedItem = articleItem({
-  id: "d4444444-4444-4444-8444-444444444444",
-  title: "NVIDIA ships a new GPU",
-  instruments: [{ instrument: watched, relation: "watchlist" }],
-});
-
 describe("NewsFeed", () => {
   it("renders the headline as a noreferrer link to the source", () => {
-    render(<NewsFeed items={[articleItem()]} filter="all" hasInstruments />);
+    render(<NewsFeed items={[articleItem()]} hasInstruments />);
 
     const link = screen.getByRole("link", { name: "Apple beats estimates" });
     expect(link).toHaveAttribute("href", "https://example.com/apple");
@@ -57,21 +51,21 @@ describe("NewsFeed", () => {
   });
 
   it("heads the card with the instrument's ticker and name", () => {
-    render(<NewsFeed items={[articleItem()]} filter="all" hasInstruments />);
+    render(<NewsFeed items={[articleItem()]} hasInstruments />);
 
     expect(screen.getByText("AAPL")).toBeInTheDocument();
     expect(screen.getByText("Apple")).toBeInTheDocument();
   });
 
   it("labels tonality and credits the model in the badge's hover text", () => {
-    render(<NewsFeed items={[articleItem()]} filter="all" hasInstruments />);
+    render(<NewsFeed items={[articleItem()]} hasInstruments />);
 
     const badge = screen.getByText("Constructive");
     expect(badge).toHaveAttribute("title", expect.stringContaining("claude-haiku-4-5"));
   });
 
   it("attributes the article to its source with a machine-readable UTC stamp", () => {
-    render(<NewsFeed items={[articleItem()]} filter="all" hasInstruments />);
+    render(<NewsFeed items={[articleItem()]} hasInstruments />);
 
     const provenance = screen.getByText("MarketWatch").closest("p");
     // Month abbreviations vary by ICU version; the machine-readable stamp does not.
@@ -97,7 +91,6 @@ describe("NewsFeed", () => {
             },
           }),
         ]}
-        filter="all"
         hasInstruments
       />,
     );
@@ -106,20 +99,9 @@ describe("NewsFeed", () => {
     expect(screen.queryByText("Constructive")).not.toBeInTheDocument();
   });
 
-  it("heads a multi-instrument card with the holding and counts the rest, rather than repeating the card", () => {
+  it("heads a multi-instrument card with the first instrument and counts the rest, rather than repeating the card", () => {
     render(
-      <NewsFeed
-        items={[
-          articleItem({
-            instruments: [
-              { instrument: watched, relation: "watchlist" },
-              { instrument, relation: "holding" },
-            ],
-          }),
-        ]}
-        filter="all"
-        hasInstruments
-      />,
+      <NewsFeed items={[articleItem({ instruments: [instrument, nvidia] })]} hasInstruments />,
     );
 
     expect(screen.getAllByRole("article")).toHaveLength(1);
@@ -128,32 +110,19 @@ describe("NewsFeed", () => {
   });
 
   it("omits the teaser paragraph when the source gave none", () => {
-    render(<NewsFeed items={[articleItem({ teaser: null })]} filter="all" hasInstruments />);
+    render(<NewsFeed items={[articleItem({ teaser: null })]} hasInstruments />);
 
     expect(screen.queryByText("Revenue came in ahead of guidance.")).not.toBeInTheDocument();
   });
 
-  it("shows only articles about held instruments under the portfolio filter", () => {
-    render(<NewsFeed items={[articleItem(), watchedItem]} filter="portfolio" hasInstruments />);
-
-    expect(screen.getByText("Apple beats estimates")).toBeInTheDocument();
-    expect(screen.queryByText("NVIDIA ships a new GPU")).not.toBeInTheDocument();
-  });
-
-  it("says a filter matched nothing rather than showing a blank grid", () => {
-    render(<NewsFeed items={[articleItem()]} filter="watchlist" hasInstruments />);
-
-    expect(screen.getByText(/Nothing published for your watchlist yet/)).toBeInTheDocument();
-  });
-
   it("tells a user with no instruments to add one, rather than showing a blank feed", () => {
-    render(<NewsFeed items={[]} filter="all" hasInstruments={false} />);
+    render(<NewsFeed items={[]} hasInstruments={false} />);
 
-    expect(screen.getByText(/Add a position or something to watch/)).toBeInTheDocument();
+    expect(screen.getByText(/Add a position/)).toBeInTheDocument();
   });
 
   it("distinguishes an empty feed from an empty portfolio", () => {
-    render(<NewsFeed items={[]} filter="all" hasInstruments />);
+    render(<NewsFeed items={[]} hasInstruments />);
 
     expect(screen.getByText(/Nothing published for your instruments yet/)).toBeInTheDocument();
   });

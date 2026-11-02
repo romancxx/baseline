@@ -43,7 +43,7 @@ async def backfill(session: AsyncSession, yahoo: YahooClient, instrument_id: uui
 
 
 async def update_prices(session: AsyncSession, yahoo: YahooClient) -> PriceUpdateSummary:
-    """Bring the prices of every instrument held in a portfolio or on a watchlist up to date.
+    """Bring the prices of every instrument held in a portfolio up to date.
 
     An instrument without prices, or with a split in its recent bars, gets its full history;
     the others get their recent bars. One instrument failing does not stop the others.
@@ -106,8 +106,8 @@ async def list_prices(
 async def _followed_instruments(
     session: AsyncSession,
 ) -> Sequence[Row[uuid.UUID, str, bool]]:
-    """The id and Yahoo symbol of every instrument in a position or on a watchlist, once, and
-    whether it has stored prices.
+    """The id and Yahoo symbol of every instrument in a position, once, and whether it has
+    stored prices.
 
     Plain values, not ORM objects: a rollback after a failure expires those.
     """

@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy import CompoundSelect, case, func, or_, select, union, update
+from sqlalchemy import Select, case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +22,6 @@ from app.modules.instruments.schemas import (
     YahooSearchResult,
 )
 from app.modules.positions.models import Position
-from app.modules.watchlist.models import WatchlistItem
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -79,9 +78,9 @@ async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Ins
     return instrument
 
 
-def followed_instrument_ids() -> CompoundSelect[uuid.UUID]:
-    """The ids of the instruments in a position or on a watchlist, as a subquery."""
-    return union(select(Position.instrument_id), select(WatchlistItem.instrument_id))
+def followed_instrument_ids() -> Select[uuid.UUID]:
+    """The ids of the instruments in a position, as a subquery."""
+    return select(Position.instrument_id)
 
 
 async def list_instruments(

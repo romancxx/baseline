@@ -56,7 +56,7 @@ every exchange tried, and no throttling on a burst of 25 requests.
   included, oldest first. It is not paginated: `to` defaults to today, `from` to one year
   before `to`, and a range longer than five years (1,830 days) is a 422.
 - **`update_prices()` keeps followed instruments current**, followed meaning held in any
-  position or on any watchlist ([0010](0010-watchlist.md)). One with no stored bar is
+  position. One with no stored bar is
   backfilled. The others share one `get_recent_bars`
   call over the last 5 days, and their bars are upserted. One with a split in those bars is
   backfilled again, since Yahoo divides every earlier close. It returns, and logs as one

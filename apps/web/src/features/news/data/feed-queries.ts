@@ -1,8 +1,5 @@
-import {
-  type FeedInstrument,
-  type FeedItem,
-  FeedItemSchema,
-} from "@/features/news/schemas/feed.schema";
+import type { Instrument } from "@/features/instruments";
+import { type FeedItem, FeedItemSchema } from "@/features/news/schemas/feed.schema";
 import { chunk, LOOKUP_CHUNK } from "@/shared/collections";
 import { serverEnv } from "@/shared/config/server-env";
 import { createSupabaseServerClient } from "@/shared/supabase/server";
@@ -13,8 +10,8 @@ const ARTICLE_COLUMNS =
   "id, title, url, source, published_at, raw_content, article_instruments!inner(instrument_id)";
 
 export type FeedQuery = {
-  /** The instruments to show, resolved by the route from holdings and watchlist. */
-  readonly instruments: readonly FeedInstrument[];
+  /** The instruments to show, resolved by the route from holdings. */
+  readonly instruments: readonly Instrument[];
   readonly limit?: number;
 };
 
@@ -74,7 +71,7 @@ export async function listFeedWith(
   }
 
   const byInstrumentId = new Map(
-    query.instruments.map((entry) => [entry.instrument.id, entry] as const),
+    query.instruments.map((instrument) => [instrument.id, instrument] as const),
   );
 
   const { data, error } = await supabase
@@ -97,7 +94,7 @@ export async function listFeedWith(
   return data.flatMap((row) => {
     const matched = row.article_instruments
       .map((link) => byInstrumentId.get(link.instrument_id))
-      .filter((entry): entry is FeedInstrument => entry !== undefined);
+      .filter((instrument): instrument is Instrument => instrument !== undefined);
 
     if (matched.length === 0) {
       return [];

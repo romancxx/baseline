@@ -5,7 +5,7 @@ describe("safeRedirectPath", () => {
   it.each([
     ["/", "/"],
     ["/portfolio", "/portfolio"],
-    ["/portfolio?tab=watchlist#top", "/portfolio?tab=watchlist#top"],
+    ["/portfolio?tab=positions#top", "/portfolio?tab=positions#top"],
   ])("keeps the same-origin path %s", (target, expected) => {
     expect(safeRedirectPath(target)).toBe(expected);
   });

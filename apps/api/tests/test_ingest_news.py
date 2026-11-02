@@ -2,13 +2,7 @@ import datetime as dt
 from typing import Protocol
 
 import pytest
-from conftest import (
-    FakeNewsSource,
-    InstrumentFactory,
-    PortfolioFactory,
-    PositionFactory,
-    WatchlistItemFactory,
-)
+from conftest import FakeNewsSource, InstrumentFactory, PortfolioFactory, PositionFactory
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog.testing import capture_logs
@@ -130,13 +124,10 @@ async def test_ingest_news_skips_etfs_and_instruments_nobody_follows(
     news: FakeNewsSource,
     follow: Follow,
     make_instrument: InstrumentFactory,
-    make_watchlist_item: WatchlistItemFactory,
-    other_user: User,
 ) -> None:
     await follow("IWDA.AS", "iShares Core MSCI World UCITS ETF", type=InstrumentType.ETF)
     await make_instrument("MSFT", name="Microsoft Corporation")
-    watched = await make_instrument("SAP.DE", name="SAP SE")
-    await make_watchlist_item(other_user, watched)
+    await follow("SAP.DE", "SAP SE")
 
     summary = await ingest_news(db_session, news)
 

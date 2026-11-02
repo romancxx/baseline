@@ -14,7 +14,7 @@ wrong means per-user LLM calls.
 
 - **Shared vs per-user is a schema property, not a query convention.** `articles`,
   `summaries`, `article_instruments` and `instruments` are shared; only
-  `portfolio_positions`, `watchlist_items` and `digests` carry a `user_id`.
+  `portfolio_positions` and `digests` carry a `user_id`.
 - **`uuid` primary keys** via `gen_random_uuid()`. Bigint identity leaks row counts.
 - **Postgres enums** for `instrument_type`, `tonality`, `digest_period` — they surface as
   TypeScript unions in the generated types. `macro_bucket` stays free text: the taxonomy will

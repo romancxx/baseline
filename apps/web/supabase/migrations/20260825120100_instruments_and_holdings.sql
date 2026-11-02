@@ -40,20 +40,3 @@ create index portfolio_positions_instrument_idx on public.portfolio_positions (i
 create trigger portfolio_positions_set_updated_at
   before update on public.portfolio_positions
   for each row execute function public.set_updated_at();
-
-create table public.watchlist_items (
-  id             uuid primary key default gen_random_uuid(),
-  user_id        uuid not null references auth.users (id) on delete cascade,
-  instrument_id  uuid not null references public.instruments (id) on delete restrict,
-  note           text,
-  created_at     timestamptz not null default now(),
-  updated_at     timestamptz not null default now(),
-
-  constraint watchlist_items_unique_entry unique (user_id, instrument_id)
-);
-
-create index watchlist_items_instrument_idx on public.watchlist_items (instrument_id);
-
-create trigger watchlist_items_set_updated_at
-  before update on public.watchlist_items
-  for each row execute function public.set_updated_at();

@@ -40,7 +40,7 @@ src/
   features/
     auth/                 sign-in, session, requireUser()
     instruments/          the instrument universe and its lookup
-    portfolio/            positions and watchlist
+    portfolio/            positions
     ingestion/            fetch → normalize → dedup → match → persist
     summarization/        tonality classification
     news/                 the digest feed
@@ -109,7 +109,7 @@ Three clients, in `src/shared/supabase/`:
 | `createSupabaseAdminClient` | ingest, summarisation, digests | secret key, **bypasses RLS** |
 
 Articles and summaries are shared across all users — an article is fetched once and
-summarised once per `(model, prompt_version)`. Only positions, watchlist and digests are
+summarised once per `(model, prompt_version)`. Only positions and digests are
 per-user, and those are isolated by RLS on `auth.uid()`.
 
 RLS is on for every table, and grants are explicit: `anon` can read nothing, `authenticated`
@@ -158,19 +158,19 @@ that Bob cannot read, update, delete or impersonate Alice — and that a filtere
 back *empty rather than failing*, which is what RLS actually does. Unit tests stay in the
 `unit` project and never touch Docker; `pnpm test` runs only those.
 
-## Portfolio and watchlist
+## Portfolio
 
-`/portfolio` holds both, as two sections over the same instrument universe. Reads are
+`/portfolio` holds your positions, over the instrument universe. Reads are
 Server Components going through the user's session client, so RLS scopes them and no
 `user_id` filter is ever written by hand in application code. Mutations are server actions
 that `revalidatePath` — no client-side data fetching, no optimistic UI yet.
 
 Users pick from the seeded universe; there is no free-text instrument entry. That is
-enforced in the database, not just the picker: the insert policies on `portfolio_positions`
-and `watchlist_items` require the referenced instrument to be `active`. Foreign keys are
-checked without RLS, so the constraint had to be spelt out — see
-`20260909120000_active_instrument_writes.sql`, which also splits the blanket `for all`
-policies so that a position stays editable after its instrument is deactivated.
+enforced in the database, not just the picker: the insert policy on `portfolio_positions`
+requires the referenced instrument to be `active`. Foreign keys are checked without RLS, so
+the constraint had to be spelt out — see `20260909120000_active_instrument_writes.sql`, which
+also splits the blanket `for all` policy so that a position stays editable after its
+instrument is deactivated.
 
 ## Ingestion
 
@@ -287,10 +287,9 @@ article up again. Retries and failures are both counted in the run summary.
 
 ## Home feed
 
-`/` shows one card per article touching an instrument you hold or watch, most recent first,
-capped at `FEED_LIMIT`. Reads are Server Components through the user's session client, so RLS
-scopes them; the route resolves holdings and watchlist and passes the instruments into
-`listFeed`.
+`/` shows one card per article touching an instrument you hold, most recent first, capped at
+`FEED_LIMIT`. Reads are Server Components through the user's session client, so RLS scopes
+them; the route resolves holdings and passes the instruments into `listFeed`.
 
 **Every card says where each part came from.** The body is the outlet's own teaser, not a
 generated summary — ADR 5 explains why there is nothing to summarise — so the provenance line
@@ -299,8 +298,7 @@ classified" when no summary exists for the configured model. A global disclaimer
 tonality is a machine reading of a headline at a point in time, not a prediction and not
 advice.
 
-Holdings and watchlist entries are distinguished by their chip, and an article matching several
-of your instruments appears once, listing them all.
+An article matching several of your instruments appears once, listing them all.
 
 Cards are polymorphic: `FeedItemSchema` is a discriminated union on `kind` and `FeedCard`
 switches on it, so theme cards become a new union member and a renderer rather than a change

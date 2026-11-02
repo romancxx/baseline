@@ -3,7 +3,6 @@ alter table public.articles enable row level security;
 alter table public.article_instruments enable row level security;
 alter table public.summaries enable row level security;
 alter table public.portfolio_positions enable row level security;
-alter table public.watchlist_items enable row level security;
 alter table public.digests enable row level security;
 
 -- Shared tables: readable by signed-in users, written only by the service role,
@@ -24,11 +23,6 @@ create policy "summaries are readable"
 -- it once per statement instead of once per row.
 create policy "own positions"
   on public.portfolio_positions for all to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
-create policy "own watchlist"
-  on public.watchlist_items for all to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 

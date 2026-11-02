@@ -68,7 +68,6 @@ export async function seedShared(admin: Db): Promise<SharedFixtures> {
 
 export type UserFixtures = {
   positionId: string;
-  watchlistItemId: string;
   digestId: string;
 };
 
@@ -84,13 +83,6 @@ export async function seedUser(
     .single();
   if (positionError || !position) throw new Error(positionError?.message);
 
-  const { data: watchlistItem, error: watchlistError } = await admin
-    .from("watchlist_items")
-    .insert({ user_id: user.id, instrument_id: instrumentId, note: `${user.email} note` })
-    .select("id")
-    .single();
-  if (watchlistError || !watchlistItem) throw new Error(watchlistError?.message);
-
   const { data: digest, error: digestError } = await admin
     .from("digests")
     .insert({
@@ -103,7 +95,7 @@ export async function seedUser(
     .single();
   if (digestError || !digest) throw new Error(digestError?.message);
 
-  return { positionId: position.id, watchlistItemId: watchlistItem.id, digestId: digest.id };
+  return { positionId: position.id, digestId: digest.id };
 }
 
 export async function cleanupShared(admin: Db, fixtures: SharedFixtures): Promise<void> {

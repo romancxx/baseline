@@ -1,4 +1,4 @@
-# 11. News ingestion
+# 10. News ingestion
 
 - **Status:** proposed
 - **Date:** 2026-10-29
@@ -6,7 +6,7 @@
 ## Context
 
 StockNews should tell a user what was reported about the securities they hold
-([0009](0009-portfolios.md)) or watch ([0010](0010-watchlist.md)): a short brief per security
+([0009](0009-portfolios.md)): a short brief per security
 with a tone, and the headlines behind it. Like market data ([0007](0007-market-data.md)), it
 runs on one local machine, for personal use, at almost no cost.
 
@@ -147,8 +147,8 @@ one source's problem; a source with real URLs has none).
 
 ### Decision
 
-- **One query per security, not per listing.** Followed stocks, held in any position or on
-  any watchlist, are grouped by `share_class_figi`; an instrument without one is its own
+- **One query per security, not per listing.** Followed stocks, held in any position, are
+  grouped by `share_class_figi`; an instrument without one is its own
   group. MC.PA and MOH.DE cost one query.
 - **The query is the name as an exact phrase, plus finance terms, over the last day:**
   `"LVMH Moët Hennessy - Louis Vuitton" (shares OR stock OR earnings OR results OR revenue OR

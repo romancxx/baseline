@@ -1,10 +1,6 @@
-import { FeedFilter } from "@/features/news/components/navigation/feed-filter";
-import type { ReviewFilter } from "@/features/news/schemas/feed.schema";
-
 export type ReviewHeaderProps = {
   readonly date: Date;
   readonly kept: number;
-  readonly filter: ReviewFilter;
 };
 
 const DAY = new Intl.DateTimeFormat("en-GB", {
@@ -14,21 +10,18 @@ const DAY = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export function ReviewHeader({ date, kept, filter }: ReviewHeaderProps) {
+export function ReviewHeader({ date, kept }: ReviewHeaderProps) {
   return (
     <header className="flex flex-col gap-2">
       <time dateTime={date.toISOString()} className="text-detail text-secondary">
         {DAY.format(date)}
       </time>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="flex items-baseline gap-3">
-          <span className="text-display tabular-nums">{kept}</span>
-          <span className="text-detail text-secondary">
-            {kept === 1 ? "article kept" : "articles kept"}
-          </span>
-        </h1>
-        <FeedFilter active={filter} />
-      </div>
+      <h1 className="flex items-baseline gap-3">
+        <span className="text-display tabular-nums">{kept}</span>
+        <span className="text-detail text-secondary">
+          {kept === 1 ? "article kept" : "articles kept"}
+        </span>
+      </h1>
     </header>
   );
 }

@@ -49,7 +49,7 @@ LEGAL_FORM_SUFFIX = re.compile(
 # Left after a legal form is removed. A trailing "." stays: it ends an abbreviation ("Co.").
 TRAILING_PUNCTUATION = " ,;:&-"
 
-# Words that keep a query to finance news, from the probes in ADR 0011.
+# Words that keep a query to finance news, from the probes in ADR 0010.
 FINANCE_TERMS = ("shares", "stock", "earnings", "results", "revenue", "analyst", "investors")
 # Google's search operator for the last day.
 LOOKBACK = "when:1d"

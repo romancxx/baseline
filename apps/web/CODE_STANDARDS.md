@@ -106,7 +106,7 @@ surviving review.
    and `instruments`: `portfolio → {auth, instruments}`, `ingestion → instruments`,
    `summarization → instruments`, `news → {instruments, summarization}`. One edge joins two
    leaf features, agreed for the Review screen: `news → portfolio` (the screen reads the
-   user's holdings and watchlist). A new edge pointing the other way, or between two leaf
+   user's holdings). A new edge pointing the other way, or between two leaf
    features, is a design question to raise before writing it. **[review]**
 5. **`scripts/` and `tests/db/` reach features only through `server.ts` or `index.ts`**, like
    any other consumer. **[lint]**

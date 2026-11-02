@@ -45,7 +45,7 @@ class NewsSource(Protocol):
 
 
 async def ingest_news(session: AsyncSession, source: NewsSource) -> NewsIngestSummary:
-    """Fetch the last day's articles of every stock held in a portfolio or on a watchlist.
+    """Fetch the last day's articles of every stock held in a portfolio.
 
     Stocks are grouped by share class, with one query per group, and each article is linked to
     every stock of its group. One query failing does not stop the others. Articles older than
@@ -61,7 +61,7 @@ async def ingest_news(session: AsyncSession, source: NewsSource) -> NewsIngestSu
     for stock_id, name, share_class_figi in stocks:
         key = share_class_figi or str(stock_id)
         groups[key].append(stock_id)
-        # The stocks come oldest first: the group's name is its first listing's.
+        # The group's name is its first listing's.
         names.setdefault(key, name)
 
     fetched = new = linked = 0
@@ -126,8 +126,7 @@ def fold(text: str) -> str:
 
 
 async def _followed_stocks(session: AsyncSession) -> Sequence[Row[uuid.UUID, str, str | None]]:
-    """The id, name and share class FIGI of every stock in a position or on a watchlist,
-    oldest first."""
+    """The id, name and share class FIGI of every stock in a position, oldest first."""
     statement = (
         select(Instrument.id, Instrument.name, Instrument.share_class_figi)
         .where(

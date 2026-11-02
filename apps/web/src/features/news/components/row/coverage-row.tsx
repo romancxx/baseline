@@ -1,13 +1,12 @@
-import { InstrumentAvatar } from "@/features/instruments";
-import type { FeedInstrument } from "@/features/news/schemas/feed.schema";
+import { type Instrument, InstrumentAvatar } from "@/features/instruments";
 import { cn } from "@/shared/ui/cn";
 
 export type CoverageRowProps = {
-  readonly entry: FeedInstrument;
+  readonly instrument: Instrument;
   readonly count: number;
 };
 
-export function CoverageRow({ entry, count }: CoverageRowProps) {
+export function CoverageRow({ instrument, count }: CoverageRowProps) {
   return (
     <li
       className={cn(
@@ -15,10 +14,10 @@ export function CoverageRow({ entry, count }: CoverageRowProps) {
         count === 0 && "opacity-dimmed",
       )}
     >
-      <InstrumentAvatar instrument={entry.instrument} />
+      <InstrumentAvatar instrument={instrument} />
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-semibold text-caption text-primary">
-          {entry.instrument.ticker}
+          {instrument.ticker}
         </span>
         <span className="text-caption text-tertiary">
           {count === 0 ? "—" : `${count} ${count === 1 ? "article" : "articles"}`}
