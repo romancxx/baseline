@@ -5,9 +5,12 @@ Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
 Settings are read from environment variables, then from `.env`. Start from the example:
 `cp .env.example .env`, then set `JWT_SECRET` to the output of `openssl rand -hex 32`.
 `OPENFIGI_API_KEY` is optional: without it, OpenFIGI allows 25 requests per minute instead
-of 250. `ANTHROPIC_API_KEY` is optional too: without it, news has headlines but no briefs.
-`ANTHROPIC_MODEL` picks the model that writes them (`claude-haiku-5-5` by default). Only
-this key is used, not an `ant auth login` profile.
+of 250. Briefs need a model: `ANTHROPIC_API_KEY` for the Anthropic API, or else the
+`claude` CLI on the PATH, logged in to a Claude subscription. `LLM_BACKEND` picks one: `api`
+(the default) or `cli`; set `cli` on your own machine to use the subscription. Without the
+chosen backend, news has headlines but no briefs. `ANTHROPIC_MODEL` picks the model for both
+(`claude-haiku-5-5` by default). The API reads only this key, not an `ant auth login`
+profile; the CLI never sees the key.
 
 Postgres runs in Docker and reads its credentials from the same `.env`. From the repo root,
 `just db-up` starts it and waits until it is healthy; `just db-down` stops it and keeps the data.
@@ -242,7 +245,7 @@ the prompt version and the tokens it cost. When no headline bears on the busines
 writes nothing and no brief is stored (`no_news`). A brief that fails a check (unknown
 citations, length, advice) is asked for once more with the reason; failing again, it is
 logged and not stored; each rejected draft is logged as `briefs.draft_rejected`, with its
-text and the reason. Without `ANTHROPIC_API_KEY`, the command does nothing. It ends with one
+text and the reason. Without a backend, the command does nothing. It ends with one
 log line, `briefs.run_finished`.
 
 ## Project layout

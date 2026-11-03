@@ -20,7 +20,9 @@ class BriefDraft(BaseModel):
 class BriefRunSummary(BaseModel):
     """What one brief generation did."""
 
-    # Why the run did nothing, e.g. "no API key".
+    # How the model was reached: "api" or "cli".
+    backend: str
+    # Why the run did nothing, e.g. no backend set up.
     skipped: str | None = None
     # Followed security groups, and the briefs stored for those with new articles.
     groups: int = 0
@@ -31,6 +33,6 @@ class BriefRunSummary(BaseModel):
     retried: int = 0
     # Why no brief was stored, by security name.
     failed: dict[str, str] = {}
-    # Summed over every answer the model gave.
+    # Summed over every answer the model gave that reported them.
     input_tokens: int = 0
     output_tokens: int = 0

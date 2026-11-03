@@ -13,6 +13,13 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
+class LlmBackend(StrEnum):
+    """What writes briefs: the Anthropic API, or the local `claude` CLI."""
+
+    API = "api"
+    CLI = "cli"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -25,6 +32,7 @@ class Settings(BaseSettings):
     openfigi_api_key: SecretStr | None = None
     anthropic_api_key: SecretStr | None = None
     anthropic_model: str = "claude-haiku-5-5"
+    llm_backend: LlmBackend = LlmBackend.API
 
 
 @lru_cache

@@ -187,13 +187,15 @@ class FakeNewsSource:
 
 
 class FakeAnthropic(AnthropicClient):
-    """Answers `generate` with `answers` in order, raising those that are exceptions, and
-    records each message; it has a key unless `has_key` is False."""
+    """Answers `generate` with `answers` in order, raising those that are exceptions, each
+    costing `token_counts`, and records each message; it has a key unless `has_key` is
+    False."""
 
     def __init__(self) -> None:
         super().__init__(api_key=None, model="claude-haiku-5-5")
         self.has_key = True
         self.answers: list[BaseModel | Exception] = []
+        self.token_counts: tuple[int | None, int | None] = (1000, 100)
         self.messages: list[str] = []
 
     @property
@@ -208,7 +210,8 @@ class FakeAnthropic(AnthropicClient):
         if isinstance(answer, Exception):
             raise answer
         assert isinstance(answer, output)
-        return Generation(output=answer, input_tokens=1000, output_tokens=100)
+        input_tokens, output_tokens = self.token_counts
+        return Generation(output=answer, input_tokens=input_tokens, output_tokens=output_tokens)
 
 
 def listing(yahoo_symbol: str, exchange_code: str) -> FigiCandidate:

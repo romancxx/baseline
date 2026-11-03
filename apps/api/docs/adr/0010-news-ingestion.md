@@ -245,8 +245,9 @@ need its links moved).
 - **`article_instruments`**: `(article_id, instrument_id)` as the key, plus `created_at`.
   Deleting either side deletes the link.
 - **`briefs`**: `id`, `group_key` (the group's share class FIGI, or the id of an instrument
-  without one), `text`, `tone` (a Postgres enum), `model`, `prompt_version`, `input_tokens`
-  and `output_tokens` (summed over the attempts), `period_start` and `period_end` (the
+  without one), `text`, `tone` (a Postgres enum), `model` (the backend and model, such as
+  `api:claude-haiku-5-5`), `prompt_version`, `input_tokens` and `output_tokens` (summed over
+  the attempts; null when the backend reports none), `period_start` and `period_end` (the
   publication times of the oldest and newest headline sent) and `generated_at`. An index on
   `(group_key, generated_at)` serves the lookup of a group's latest brief.
 - **`brief_articles`**: `(brief_id, article_id)`, the articles a brief cites. It cascades
@@ -273,7 +274,8 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
   garble than UUIDs.
   - An `integrations/anthropic/` client over the official `anthropic` SDK,
     `claude-haiku-5-5` ($0.10 per million input tokens, $0.50 per million output) at effort
-    `low`. The model is the `ANTHROPIC_MODEL` setting.
+    `low`. The model is the `ANTHROPIC_MODEL` setting. Without a key, the local `claude`
+    CLI can write them on a Claude subscription ([0011](0011-local-llm-backend.md)).
   - Structured output (`output_config.format`, from the Pydantic model's JSON schema through
     the SDK's `transform_schema`), checked again with Pydantic. An answer that does not
     validate, or did not end normally (`max_tokens`, `refusal`), raises `InvalidOutputError`
@@ -282,7 +284,8 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
     with exponential backoff and jitter, or after the API's `retry-after`. What still fails
     raises `ProviderUnavailableError`; a rejected key says so in its message.
 
-  Without `ANTHROPIC_API_KEY`, the command logs `skipped: "no API key"` and exits 0; news
+  Without a backend (no `ANTHROPIC_API_KEY` and no `claude` CLI), the command logs
+  `skipped` and exits 0; news
   shows headlines only.
 - **Output:**
   - a brief of 1–5 sentences, at most about 600 characters: what was reported, attributed
@@ -340,9 +343,10 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
   fetcher, trafilatura, robots.txt and paywall handling, and a call per article.
 - Summarising teasers ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)):
   Google's teaser repeats the title.
-- The `claude` CLI on a Claude subscription
+- The `claude` CLI on a Claude subscription as the only backend
   ([web 0007](../../../web/docs/adr/0007-local-summarization-backend.md)): no API bill, but
-  about 10 s a call, and a command tied to a signed-in CLI.
+  about 10 s a call, and a command tied to a signed-in CLI. It is the second backend
+  instead ([0011](0011-local-llm-backend.md)).
 - A local model through Ollama: free and private, but slow on a laptop.
 - Sonnet 5.5: 20 times the price for a task Haiku should handle. Switch if Haiku fails the
   [evaluation](#evaluation).

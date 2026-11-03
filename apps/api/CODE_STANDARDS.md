@@ -65,6 +65,9 @@ considering a change done.
   blocking code inside `async def`. **[review]**
 - An integration's async method runs each blocking library call with `asyncio.to_thread`.
   **[review]**
+- An integration that runs a program uses `asyncio.create_subprocess_exec` with an argument
+  list, never a shell, finds it with `shutil.which`, passes input on stdin, and kills it
+  after a timeout. Tests replace `asyncio.create_subprocess_exec`. **[test]**
 - Every endpoint requires a token unless it is public on purpose: protect the router with
   `dependencies=[Depends(get_current_user)]`, or take `user: CurrentUser`. **[test]**
 - Declare a fixed path (`/search`) before a path with a parameter (`/{instrument_id}`) in the
@@ -80,7 +83,7 @@ considering a change done.
 - Routers never catch `AppError`. **[review]**
 - An integration catches its library's and the network's failures and raises
   `ProviderUnavailableError`; no third-party exception leaves it. **[test]**
-- A model's answer is read only through `AnthropicClient.generate` with a Pydantic output
+- A model's answer is read only through an `LLMClient`'s `generate` with a Pydantic output
   model, never parsed from text by hand. An invalid answer raises `InvalidOutputError`, which
   the caller handles apart from `ProviderUnavailableError`. **[test]**
 - A rule a model's answer must follow is checked in code too, when code can check it

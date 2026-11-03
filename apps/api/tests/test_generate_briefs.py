@@ -1,4 +1,5 @@
 import datetime as dt
+import shutil
 import uuid
 from collections.abc import Sequence
 from typing import Protocol
@@ -11,15 +12,24 @@ from conftest import (
     PortfolioFactory,
     PositionFactory,
 )
+from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog.testing import capture_logs
 
+from app.core.config import LlmBackend, get_settings
 from app.core.exceptions import ProviderUnavailableError
 from app.integrations.anthropic.client import InvalidOutputError
 from app.modules.briefs.models import Brief, BriefArticle, Tone
 from app.modules.briefs.schemas import BriefDraft, BriefRunSummary
-from app.modules.briefs.service import PROMPT_VERSION, check_brief, generate_briefs
+from app.modules.briefs.service import (
+    NO_BACKEND,
+    PROMPT_VERSION,
+    LLMClient,
+    check_brief,
+    generate_briefs,
+    llm_client,
+)
 from app.modules.instruments.models import Instrument
 from app.modules.users.models import User
 
@@ -94,13 +104,17 @@ async def test_generate_briefs_stores_a_brief_with_its_citations(
     )
     # Headline 2 is the older one; citing it twice stores one citation.
     anthropic.answers = [draft(cited=[2, 2])]
+    # pyright checks here that FakeAnthropic has LLMClient's members.
+    client: LLMClient = anthropic
 
-    summary = await generate_briefs(db_session, anthropic)
+    summary = await generate_briefs(db_session, client)
 
-    assert summary == BriefRunSummary(groups=1, generated=1, input_tokens=1000, output_tokens=100)
+    assert summary == BriefRunSummary(
+        backend="api", groups=1, generated=1, input_tokens=1000, output_tokens=100
+    )
     [brief] = await briefs(db_session)
     assert (brief.group_key, brief.text, brief.tone) == (str(apple.id), BRIEF, Tone.POSITIVE)
-    assert (brief.model, brief.prompt_version) == ("claude-haiku-5-5", PROMPT_VERSION)
+    assert (brief.model, brief.prompt_version) == ("api:claude-haiku-5-5", PROMPT_VERSION)
     assert (brief.input_tokens, brief.output_tokens) == (1000, 100)
     assert (brief.period_start, brief.period_end) == (beats.published_at, record.published_at)
     assert await citations(db_session, brief) == {beats.id}
@@ -333,7 +347,7 @@ async def test_generate_briefs_skips_a_group_whose_new_articles_are_too_old(
     summary = await generate_briefs(db_session, anthropic)
 
     assert anthropic.messages == []
-    assert summary == BriefRunSummary(groups=1)
+    assert summary == BriefRunSummary(backend="api", groups=1)
 
 
 async def test_generate_briefs_reports_an_unavailable_api_and_goes_on(
@@ -352,7 +366,24 @@ async def test_generate_briefs_reports_an_unavailable_api_and_goes_on(
     assert summary.generated == 1
 
 
-async def test_generate_briefs_without_a_key_reports_it_and_does_nothing(
+async def test_generate_briefs_stores_null_tokens_when_the_backend_does_not_count_them(
+    db_session: AsyncSession,
+    anthropic: FakeAnthropic,
+    follow: Follow,
+    make_article: ArticleFactory,
+) -> None:
+    await make_article(await follow("AAPL", APPLE))
+    anthropic.token_counts = (None, None)
+    anthropic.answers = [draft()]
+
+    summary = await generate_briefs(db_session, anthropic)
+
+    [brief] = await briefs(db_session)
+    assert (brief.input_tokens, brief.output_tokens) == (None, None)
+    assert (summary.input_tokens, summary.output_tokens) == (0, 0)
+
+
+async def test_generate_briefs_without_a_backend_reports_it_and_does_nothing(
     db_session: AsyncSession,
     anthropic: FakeAnthropic,
     follow: Follow,
@@ -364,7 +395,44 @@ async def test_generate_briefs_without_a_key_reports_it_and_does_nothing(
     with capture_logs() as logs:
         summary = await generate_briefs(db_session, anthropic)
 
-    assert summary == BriefRunSummary(skipped="no API key")
+    assert summary == BriefRunSummary(backend="api", skipped=NO_BACKEND)
     assert anthropic.messages == []
     finished = [log for log in logs if log["event"] == "briefs.run_finished"]
-    assert [log["skipped"] for log in finished] == ["no API key"]
+    assert [(log["backend"], log["skipped"]) for log in finished] == [("api", NO_BACKEND)]
+
+
+@pytest.mark.parametrize(
+    ("backend", "api_key", "cli_installed", "chosen", "available"),
+    [
+        (LlmBackend.API, "sk-test", True, "api", True),
+        (LlmBackend.API, None, True, "api", False),
+        (LlmBackend.CLI, "sk-test", True, "cli", True),
+        (LlmBackend.CLI, "sk-test", False, "cli", False),
+    ],
+    ids=[
+        "api",
+        "api without a key, cli installed",
+        "cli despite a key",
+        "cli not installed",
+    ],
+)
+async def test_llm_client_follows_the_backend_setting(
+    monkeypatch: pytest.MonkeyPatch,
+    backend: LlmBackend,
+    api_key: str | None,
+    cli_installed: bool,
+    chosen: str,
+    available: bool,
+) -> None:
+    monkeypatch.setattr(shutil, "which", lambda name: f"/bin/{name}" if cli_installed else None)
+    settings = get_settings().model_copy(
+        update={
+            "llm_backend": backend,
+            "anthropic_api_key": SecretStr(api_key) if api_key else None,
+        }
+    )
+
+    client = llm_client(settings)
+
+    assert (client.backend, client.available) == (chosen, available)
+    await client.aclose()

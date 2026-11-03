@@ -15,5 +15,6 @@ its date says when it last changed.
 | [0008](0008-security-identifiers.md) | Security identifiers | OpenFIGI share class FIGIs and ISIN lookups through one rate-limited `httpx2` client per app |
 | [0009](0009-portfolios.md) | Portfolios | Several per user, names unique per user, CRUD scoped to the owner; positions of one instrument each, with optional quantity and average price; CSV import of ISINs with a per-row report and a dry run |
 | [0010](0010-news-ingestion.md) | News ingestion (proposed) | Google News RSS behind a `NewsSource` protocol, one English finance query per security; junk and duplicate titles dropped; one Haiku brief per security over its last 40 headlines, with tone, cited articles and provenance; commands only |
+| [0011](0011-local-llm-backend.md) | Local LLM backend | An `LLMClient` protocol with two backends, the Anthropic API and the local `claude` CLI on a subscription, chosen by `LLM_BACKEND`: the API by default, the CLI as a local opt-in |
 
 Known gaps and planned work are in [improvements.md](../improvements.md).

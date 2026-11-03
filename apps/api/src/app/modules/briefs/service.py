@@ -3,14 +3,19 @@ import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 import structlog
+from pydantic import BaseModel
 from sqlalchemy import Row, select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import LlmBackend, Settings
 from app.core.exceptions import ProviderUnavailableError
 from app.integrations.anthropic.client import AnthropicClient, InvalidOutputError
+from app.integrations.anthropic.schemas import Generation
+from app.integrations.claude_cli.client import ClaudeCliClient
 from app.modules.briefs.models import Brief, BriefArticle
 from app.modules.briefs.schemas import BriefDraft, BriefRunSummary
 from app.modules.news.models import Article, ArticleInstrument
@@ -71,21 +76,56 @@ DENIED_PHRASES = (
 DENY_LIST = re.compile("|".join(DENIED_PHRASES), re.IGNORECASE)
 # Attempts after the first, each told why the previous answer was rejected.
 CORRECTIVE_RETRIES = 1
-NO_KEY = "no API key"
+NO_BACKEND = "no LLM backend: set ANTHROPIC_API_KEY or install the claude CLI"
 NOT_STORED = "The brief could not be stored."
+
+
+class LLMClient(Protocol):
+    """A model that answers a system prompt and a message with a validated Pydantic model.
+    Any class with these members is an LLMClient."""
+
+    # How it reaches the model, e.g. "api" or "cli".
+    backend: str
+    # e.g. claude-haiku-5-5
+    model: str
+
+    @property
+    def available(self) -> bool:
+        """Whether it is set up; when not, `generate` raises ProviderUnavailableError."""
+        ...
+
+    async def generate[T: BaseModel](
+        self, system: str, message: str, output: type[T]
+    ) -> Generation[T]:
+        """The model's answer, validated as `output`.
+
+        Raises ProviderUnavailableError when the model cannot be reached, and
+        InvalidOutputError when the answer is not a valid `output`.
+        """
+        ...
+
+    async def aclose(self) -> None: ...
 
 
 @dataclass
 class _Attempts:
-    """What the model's attempts at one brief cost, and why the last one failed."""
+    """What the model's attempts at one brief cost, when the backend says, and why the last one
+    failed."""
 
     reason: str = ""
     retried: bool = False
-    input_tokens: int = 0
-    output_tokens: int = 0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
-async def generate_briefs(session: AsyncSession, client: AnthropicClient) -> BriefRunSummary:
+def llm_client(settings: Settings) -> LLMClient:
+    """The client for LLM_BACKEND: the Anthropic API, or the local claude CLI."""
+    if settings.llm_backend == LlmBackend.CLI:
+        return ClaudeCliClient(settings.anthropic_model)
+    return AnthropicClient(settings.anthropic_api_key, settings.anthropic_model)
+
+
+async def generate_briefs(session: AsyncSession, client: LLMClient) -> BriefRunSummary:
     """Write a brief for every followed security group with articles published after its latest
     brief's newest headline, from its recent headlines.
 
@@ -94,7 +134,7 @@ async def generate_briefs(session: AsyncSession, client: AnthropicClient) -> Bri
     group failing does not stop the others.
     """
     if not client.available:
-        return _finish(BriefRunSummary(skipped=NO_KEY))
+        return _finish(BriefRunSummary(backend=client.backend, skipped=NO_BACKEND))
 
     since = dt.datetime.now(dt.UTC) - WINDOW
     groups = await followed_groups(session)
@@ -105,7 +145,7 @@ async def generate_briefs(session: AsyncSession, client: AnthropicClient) -> Bri
     ]
     await session.commit()
 
-    summary = BriefRunSummary(groups=len(groups))
+    summary = BriefRunSummary(backend=client.backend, groups=len(groups))
     for group, headlines in todo:
         if not headlines:
             continue
@@ -116,8 +156,8 @@ async def generate_briefs(session: AsyncSession, client: AnthropicClient) -> Bri
             continue
         if attempts.retried:
             summary.retried += 1
-        summary.input_tokens += attempts.input_tokens
-        summary.output_tokens += attempts.output_tokens
+        summary.input_tokens += attempts.input_tokens or 0
+        summary.output_tokens += attempts.output_tokens or 0
         if draft is None:
             logger.warning("briefs.rejected", security=group.name, reason=attempts.reason)
             summary.failed[group.name] = f"Rejected twice: {attempts.reason}"
@@ -127,7 +167,9 @@ async def generate_briefs(session: AsyncSession, client: AnthropicClient) -> Bri
             continue
 
         try:
-            await _store(session, group, client.model, draft, attempts, headlines)
+            await _store(
+                session, group, f"{client.backend}:{client.model}", draft, attempts, headlines
+            )
             await session.commit()
         except DBAPIError as exc:
             await session.rollback()
@@ -170,14 +212,14 @@ def check_brief(draft: BriefDraft, headline_count: int) -> list[str]:
     if denied:
         phrases = ", ".join(f'"{phrase}"' for phrase in denied)
         reasons.append(
-            f"It addresses the reader, advises or forecasts in its own voice ({phrases}). "
+            f"It addresses the reader or advises in its own voice ({phrases}). "
             "Report only what outlets wrote, attributed to them."
         )
     return reasons
 
 
 async def _write(
-    client: AnthropicClient,
+    client: LLMClient,
     name: str,
     headlines: Sequence[Row[uuid.UUID, str, str, dt.datetime]],
 ) -> tuple[BriefDraft | None, _Attempts]:
@@ -194,8 +236,8 @@ async def _write(
         except InvalidOutputError as exc:
             reasons = [exc.reason]
         else:
-            attempts.input_tokens += generation.input_tokens
-            attempts.output_tokens += generation.output_tokens
+            attempts.input_tokens = _add(attempts.input_tokens, generation.input_tokens)
+            attempts.output_tokens = _add(attempts.output_tokens, generation.output_tokens)
             previous = generation.output.text
             reasons = check_brief(generation.output, len(headlines))
             if not reasons:
@@ -282,6 +324,13 @@ async def _store(
     await session.flush()
     cited = dict.fromkeys(headlines[number - 1].id for number in draft.cited_article_ids)
     session.add_all(BriefArticle(brief_id=brief.id, article_id=article_id) for article_id in cited)
+
+
+def _add(total: int | None, tokens: int | None) -> int | None:
+    """`total` plus `tokens`; None while no count is known."""
+    if tokens is None:
+        return total
+    return (total or 0) + tokens
 
 
 def _finish(summary: BriefRunSummary) -> BriefRunSummary:

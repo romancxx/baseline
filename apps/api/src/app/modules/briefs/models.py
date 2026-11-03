@@ -31,12 +31,12 @@ class Brief(Base):
     group_key: Mapped[str] = mapped_column(String(36))
     text: Mapped[str] = mapped_column(Text)
     tone: Mapped[Tone] = mapped_column(Enum(Tone, name="brief_tone", values_callable=enum_values))
-    # e.g. claude-haiku-5-5
+    # The backend and the model, e.g. api:claude-haiku-5-5 or cli:claude-haiku-5-5.
     model: Mapped[str] = mapped_column(String(64))
     prompt_version: Mapped[int]
-    # Summed over the attempts the brief took.
-    input_tokens: Mapped[int]
-    output_tokens: Mapped[int]
+    # Summed over the attempts the brief took; null when the backend did not say.
+    input_tokens: Mapped[int | None]
+    output_tokens: Mapped[int | None]
     # Publication times of the oldest and newest headline it was written from.
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))

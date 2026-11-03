@@ -32,6 +32,8 @@ class AnthropicClient:
     """Claude through the Anthropic API: a system prompt and a message in, a Pydantic model
     out."""
 
+    backend = "api"
+
     def __init__(
         self,
         api_key: SecretStr | None,
