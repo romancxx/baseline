@@ -7,14 +7,15 @@ from collections.abc import Sequence
 from typing import Protocol
 
 import structlog
-from sqlalchemy import Row, delete, select
+from sqlalchemy import Row, Select, delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ProviderUnavailableError
+from app.core.pagination import KeysetPage, PageRequest, paginate
 from app.modules.instruments.models import Instrument, InstrumentType
-from app.modules.instruments.service import followed_instrument_ids
+from app.modules.instruments.service import followed_instrument_ids, get_instrument
 from app.modules.news.models import Article, ArticleInstrument, ArticleSource
 from app.modules.news.schemas import (
     FetchResult,
@@ -110,14 +111,32 @@ async def followed_groups(session: AsyncSession) -> list[SecurityGroup]:
     """The stocks held in a portfolio, grouped by share class, in the order they were stored."""
     stocks = await _followed_stocks(session)
 
-    # Listings of one share class share a FIGI; a stock without one is its own group.
     groups: dict[str, SecurityGroup] = {}
     for stock_id, name, share_class_figi in stocks:
-        key = share_class_figi or str(stock_id)
+        key = group_key(share_class_figi, stock_id)
         # The stocks come oldest first: the group's name is its first listing's.
         group = groups.setdefault(key, SecurityGroup(key=key, name=name, instrument_ids=[]))
         group.instrument_ids.append(stock_id)
     return list(groups.values())
+
+
+def group_key(share_class_figi: str | None, instrument_id: uuid.UUID) -> str:
+    """The key of an instrument's security group: listings of one share class share a FIGI; an
+    instrument without one is its own group."""
+    return share_class_figi or str(instrument_id)
+
+
+async def list_news(
+    session: AsyncSession, instrument_id: uuid.UUID, page: PageRequest
+) -> KeysetPage[Article]:
+    """One page of the articles of the instrument's share class, newest published first."""
+    instrument = await get_instrument(session, instrument_id)
+
+    linked = select(ArticleInstrument.article_id).where(
+        ArticleInstrument.instrument_id.in_(_listing_ids(instrument))
+    )
+    statement = select(Article).where(Article.id.in_(linked))
+    return await paginate(session, statement, Article, page, order_by=Article.published_at)
 
 
 def title_key(title: str, publisher: str) -> str:
@@ -134,6 +153,13 @@ def fold(text: str) -> str:
     """Casefold `text` and remove its accents: "Société" gives "societe"."""
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     return "".join(char for char in decomposed if not unicodedata.combining(char))
+
+
+def _listing_ids(instrument: Instrument) -> Select[uuid.UUID]:
+    """The ids of the stored listings of the instrument's share class, as a subquery."""
+    if instrument.share_class_figi is None:
+        return select(Instrument.id).where(Instrument.id == instrument.id)
+    return select(Instrument.id).where(Instrument.share_class_figi == instrument.share_class_figi)
 
 
 async def _followed_stocks(session: AsyncSession) -> Sequence[Row[uuid.UUID, str, str | None]]:

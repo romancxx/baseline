@@ -10,16 +10,16 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import Select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import InstrumentedAttribute, Mapped
 
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
 
 class Cursor(BaseModel):
-    """The (created_at, id) of the last row of a page; the next page starts after it."""
+    """The (order column, id) of the last row of a page; the next page starts after it."""
 
-    created_at: datetime
+    value: datetime
     id: uuid.UUID
 
 
@@ -65,7 +65,7 @@ Pagination = Annotated[PageRequest, Depends(page_request)]
 
 
 class Paginatable(Protocol):
-    """A model with the columns of the keyset order."""
+    """A model with the columns of the default keyset order."""
 
     id: Mapped[uuid.UUID]
     created_at: Mapped[datetime]
@@ -87,14 +87,18 @@ class KeysetPage[M]:
 
 
 async def paginate[M: Paginatable](
-    session: AsyncSession, statement: Select[M], model: type[M], page: PageRequest
+    session: AsyncSession,
+    statement: Select[M],
+    model: type[M],
+    page: PageRequest,
+    order_by: InstrumentedAttribute[datetime] | None = None,
 ) -> KeysetPage[M]:
-    """One page of `statement`'s rows, newest first (created_at, then id, descending)."""
+    """One page of `statement`'s rows, newest first: `order_by` (created_at by default), then
+    id, descending."""
+    column = order_by if order_by is not None else model.created_at
     if page.after is not None:
-        statement = statement.where(
-            tuple_(model.created_at, model.id) < (page.after.created_at, page.after.id)
-        )
-    statement = statement.order_by(model.created_at.desc(), model.id.desc())
+        statement = statement.where(tuple_(column, model.id) < (page.after.value, page.after.id))
+    statement = statement.order_by(column.desc(), model.id.desc())
 
     # One extra row tells whether a next page exists.
     rows = (await session.scalars(statement.limit(page.limit + 1))).all()
@@ -102,4 +106,4 @@ async def paginate[M: Paginatable](
     if len(rows) <= page.limit:
         return KeysetPage(items=items, next_cursor=None)
     last = items[-1]
-    return KeysetPage(items=items, next_cursor=Cursor(created_at=last.created_at, id=last.id))
+    return KeysetPage(items=items, next_cursor=Cursor(value=getattr(last, column.key), id=last.id))

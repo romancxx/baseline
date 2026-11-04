@@ -1,6 +1,18 @@
 import uuid
+from datetime import datetime
 
-from pydantic import AwareDatetime, BaseModel
+from pydantic import AwareDatetime, BaseModel, ConfigDict
+
+
+class ArticleRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    publisher: str
+    published_at: datetime
+    # As the source gives it, e.g. a news.google.com/rss/articles/… link.
+    url: str
 
 
 class SecurityGroup(BaseModel):

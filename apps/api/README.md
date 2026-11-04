@@ -86,7 +86,8 @@ sends the token with every request.
 
 ## Pagination
 
-List endpoints return one page at a time, newest first:
+List endpoints return one page at a time, newest first (news by publication time, the rest
+by creation time):
 
 ```json
 { "items": [ ... ], "next_cursor": "eyJjcmVhdGVkX2F0Ijog..." }
@@ -247,6 +248,28 @@ citations, length, advice) is asked for once more with the reason; failing again
 logged and not stored; each rejected draft is logged as `briefs.draft_rejected`, with its
 text and the reason. Without a backend, the command does nothing. It ends with one
 log line, `briefs.run_finished`.
+
+Both read endpoints take any listing of a share class, followed or not: MOH.DE answers with
+what was fetched for MC.PA.
+
+- `GET /api/v1/instruments/{id}/news` returns its articles (`title`, `publisher`,
+  `published_at`, `url`), newest published first, paginated like the other lists.
+- `GET /api/v1/instruments/{id}/brief` returns its latest brief, or 404 when there is none:
+
+```json
+{
+  "text": "Reuters reports LVMH's third-quarter sales rose 4%…",
+  "tone": "positive",
+  "model": "api:claude-haiku-5-5",
+  "articles": [{ "title": "LVMH sales rise - Reuters", "publisher": "Reuters", … }],
+  "provenance": "From 7 articles, 28-30 Oct, generated 2026-10-30 06:00 UTC",
+  "disclaimer": "Describes news as reported. Not investment advice.",
+  …
+}
+```
+
+`articles` are the ones the brief cites. The provenance line counts them, and gives the days
+of the headlines it was written from (UTC) and when it was generated.
 
 ## Project layout
 

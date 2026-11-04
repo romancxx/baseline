@@ -304,7 +304,7 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
     reported as such, for example "Jefferies raised its rating to buy".
   - A deny-list check on the output looks for second person, "should buy" and similar, and
     "investors should".
-  - News responses carry one line: "Briefs describe news as it was published. They are not
+  - The brief's response carries a fixed disclaimer: "Describes news as reported. Not
     investment advice."
 - **The prompt's rules** come from what the headline-only probe got wrong: only what the
   headlines say; dates and figures repeated as written, never computed ("this Monday" stays
@@ -328,11 +328,12 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
   are kept.
 - **The prompt is versioned.** `PROMPT_VERSION` in code is stored with each brief
   ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
-- **The provenance line is built when a brief is read**, from its cited articles and
-  `generated_at`, not stored: "Generated on 2026-10-30 at 06:12 UTC from 9 headlines (Reuters,
-  WSJ, Les Echos and 6 others)". It claims only what was generated: headlines, not articles
-  ([web 0006](../../../web/docs/adr/0006-home-feed.md)). The model and prompt version are in
-  the response, not in the line.
+- **The provenance line is built when a brief is read**, not stored: the number of cited
+  articles still stored, the UTC days from `period_start` to `period_end`, and
+  `generated_at`, as in "From 7 articles, 28-30 Oct, generated 2026-10-30 06:00 UTC". It is
+  a Pydantic computed field of `BriefRead`, so it is derived from the fields beside it and
+  cannot disagree with them. The model and prompt version are in the response, not in the
+  line.
 - **Cost:** 40 headlines and the instructions come to about 2,500 input tokens, and the
   output with thinking to about 400. That is about $0.0005 a brief, or 1.5 cents for 30
   securities.
@@ -359,14 +360,25 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
 - **Commands only:** `python -m app.jobs.ingest_news` (`just ingest-news`) and
   `python -m app.jobs.generate_briefs` (`just brief`), wired as in
   [0002](0002-api-architecture.md). No scheduler, no digests, no email.
-- **Read endpoint:** `GET /instruments/{id}/news` returns the security's latest brief with its
-  provenance line and cited article IDs, and its 40 most recent articles, newest first. It is
-  not paginated: the 40 are what the brief was written from.
+- **Two read endpoints, by instrument**, each reading the instrument's share class, so any
+  listing works, followed or not: MOH.DE shows what was fetched for MC.PA.
+  - `GET /instruments/{id}/brief`: the group's latest brief (by `generated_at`, then `id`),
+    with its cited articles (title, publisher, publication time, URL), newest first, its
+    provenance line and the disclaimer. 404 when the group has none.
+  - `GET /instruments/{id}/news`: the group's articles, newest published first,
+    keyset-paginated on `(published_at, id)`: `paginate()` takes the order column, and
+    defaults to `created_at` for every other list.
+- **The cited articles load with the brief**: `Brief.articles` is a read-only relationship
+  through `brief_articles`, loaded with `selectin` (a second `SELECT … WHERE id IN`). The job
+  writes citations as `BriefArticle` rows and never touches it.
 
 ### Alternatives considered
 
 A scheduler process, digests and email, as in the earlier draft (deferred). A `GET /news`
-feed over every followed security (deferred until the web app has a home feed).
+feed over every followed security (deferred until the web app has a home feed). One endpoint
+with the brief and the 40 headlines it was written from (no way to read older articles; the
+brief's cited articles already show its sources). Paginating news on `created_at` (the order
+the job stored them, not the order they were published).
 
 ## Evaluation
 

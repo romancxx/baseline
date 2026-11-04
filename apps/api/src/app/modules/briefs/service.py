@@ -12,15 +12,16 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import LlmBackend, Settings
-from app.core.exceptions import ProviderUnavailableError
+from app.core.exceptions import NotFoundError, ProviderUnavailableError
 from app.integrations.anthropic.client import AnthropicClient, InvalidOutputError
 from app.integrations.anthropic.schemas import Generation
 from app.integrations.claude_cli.client import ClaudeCliClient
 from app.modules.briefs.models import Brief, BriefArticle
 from app.modules.briefs.schemas import BriefDraft, BriefRunSummary
+from app.modules.instruments.service import get_instrument
 from app.modules.news.models import Article, ArticleInstrument
 from app.modules.news.schemas import SecurityGroup
-from app.modules.news.service import followed_groups
+from app.modules.news.service import followed_groups, group_key
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -116,6 +117,21 @@ class _Attempts:
     retried: bool = False
     input_tokens: int | None = None
     output_tokens: int | None = None
+
+
+async def get_latest_brief(session: AsyncSession, instrument_id: uuid.UUID) -> Brief:
+    """The latest brief of the instrument's share class, with its cited articles."""
+    instrument = await get_instrument(session, instrument_id)
+
+    brief = await session.scalar(
+        select(Brief)
+        .where(Brief.group_key == group_key(instrument.share_class_figi, instrument.id))
+        .order_by(Brief.generated_at.desc(), Brief.id.desc())
+        .limit(1)
+    )
+    if brief is None:
+        raise NotFoundError(f"Instrument {instrument_id} has no brief yet.")
+    return brief
 
 
 def llm_client(settings: Settings) -> LLMClient:

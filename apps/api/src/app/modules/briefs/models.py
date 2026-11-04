@@ -3,9 +3,10 @@ from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, enum_values
+from app.modules.news.models import Article
 
 
 class Tone(StrEnum):
@@ -42,6 +43,14 @@ class Brief(Base):
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+    # The articles it cites, newest first; written through BriefArticle rows.
+    articles: Mapped[list[Article]] = relationship(
+        secondary="brief_articles",
+        order_by=(Article.published_at.desc(), Article.id.desc()),
+        viewonly=True,
+        lazy="selectin",
     )
 
 

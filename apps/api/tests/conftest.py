@@ -29,6 +29,8 @@ from app.integrations.yahoo.client import YahooClient
 from app.integrations.yahoo.dependencies import get_yahoo_client
 from app.integrations.yahoo.schemas import ListingDetails, PriceHistory, QuoteType, SearchResult
 from app.main import create_app
+from app.modules.briefs.models import Brief, BriefArticle, Tone
+from app.modules.briefs.service import PROMPT_VERSION
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.news.models import Article, ArticleInstrument, ArticleSource
 from app.modules.news.schemas import FetchResult, NewsQuery, RawArticle
@@ -464,5 +466,43 @@ def make_article(db_session: AsyncSession) -> ArticleFactory:
         await db_session.commit()
         await db_session.refresh(article)
         return article
+
+    return make
+
+
+class BriefFactory(Protocol):
+    async def __call__(
+        self, group_key: str, *articles: Article, generated_at: dt.datetime | None = ...
+    ) -> Brief: ...
+
+
+@pytest.fixture
+def make_brief(db_session: AsyncSession) -> BriefFactory:
+    """A function that inserts a brief of `group_key` citing `articles` (at least one), over
+    their publication times, generated now unless `generated_at` is given."""
+
+    async def make(
+        group_key: str, *articles: Article, generated_at: dt.datetime | None = None
+    ) -> Brief:
+        published = [article.published_at for article in articles]
+        brief = Brief(
+            group_key=group_key,
+            text="Reuters reports Apple beat estimates on iPhone sales.",
+            tone=Tone.POSITIVE,
+            model="api:claude-haiku-5-5",
+            prompt_version=PROMPT_VERSION,
+            input_tokens=1000,
+            output_tokens=100,
+            period_start=min(published),
+            period_end=max(published),
+        )
+        if generated_at is not None:
+            brief.generated_at = generated_at
+        db_session.add(brief)
+        await db_session.flush()
+        db_session.add_all(BriefArticle(brief_id=brief.id, article_id=a.id) for a in articles)
+        await db_session.commit()
+        await db_session.refresh(brief)
+        return brief
 
     return make

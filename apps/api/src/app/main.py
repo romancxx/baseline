@@ -10,9 +10,11 @@ from app.core.logging import configure_logging
 from app.core.middleware import RequestLoggingMiddleware
 from app.integrations.openfigi.client import OpenFigiClient
 from app.modules.auth.router import router as auth_router
+from app.modules.briefs.router import router as briefs_router
 from app.modules.health.router import router as health_router
 from app.modules.imports.router import router as imports_router
 from app.modules.instruments.router import router as instruments_router
+from app.modules.news.router import router as news_router
 from app.modules.portfolios.router import router as portfolios_router
 from app.modules.positions.router import router as positions_router
 from app.modules.prices.router import router as prices_router
@@ -49,6 +51,8 @@ def create_app() -> FastAPI:
     api.include_router(positions_router)
     api.include_router(imports_router)
     api.include_router(prices_router)
+    api.include_router(news_router)
+    api.include_router(briefs_router)
     app.include_router(api)
 
     return app
