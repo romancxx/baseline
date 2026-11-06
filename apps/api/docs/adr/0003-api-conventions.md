@@ -62,15 +62,14 @@ decimals and testing.
   migrations are tested too.
 - **Every test runs in a transaction that is rolled back**; the code's own commits become
   savepoints.
-- **Fixtures** build a fresh app per test with the session dependency overridden: `client`,
-  `auth_client`, `user`. Rows a test needs come from factory fixtures (`make_instrument`)
-  that insert through the session. Test settings come from `[tool.pytest_env]`.
+- **Fixtures** build a fresh app per test with the session dependency overridden: `client`, `auth_client`, `user`.
+  Rows a test needs come from factory fixtures (`make_instrument`) that insert through the session.
+  The test database URL and JWT secret come from the environment, set by `just api-test` and by CI, so `pyproject.toml` holds no credentials.
 - **Endpoints never reach a provider in tests**: the `app` fixture overrides each external
   client's dependency with a fake (`yahoo`, a `FakeYahoo`), which a test configures and
   inspects.
-- **No external calls**: a third-party library is replaced at its own boundary, so the
-  integration's code still runs: with `monkeypatch` for a library such as yfinance, with
-  `httpx2.MockTransport` for an HTTP API.
+- **No external calls**: a third-party library is replaced at its own boundary, so the integration's code still runs: with `monkeypatch` for a library such as yfinance, with `httpx2.MockTransport` for an HTTP API.
+  pytest-socket fails any test that connects to a host other than loopback.
 
 ## Alternatives considered
 

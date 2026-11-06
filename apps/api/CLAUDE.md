@@ -1,12 +1,13 @@
 # API
 
-Read [CODE_STANDARDS.md](CODE_STANDARDS.md) before writing code here; reviews check changes
-against it.
+Follow the code standards below; reviews check changes against them.
+
+@CODE_STANDARDS.md
 
 ## Before a change is done
 
-From the repo root, with Postgres up (`just db-up`), run `just api-format`, `just api-lint`,
-`just api-typecheck` and `just api-test`.
+From the repo root, with Postgres up (`just db-up`), run `just api-format`, `just api-lint`, `just api-typecheck` and `just api-test`.
+Run the tests through `just api-test`: a bare `uv run pytest` lacks the test database URL and JWT secret.
 
 - Before trusting a new test, break the behaviour it covers and see it fail.
 - Check a new query that relies on indexes with `EXPLAIN`, on a table large enough to make an

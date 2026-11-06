@@ -154,8 +154,7 @@ holds it in place:
   **[review]**
 - Read settings through `get_settings()`, never `os.environ` or a module-level `Settings()`.
   **[review]**
-- A new setting goes in `Settings` and in `.env.example`; a required one also in
-  `[tool.pytest_env]`. **[review]**
+- A new setting goes in `Settings` and in `.env.example`; a required one also in the `api-test` recipe of the `justfile` and the `env` of `.github/workflows/api.yml`. **[review]**
 - Keys only Docker Compose reads (`POSTGRES_*`) stay out of `Settings`. **[review]**
 
 ## 8. Database — [ADR 0004](docs/adr/0004-database-and-migrations.md)
@@ -266,16 +265,14 @@ holds it in place:
   left unchanged. **[review]**
 - Replace our own dependencies with `app.dependency_overrides`, never by patching our modules.
   **[review]**
-- Tests never call an external service. An integration's tests replace the library at its
-  boundary, never our own functions: `monkeypatch.setattr(yf, "Search", fake)` for a library,
-  `httpx2.MockTransport(handler)` passed as the client's `transport` for an HTTP API.
-  **[review]**
+- Tests never open a connection to anything but the local Postgres. **[test]**
+- An integration's tests replace the library at its boundary, never our own functions: `monkeypatch.setattr(yf, "Search", fake)` for a library, `httpx2.MockTransport(handler)` passed as the client's `transport` for an HTTP API. **[review]**
 - A provider that answers with a document (a feed) is tested on real answers, recorded and
   trimmed, in `tests/fixtures/<provider>/`. Each file says in a comment what was recorded,
   when, and what was trimmed. **[review]**
 - Override settings with `monkeypatch.setenv` and `get_settings.cache_clear()` before and
   after. **[review]**
-- Test settings live in `[tool.pytest_env]`; the test database name ends in `_test`. **[test]**
+- The test database name ends in `_test`. **[test]**
 - Name tests `test_<subject>_<behaviour>`. **[review]**
 - Build request bodies with a payload factory in the test module (`user_payload(**overrides)`).
   **[review]**

@@ -5,7 +5,7 @@ its date says when it last changed.
 
 | ADR | Topic | Decision |
 | --- | --- | --- |
-| [0001](0001-project-and-tooling.md) | Project and tooling | uv, `src/` layout, ruff, strict pyright, pytest, a root `justfile` |
+| [0001](0001-project-and-tooling.md) | Project and tooling | uv, `src/` layout, ruff, strict pyright, pytest, a root `justfile`, GitHub Actions CI |
 | [0002](0002-api-architecture.md) | API architecture | App factory; one package per feature, external services in `integrations/`, shared code in `core/`, one-way imports |
 | [0003](0003-api-conventions.md) | API conventions | Settings, domain errors with one error shape, structured logs with request IDs, keyset pagination, decimals as JSON strings, tests on a rolled-back real database |
 | [0004](0004-database-and-migrations.md) | Database and migrations | Postgres 18, async SQLAlchemy over asyncpg, a session per request, reviewed Alembic migrations |

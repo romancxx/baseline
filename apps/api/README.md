@@ -1,33 +1,160 @@
 # StockNews API
 
-Python backend for StockNews. Requires [uv](https://docs.astral.sh/uv/).
+[![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
 
-Settings are read from environment variables, then from `.env`. Start from the example:
-`cp .env.example .env`, then set `JWT_SECRET` to the output of `openssl rand -hex 32`.
-`OPENFIGI_API_KEY` is optional: without it, OpenFIGI allows 25 requests per minute instead
-of 250. Briefs need a model: `ANTHROPIC_API_KEY` for the Anthropic API, or else the
-`claude` CLI on the PATH, logged in to a Claude subscription. `LLM_BACKEND` picks one: `api`
-(the default) or `cli`; set `cli` on your own machine to use the subscription. Without the
-chosen backend, news has headlines but no briefs. `ANTHROPIC_MODEL` picks the model for both
-(`claude-haiku-5-5` by default). The API reads only this key, not an `ant auth login`
-profile; the CLI never sees the key.
+The backend of a news reader for the stocks you hold.
+It keeps your portfolios, fetches each stock's daily prices from Yahoo Finance and its headlines from Google News, and has Claude write a short brief per stock that cites the headlines it was written from.
+
+A brief, as stored on 2 November 2026:
+
+> **ASML Holding N.V.** (ASML.AS) · tone: mixed
+>
+> TIKR.com reports ASML fell 6% in Intel's chip rout, while CEO says supply "will not fully meet the demand."
+> marketscreener.com reports Jefferies is Neutral on the company.
+> Simply Wall St and Yahoo Finance published pieces on executive pay tied to employee morale and on whether the shares are undervalued or fairly valued after a pullback and a 149% run.
+> TradingKey published a piece calling ASML a buy after a Terafab deal.
+>
+> From 5 articles, 1-2 Nov, generated 2026-11-02 15:10 UTC.
+> *Describes news as reported. Not investment advice.*
+
+| Published (UTC) | Publisher          | Headline cited                                                                     |
+| --------------- | ------------------ | ---------------------------------------------------------------------------------- |
+| 2 Nov, 13:30    | TIKR.com           | ASML Fell 6% in Intel's Chip Rout. Its CEO Says Supply "Will Not Fully Meet the Demand" |
+| 2 Nov, 12:20    | marketscreener.com | ASML Holding N.V. : Jefferies is Neutral                                           |
+| 1 Nov, 17:08    | Yahoo Finance      | Why Is ASML Holding (NasdaqGS:ASML) Tying Executive Pay To Employee Morale?        |
+| 1 Nov, 16:05    | Yahoo Finance      | ASML (NasdaqGS:ASML) Stock Looks Fairly Valued On Its 149% Run                     |
+| 1 Nov, 15:24    | TradingKey         | Why ASML is a buy After Terafab Deal?                                              |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    client([Client]) -->|"HTTP /api/v1"| api[FastAPI app]
+
+    subgraph jobs [Jobs, run with just]
+        prices[update_prices]
+        ingest[ingest_news]
+        briefs[generate_briefs]
+    end
+
+    subgraph integrations [integrations/]
+        yahoo[Yahoo Finance]
+        openfigi[OpenFIGI]
+        gnews[Google News RSS]
+        llm[Anthropic API or claude CLI]
+    end
+
+    api --> db[(Postgres)]
+    prices --> db
+    ingest --> db
+    briefs --> db
+
+    api -->|search, listings| yahoo
+    api -->|share classes, ISINs| openfigi
+    prices -->|daily bars| yahoo
+    ingest -->|headlines| gnews
+    briefs -->|briefs| llm
+```
+
+## Quickstart
+
+Needs [uv](https://docs.astral.sh/uv/), [just](https://just.systems/), Docker and `jq`.
+
+```sh
+git clone https://github.com/romancxx/stock-news-v2.git && cd stock-news-v2
+cp apps/api/.env.example apps/api/.env
+# In apps/api/.env: set JWT_SECRET to the output of `openssl rand -hex 32`, and either
+# ANTHROPIC_API_KEY, or LLM_BACKEND=cli with the `claude` CLI logged in.
+just db-up
+just api-install
+uv --directory apps/api run alembic upgrade head
+just api-dev
+```
+
+In a second terminal, register, follow a stock, then fetch its news and write its brief:
+
+```sh
+API=http://localhost:8000/api/v1
+curl -s $API/auth/register -H 'Content-Type: application/json' \
+  -d '{"email": "me@example.com", "password": "correct-horse-battery"}'
+TOKEN=$(curl -s $API/auth/login --data-urlencode username=me@example.com \
+  --data-urlencode password=correct-horse-battery | jq -r .access_token)
+AUTH="Authorization: Bearer $TOKEN"
+INSTRUMENT=$(curl -s $API/instruments/resolve -H "$AUTH" -H 'Content-Type: application/json' \
+  -d '{"yahoo_symbol": "ASML.AS"}' | jq -r .id)
+PORTFOLIO=$(curl -s $API/portfolios -H "$AUTH" -H 'Content-Type: application/json' \
+  -d '{"name": "Long term"}' | jq -r .id)
+curl -s $API/portfolios/$PORTFOLIO/positions -H "$AUTH" -H 'Content-Type: application/json' \
+  -d "{\"instrument_id\": \"$INSTRUMENT\"}"
+
+just ingest-news
+just brief
+curl -s $API/instruments/$INSTRUMENT/brief -H "$AUTH" | jq
+```
+
+The interactive docs are at <http://localhost:8000/docs>.
+
+## Key design decisions
+
+- [0001](docs/adr/0001-project-and-tooling.md): uv, a `src/` layout, ruff, strict pyright and pytest, run through a root `justfile` and GitHub Actions.
+- [0002](docs/adr/0002-api-architecture.md): one package per feature, each external service behind its own client in `integrations/`, imports going one way.
+- [0003](docs/adr/0003-api-conventions.md): domain errors with one error shape, structured logs with request IDs, keyset pagination, decimals as JSON strings, tests on a real Postgres.
+- [0004](docs/adr/0004-database-and-migrations.md): Postgres 18 through async SQLAlchemy, with reviewed Alembic migrations tested up and down.
+- [0005](docs/adr/0005-authentication.md): Argon2id passwords, 15-minute JWTs, single-use refresh tokens in an httpOnly cookie; another user's rows answer 404.
+- [0006](docs/adr/0006-instruments.md): one instrument per Yahoo symbol, grouped into share classes by FIGI, searched with pg_trgm.
+- [0007](docs/adr/0007-market-data.md): Yahoo Finance through yfinance, as `Decimal` prices; daily bars upserted per instrument and day.
+- [0008](docs/adr/0008-security-identifiers.md): OpenFIGI for share class FIGIs and ISIN lookups, behind one rate-limited client.
+- [0009](docs/adr/0009-portfolios.md): several portfolios per user, and a CSV import by ISIN with a per-row report and a dry run.
+- [0010](docs/adr/0010-news-ingestion.md): Google News RSS behind a `NewsSource` protocol, and one brief per security, checked in code, citing its headlines.
+- [0011](docs/adr/0011-local-llm-backend.md): briefs from the Anthropic API or the local `claude` CLI, chosen by `LLM_BACKEND`.
+
+## Data sources and terms
+
+StockNews is a personal project, meant to be run for your own use.
+Each source has its own terms; read them before using the data any other way.
+
+| Source | Used for | Terms |
+| --- | --- | --- |
+| Yahoo Finance, through [yfinance](https://github.com/ranaroussi/yfinance) | Search, listing details, daily prices | yfinance is not affiliated with Yahoo; its README notes Yahoo's API is meant for personal use only. [Yahoo terms](https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html) |
+| [OpenFIGI](https://www.openfigi.com/) | Share class FIGIs, ISIN lookups | [OpenFIGI terms of service](https://www.openfigi.com/docs/terms-of-service) |
+| Google News RSS | Headlines and links; articles stay on their publishers' sites | [Google terms of service](https://policies.google.com/terms) |
+| Anthropic | Writing the briefs | [Commercial terms](https://www.anthropic.com/legal/commercial-terms) with an API key; [consumer terms](https://www.anthropic.com/legal/consumer-terms) with the `claude` CLI on a subscription |
+
+## Disclaimer
+
+StockNews is not affiliated with Yahoo, Google, OpenFIGI or Anthropic.
+Briefs are written by a language model from headlines alone: they may be wrong or incomplete, and describe the news as reported.
+Nothing here is investment advice.
+
+## Configuration
+
+Settings are read from environment variables, then from `.env`, which starts as a copy of `.env.example`.
+`JWT_SECRET` takes the output of `openssl rand -hex 32`.
+`OPENFIGI_API_KEY` is optional: without it, OpenFIGI allows 25 requests per minute instead of 250.
+Briefs need a model: `ANTHROPIC_API_KEY` for the Anthropic API, or else the `claude` CLI on the PATH, logged in to a Claude subscription.
+`LLM_BACKEND` picks one: `api` (the default) or `cli`; set `cli` on your own machine to use the subscription.
+Without the chosen backend, news has headlines but no briefs.
+`ANTHROPIC_MODEL` picks the model for both (`claude-haiku-5-5` by default).
+The API reads only this key, not an `ant auth login` profile; the CLI never sees the key.
 
 Postgres runs in Docker and reads its credentials from the same `.env`. From the repo root,
 `just db-up` starts it and waits until it is healthy; `just db-down` stops it and keeps the data.
 
-Run from `apps/api/`:
+## Development
 
-| Task       | Command                                |
-| ---------- | -------------------------------------- |
-| Install    | `uv sync`                              |
-| Dev server | `uv run uvicorn app.main:app --reload` |
-| Lint       | `uv run ruff check`                    |
-| Format     | `uv run ruff format`                   |
-| Type-check | `uv run pyright`                       |
-| Test       | `uv run pytest`                        |
+From the repo root:
 
-From the repo root, the same commands are available as `just api-install`, `just api-dev`,
-`just api-lint`, `just api-format`, `just api-typecheck` and `just api-test`.
+| Task       | Command              |
+| ---------- | -------------------- |
+| Install    | `just api-install`   |
+| Dev server | `just api-dev`       |
+| Format     | `just api-format`    |
+| Lint       | `just api-lint`      |
+| Type-check | `just api-typecheck` |
+| Test       | `just api-test`      |
+
+`just api-lint` runs `ruff check` and `ruff format --check`.
+GitHub Actions runs lint, the format check, pyright and the tests on each push and pull request that touches `apps/api/`.
 
 `just yahoo-search "MSCI World"` searches the real Yahoo Finance and prints each stock or ETF
 found with its exchange code and currency. It is the only command that calls Yahoo; tests
@@ -38,9 +165,10 @@ the name without its legal form, finance terms, the last day, junk dropped. It p
 each article (time, publisher, headline) and what was dropped. Tests never call Google News:
 they read real feeds, recorded and trimmed, from `tests/fixtures/google_news/`.
 
-Tests need Postgres running. Each run recreates a separate `stocknews_test` database, migrates
-it to head, and migrates it back to base at the end; the development database is not touched.
-Test settings are in `[tool.pytest_env]` in `pyproject.toml`, so tests do not need a `.env`.
+Tests need Postgres running.
+Each run recreates a separate `stocknews_test` database, migrates it to head, and migrates it back to base at the end; the development database is not touched.
+`just api-test` sets the test `DATABASE_URL` and `JWT_SECRET`; CI sets its own.
+A test that connects to anything but the local Postgres fails.
 
 ## Migrations
 
@@ -316,3 +444,7 @@ Why the API is built the way it is, one record per topic, is in
 
 Known shortcuts and planned improvements are summarised in
 [docs/improvements.md](docs/improvements.md).
+
+## License
+
+MIT, see [LICENSE](../../LICENSE).

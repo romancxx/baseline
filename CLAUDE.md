@@ -11,3 +11,6 @@ API's Postgres: `just db-up`, `just db-down`.
 
 Commits are Conventional Commits scoped by app and topic: `feat(api/news): …`,
 `fix(api/import): …`.
+
+Markdown has one sentence per line, never wrapped mid-sentence.
+A wrapped paragraph is converted only when it is edited for another reason.

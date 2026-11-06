@@ -10,6 +10,7 @@
   fail instead of being hidden by the working directory.
 - **ruff** (lint + format, 100 columns), **pyright** strict on `src/`, **pytest**.
 - A root **`justfile`** runs everything from the repo root (`api-*`, `db-up`, `db-down`).
+- **GitHub Actions** (`.github/workflows/api.yml`) runs on each push and pull request that touches `apps/api/`: ruff check and format check, pyright and pytest, against a Postgres service container of the version Docker Compose runs.
 
 ## Consequences
 

@@ -5,7 +5,6 @@ The ADR column points to the record that explains the current design.
 
 | Area | Now | Improvement | Worth doing when | ADR |
 | --- | --- | --- | --- | --- |
-| Tooling | Formatting is not checked: `just api-lint` runs only `ruff check`. | Add `ruff format --check` to `api-lint`. | CI is set up. | [0001](adr/0001-project-and-tooling.md) |
 | Configuration | The log level is fixed at `INFO`. | A `LOG_LEVEL` setting. | Someone needs debug logs from a deployed environment. | [0003](adr/0003-api-conventions.md) |
 | Database | An unreachable host makes asyncpg wait for its default 60s connect timeout, so `/health` hangs. | Set `connect_args={"timeout": …}` on the engine. | Before deploying. | [0004](adr/0004-database-and-migrations.md) |
 | Database | `updated_at` is bumped by SQLAlchemy on ORM updates only; raw SQL updates leave it unchanged. | A `set_updated_at` trigger in the database, created by the migration that adds each table. | The first table is updated outside the ORM. | [0004](adr/0004-database-and-migrations.md) |
@@ -23,7 +22,6 @@ The ADR column points to the record that explains the current design.
 | Auth | Two refreshes sent at once with the same token (two tabs) look like reuse: the second revokes all of the user's tokens. | A short grace period during which the just-rotated token returns the same new pair. | Users report being logged out when several tabs are open. | [0005](adr/0005-authentication.md) |
 | Auth | Expired and revoked rows stay in `refresh_tokens` forever. | A periodic job deleting rows past `expires_at`. | The table grows noticeably. | [0005](adr/0005-authentication.md) |
 | Auth | A failed refresh (401) leaves the stale cookie in the browser. | Clear the cookie on that 401 too. | The web app relies on the cookie's presence. | [0005](adr/0005-authentication.md) |
-| Tests | The test `DATABASE_URL` in `[tool.pytest_env]` repeats the local Postgres credentials from `.env`. | Let CI or each developer supply it (pytest-env's `D:` prefix keeps an existing value). | Credentials differ between machines, or CI is set up. | [0003](adr/0003-api-conventions.md) |
 | Instruments | The search is accent-sensitive: `moet` scores 0.40 against "LVMH Moët Hennessy…" and is not found. | The `unaccent` extension, an `IMMUTABLE` wrapper function around it, and the trigram index on that function of `name`. | Users search names with accents (French, German, Spanish listings). | [0006](adr/0006-instruments.md) |
 | Instruments | Name matches use pg_trgm's default word-similarity threshold (0.6): very short typos miss (`aple` scores 0.57 against "Apple Inc."). | Tune `pg_trgm.word_similarity_threshold` with `SET LOCAL` in the search's transaction, checked against real searches. | Users report missing results. | [0006](adr/0006-instruments.md) |
 | Instruments | A thin search asks Yahoo every time, with nothing cached: typing a name letter by letter makes one Yahoo request per keystroke past 2 characters. | Cache Yahoo's results per query for a few minutes, and debounce in the web app. | The web app searches as the user types. | [0006](adr/0006-instruments.md) |
