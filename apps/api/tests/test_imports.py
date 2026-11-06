@@ -1,4 +1,3 @@
-import uuid
 from decimal import Decimal
 
 import pytest
@@ -6,7 +5,6 @@ from conftest import (
     FakeOpenFigi,
     FakeYahoo,
     InstrumentFactory,
-    PortfolioFactory,
     PositionFactory,
     details,
     listing,
@@ -17,19 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.imports.service import MAX_FILE_SIZE
 from app.modules.instruments.models import Instrument
+from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
-from app.modules.users.models import User
 
 pytestmark = pytest.mark.anyio
+
+URL = "/api/v1/portfolio/import"
 
 LVMH = "FR0000121014"
 MSCI_WORLD = "IE00B4L5Y983"
 SP_500 = "IE00B5BMR087"
 APPLE = "US0378331005"
-
-
-def import_url(portfolio_id: uuid.UUID) -> str:
-    return f"/api/v1/portfolios/{portfolio_id}/import"
 
 
 def csv_file(*lines: str) -> dict[str, tuple[str, bytes, str]]:
@@ -78,15 +74,10 @@ async def count(db_session: AsyncSession, model: type[Instrument | Position]) ->
 
 
 async def test_import_reports_each_row_and_imports_the_valid_ones(
-    auth_client: AsyncClient,
-    db_session: AsyncSession,
-    make_portfolio: PortfolioFactory,
-    user: User,
+    auth_client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    portfolio = await make_portfolio(user)
-
     response = await auth_client.post(
-        import_url(portfolio.id),
+        URL,
         files=csv_file(
             "isin,quantity,average_price,currency",
             f"{LVMH},10,650.5,EUR",
@@ -122,16 +113,10 @@ async def test_import_reports_each_row_and_imports_the_valid_ones(
 
 
 async def test_import_rejects_a_file_with_an_unknown_column(
-    auth_client: AsyncClient,
-    db_session: AsyncSession,
-    make_portfolio: PortfolioFactory,
-    openfigi: FakeOpenFigi,
-    user: User,
+    auth_client: AsyncClient, db_session: AsyncSession, openfigi: FakeOpenFigi
 ) -> None:
-    portfolio = await make_portfolio(user)
-
     response = await auth_client.post(
-        import_url(portfolio.id), files=csv_file("isin,quantity,broker", f"{LVMH},10,Degiro")
+        URL, files=csv_file("isin,quantity,broker", f"{LVMH},10,Degiro")
     )
 
     assert response.status_code == 422
@@ -142,16 +127,9 @@ async def test_import_rejects_a_file_with_an_unknown_column(
 
 
 async def test_import_rejects_an_average_price_without_a_currency(
-    auth_client: AsyncClient,
-    make_portfolio: PortfolioFactory,
-    openfigi: FakeOpenFigi,
-    user: User,
+    auth_client: AsyncClient, openfigi: FakeOpenFigi
 ) -> None:
-    portfolio = await make_portfolio(user)
-
-    response = await auth_client.post(
-        import_url(portfolio.id), files=csv_file("isin,average_price", f"{LVMH},650.5")
-    )
+    response = await auth_client.post(URL, files=csv_file("isin,average_price", f"{LVMH},650.5"))
 
     [row] = response.json()["rows"]
     assert row["status"] == "invalid"
@@ -169,36 +147,20 @@ async def test_import_rejects_an_average_price_without_a_currency(
     ],
 )
 async def test_import_picks_the_listing_by_exchange_and_currency(
-    auth_client: AsyncClient,
-    make_portfolio: PortfolioFactory,
-    user: User,
-    isin: str,
-    currency: str,
-    expected: str,
+    auth_client: AsyncClient, isin: str, currency: str, expected: str
 ) -> None:
-    portfolio = await make_portfolio(user)
-
-    response = await auth_client.post(
-        import_url(portfolio.id), files=csv_file("isin,currency", f"{isin},{currency}")
-    )
+    response = await auth_client.post(URL, files=csv_file("isin,currency", f"{isin},{currency}"))
 
     [row] = response.json()["rows"]
     assert (row["status"], row["symbol"]) == ("imported", expected)
 
 
 async def test_import_reports_a_stored_instrument_in_another_currency(
-    auth_client: AsyncClient,
-    db_session: AsyncSession,
-    make_portfolio: PortfolioFactory,
-    make_instrument: InstrumentFactory,
-    user: User,
+    auth_client: AsyncClient, db_session: AsyncSession, make_instrument: InstrumentFactory
 ) -> None:
-    portfolio = await make_portfolio(user)
     await make_instrument("MC.PA", currency="EUR", isin=LVMH)
 
-    response = await auth_client.post(
-        import_url(portfolio.id), files=csv_file("isin,currency", f"{LVMH},JPY")
-    )
+    response = await auth_client.post(URL, files=csv_file("isin,currency", f"{LVMH},JPY"))
 
     [row] = response.json()["rows"]
     assert (row["status"], row["symbol"]) == ("currency_mismatch", "MC.PA")
@@ -209,17 +171,15 @@ async def test_import_reports_a_stored_instrument_in_another_currency(
 async def test_import_dry_run_reports_without_writing(
     auth_client: AsyncClient,
     db_session: AsyncSession,
-    make_portfolio: PortfolioFactory,
     make_instrument: InstrumentFactory,
     make_position: PositionFactory,
-    user: User,
+    portfolio: Portfolio,
 ) -> None:
-    portfolio = await make_portfolio(user)
     iwda = await make_instrument("IWDA.AS", currency="EUR", isin=MSCI_WORLD)
     await make_position(portfolio, iwda, quantity=Decimal(1))
 
     response = await auth_client.post(
-        import_url(portfolio.id),
+        URL,
         params={"dry_run": "true"},
         files=csv_file("isin,quantity", f"{LVMH},10", f"{MSCI_WORLD},20"),
     )
@@ -237,20 +197,13 @@ async def test_import_dry_run_reports_without_writing(
 
 
 async def test_import_again_updates_the_columns_in_the_file(
-    auth_client: AsyncClient,
-    db_session: AsyncSession,
-    make_portfolio: PortfolioFactory,
-    user: User,
+    auth_client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    portfolio = await make_portfolio(user)
     await auth_client.post(
-        import_url(portfolio.id),
-        files=csv_file("isin,quantity,average_price,currency", f"{LVMH},10,650.5,EUR"),
+        URL, files=csv_file("isin,quantity,average_price,currency", f"{LVMH},10,650.5,EUR")
     )
 
-    response = await auth_client.post(
-        import_url(portfolio.id), files=csv_file("isin,quantity", f"{LVMH},12")
-    )
+    response = await auth_client.post(URL, files=csv_file("isin,quantity", f"{LVMH},12"))
 
     [row] = response.json()["rows"]
     assert (row["status"], row["symbol"]) == ("updated", "MC.PA")
@@ -260,37 +213,30 @@ async def test_import_again_updates_the_columns_in_the_file(
     assert await count(db_session, Position) == 1
 
 
-async def test_import_rejects_a_file_over_the_size_limit(
-    auth_client: AsyncClient, make_portfolio: PortfolioFactory, user: User
-) -> None:
-    portfolio = await make_portfolio(user)
+async def test_import_rejects_a_file_over_the_size_limit(auth_client: AsyncClient) -> None:
     rows = [f"{LVMH}"] * (MAX_FILE_SIZE // len(LVMH))
 
-    response = await auth_client.post(import_url(portfolio.id), files=csv_file("isin", *rows))
+    response = await auth_client.post(URL, files=csv_file("isin", *rows))
 
     assert response.status_code == 413
     assert response.json()["code"] == "file_too_large"
 
 
-async def test_import_into_another_users_portfolio_answers_404(
+async def test_import_writes_into_the_current_users_portfolio(
     auth_client: AsyncClient,
     db_session: AsyncSession,
-    make_portfolio: PortfolioFactory,
-    other_user: User,
+    portfolio: Portfolio,
+    other_portfolio: Portfolio,
 ) -> None:
-    portfolio = await make_portfolio(other_user)
+    response = await auth_client.post(URL, files=csv_file("isin", LVMH))
 
-    response = await auth_client.post(import_url(portfolio.id), files=csv_file("isin", LVMH))
+    assert response.status_code == 200
+    position = await db_session.scalar(select(Position))
+    assert position is not None
+    assert position.portfolio_id == portfolio.id
 
-    assert response.status_code == 404
-    assert await count(db_session, Position) == 0
 
-
-async def test_import_requires_authentication(
-    client: AsyncClient, make_portfolio: PortfolioFactory, user: User
-) -> None:
-    portfolio = await make_portfolio(user)
-
-    response = await client.post(import_url(portfolio.id), files=csv_file("isin", LVMH))
+async def test_import_requires_authentication(client: AsyncClient) -> None:
+    response = await client.post(URL, files=csv_file("isin", LVMH))
 
     assert response.status_code == 401

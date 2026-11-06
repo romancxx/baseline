@@ -49,9 +49,9 @@ holds it in place:
 
 ## 2. Routers and endpoints — [ADR 0002](docs/adr/0002-api-architecture.md), [ADR 0003](docs/adr/0003-api-conventions.md)
 
-- A router sets its prefix and tag to the module name:
-  `APIRouter(prefix="/instruments", tags=["instruments"])`. A resource nested in another's
-  puts the parent's path first: `prefix="/portfolios/{portfolio_id}/positions"`. **[review]**
+- A router sets its prefix and tag to the module name: `APIRouter(prefix="/instruments", tags=["instruments"])`.
+  A resource the user has exactly one of is singular and has no id in its path (`prefix="/portfolio"`, tag `portfolios`).
+  A resource nested in another's puts the parent's path first: `prefix="/portfolio/positions"`. **[review]**
 - A router only reads the request, calls a service or dependency, and returns a schema.
   **[review]**
 - The response model is the return annotation (`-> InstrumentRead`); `response_model=` only
@@ -229,10 +229,9 @@ holds it in place:
   `refresh_token` cookie with the router's fixed flags, never in a body or query string.
   **[test]**
 - A refresh token is used once: rotate through `rotate_refresh_token`. **[test]**
-- Query a user-owned table only with `user_id` = the current user: in list queries, and for
-  one row through the resource's owned dependency (`portfolio: OwnedPortfolio`). Never load
-  one by id alone. A row owned through a parent is looked up within the owned parent
-  (`position: OwnedPosition`, inside `OwnedPortfolio`). **[test]**
+- Query a user-owned table only with `user_id` = the current user: in list queries, and for one row through the resource's dependency (`portfolio: UserPortfolio`).
+  Never load one by id alone.
+  A row owned through a parent is looked up within the parent the dependency returned (`position: OwnedPosition`, inside `UserPortfolio`). **[test]**
 - Another user's row answers 404 with the same message as an unknown id, never 403.
   **[test]**
 - A provider's response goes to a parser as a stream (`feedparser.parse(io.BytesIO(content))`),

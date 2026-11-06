@@ -1,4 +1,3 @@
-import uuid
 from typing import Annotated
 
 from fastapi import Depends
@@ -9,11 +8,9 @@ from app.modules.portfolios.models import Portfolio
 from app.modules.portfolios.service import get_portfolio
 
 
-async def get_owned_portfolio(
-    session: DbSession, user: CurrentUser, portfolio_id: uuid.UUID
-) -> Portfolio:
-    """The `{portfolio_id}` of the path, if it belongs to the current user; 404 otherwise."""
-    return await get_portfolio(session, user, portfolio_id)
+async def get_user_portfolio(session: DbSession, user: CurrentUser) -> Portfolio:
+    """The current user's portfolio."""
+    return await get_portfolio(session, user)
 
 
-OwnedPortfolio = Annotated[Portfolio, Depends(get_owned_portfolio)]
+UserPortfolio = Annotated[Portfolio, Depends(get_user_portfolio)]

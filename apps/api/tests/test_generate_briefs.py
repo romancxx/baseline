@@ -9,7 +9,6 @@ from conftest import (
     ArticleFactory,
     FakeAnthropic,
     InstrumentFactory,
-    PortfolioFactory,
     PositionFactory,
 )
 from pydantic import SecretStr
@@ -31,7 +30,7 @@ from app.modules.briefs.service import (
     llm_client,
 )
 from app.modules.instruments.models import Instrument
-from app.modules.users.models import User
+from app.modules.portfolios.models import Portfolio
 
 pytestmark = pytest.mark.anyio
 
@@ -60,13 +59,9 @@ class Follow(Protocol):
 
 @pytest.fixture
 async def follow(
-    make_instrument: InstrumentFactory,
-    make_portfolio: PortfolioFactory,
-    make_position: PositionFactory,
-    user: User,
+    make_instrument: InstrumentFactory, make_position: PositionFactory, portfolio: Portfolio
 ) -> Follow:
-    """A function that inserts a stock held in a portfolio of `user`."""
-    portfolio = await make_portfolio(user)
+    """A function that inserts a stock held in the portfolio of `user`."""
 
     async def make(
         yahoo_symbol: str, name: str, *, share_class_figi: str | None = None

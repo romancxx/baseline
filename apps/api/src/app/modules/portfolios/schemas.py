@@ -1,20 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
-
-PortfolioName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
-]
-
-
-class PortfolioCreate(BaseModel):
-    name: PortfolioName
-
-
-class PortfolioUpdate(BaseModel):
-    name: PortfolioName | None = None
+from pydantic import BaseModel, ConfigDict
 
 
 class PortfolioRead(BaseModel):

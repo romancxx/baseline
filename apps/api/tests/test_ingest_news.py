@@ -2,7 +2,7 @@ import datetime as dt
 from typing import Protocol
 
 import pytest
-from conftest import FakeNewsSource, InstrumentFactory, PortfolioFactory, PositionFactory
+from conftest import FakeNewsSource, InstrumentFactory, PositionFactory
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog.testing import capture_logs
@@ -11,7 +11,7 @@ from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.news.models import Article, ArticleInstrument
 from app.modules.news.schemas import NewsIngestSummary, RawArticle
 from app.modules.news.service import NOT_STORED, ingest_news
-from app.modules.users.models import User
+from app.modules.portfolios.models import Portfolio
 
 pytestmark = pytest.mark.anyio
 
@@ -45,13 +45,9 @@ class Follow(Protocol):
 
 @pytest.fixture
 async def follow(
-    make_instrument: InstrumentFactory,
-    make_portfolio: PortfolioFactory,
-    make_position: PositionFactory,
-    user: User,
+    make_instrument: InstrumentFactory, make_position: PositionFactory, portfolio: Portfolio
 ) -> Follow:
-    """A function that inserts an instrument held in a portfolio of `user`."""
-    portfolio = await make_portfolio(user)
+    """A function that inserts an instrument held in the portfolio of `user`."""
 
     async def make(
         yahoo_symbol: str,

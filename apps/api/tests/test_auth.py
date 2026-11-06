@@ -10,6 +10,7 @@ from structlog.testing import capture_logs
 
 from app.core.config import get_settings
 from app.core.security import JWT_ALGORITHM, verify_password
+from app.modules.portfolios.models import Portfolio
 from app.modules.users.models import User
 
 pytestmark = pytest.mark.anyio
@@ -49,6 +50,17 @@ async def test_register_stores_an_argon2_hash_not_the_password(
     assert user.hashed_password != PASSWORD
     assert user.hashed_password.startswith("$argon2id$")
     assert verify_password(PASSWORD, user.hashed_password)
+
+
+async def test_register_creates_the_users_portfolio(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    response = await client.post(REGISTER_URL, json=user_payload())
+
+    portfolios = await db_session.scalars(
+        select(Portfolio).where(Portfolio.user_id == uuid.UUID(response.json()["id"]))
+    )
+    assert [portfolio.name for portfolio in portfolios] == ["My portfolio"]
 
 
 @pytest.mark.parametrize("email", ["alice@example.com", "ALICE@example.com"])

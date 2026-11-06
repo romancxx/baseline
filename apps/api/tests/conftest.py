@@ -36,6 +36,7 @@ from app.modules.news.models import Article, ArticleInstrument, ArticleSource
 from app.modules.news.schemas import FetchResult, NewsQuery, RawArticle
 from app.modules.news.service import title_key
 from app.modules.portfolios.models import Portfolio
+from app.modules.portfolios.service import get_portfolio
 from app.modules.positions.models import Position
 from app.modules.prices.models import DailyPrice
 from app.modules.users.models import User
@@ -343,22 +344,16 @@ def make_instrument(db_session: AsyncSession) -> InstrumentFactory:
     return make
 
 
-class PortfolioFactory(Protocol):
-    async def __call__(self, owner: User, name: str = ...) -> Portfolio: ...
+@pytest.fixture
+async def portfolio(db_session: AsyncSession, user: User) -> Portfolio:
+    """The portfolio `user` was created with."""
+    return await get_portfolio(db_session, user)
 
 
 @pytest.fixture
-def make_portfolio(db_session: AsyncSession) -> PortfolioFactory:
-    """A function that inserts a portfolio owned by `owner`."""
-
-    async def make(owner: User, name: str = "Long term") -> Portfolio:
-        portfolio = Portfolio(user_id=owner.id, name=name)
-        db_session.add(portfolio)
-        await db_session.commit()
-        await db_session.refresh(portfolio)
-        return portfolio
-
-    return make
+async def other_portfolio(db_session: AsyncSession, other_user: User) -> Portfolio:
+    """The portfolio `other_user` was created with."""
+    return await get_portfolio(db_session, other_user)
 
 
 class PositionFactory(Protocol):

@@ -8,7 +8,6 @@ from conftest import (
     DailyPriceFactory,
     FakeYahoo,
     InstrumentFactory,
-    PortfolioFactory,
     PositionFactory,
 )
 from sqlalchemy import select
@@ -17,10 +16,10 @@ from structlog.testing import capture_logs
 
 from app.integrations.yahoo.schemas import DailyBar, PriceHistory, Split
 from app.modules.instruments.models import Instrument
+from app.modules.portfolios.models import Portfolio
 from app.modules.prices.models import DailyPrice
 from app.modules.prices.schemas import PriceUpdateSummary
 from app.modules.prices.service import NO_RECENT_BARS, NOT_STORED, update_prices
-from app.modules.users.models import User
 
 pytestmark = pytest.mark.anyio
 
@@ -48,13 +47,9 @@ class Follow(Protocol):
 
 @pytest.fixture
 async def follow(
-    make_instrument: InstrumentFactory,
-    make_portfolio: PortfolioFactory,
-    make_position: PositionFactory,
-    user: User,
+    make_instrument: InstrumentFactory, make_position: PositionFactory, portfolio: Portfolio
 ) -> Follow:
-    """A function that inserts an instrument held in a portfolio of `user`."""
-    portfolio = await make_portfolio(user)
+    """A function that inserts an instrument held in the portfolio of `user`."""
 
     async def make(yahoo_symbol: str) -> Instrument:
         instrument = await make_instrument(yahoo_symbol)
@@ -147,14 +142,13 @@ async def test_update_prices_fetches_an_instrument_held_in_several_portfolios_on
     db_session: AsyncSession,
     yahoo: FakeYahoo,
     make_instrument: InstrumentFactory,
-    make_portfolio: PortfolioFactory,
     make_position: PositionFactory,
-    user: User,
-    other_user: User,
+    portfolio: Portfolio,
+    other_portfolio: Portfolio,
 ) -> None:
     instrument = await make_instrument("AAPL")
-    await make_position(await make_portfolio(user), instrument)
-    await make_position(await make_portfolio(other_user), instrument)
+    await make_position(portfolio, instrument)
+    await make_position(other_portfolio, instrument)
     yahoo.histories["AAPL"] = history(bar(days_ago(1)))
 
     summary = await update_prices(db_session, yahoo)

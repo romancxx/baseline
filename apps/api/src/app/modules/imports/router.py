@@ -6,10 +6,10 @@ from app.integrations.yahoo.dependencies import Yahoo
 from app.modules.auth.dependencies import get_current_user
 from app.modules.imports.schemas import ImportResponse
 from app.modules.imports.service import MAX_FILE_SIZE, import_positions
-from app.modules.portfolios.dependencies import OwnedPortfolio
+from app.modules.portfolios.dependencies import UserPortfolio
 
 router = APIRouter(
-    prefix="/portfolios/{portfolio_id}/import",
+    prefix="/portfolio/import",
     tags=["imports"],
     dependencies=[Depends(get_current_user)],
 )
@@ -20,7 +20,7 @@ async def import_csv(
     session: DbSession,
     yahoo: Yahoo,
     openfigi: OpenFigi,
-    portfolio: OwnedPortfolio,
+    portfolio: UserPortfolio,
     file: UploadFile,
     dry_run: bool = False,
 ) -> ImportResponse:

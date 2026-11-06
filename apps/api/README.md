@@ -3,7 +3,7 @@
 [![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
 
 The backend of a news reader for the stocks you hold.
-It keeps your portfolios, fetches each stock's daily prices from Yahoo Finance and its headlines from Google News, and has Claude write a short brief per stock that cites the headlines it was written from.
+It keeps your portfolio, fetches each stock's daily prices from Yahoo Finance and its headlines from Google News, and has Claude write a short brief per stock that cites the headlines it was written from.
 
 A brief, as stored on 2 November 2026:
 
@@ -82,9 +82,7 @@ TOKEN=$(curl -s $API/auth/login --data-urlencode username=me@example.com \
 AUTH="Authorization: Bearer $TOKEN"
 INSTRUMENT=$(curl -s $API/instruments/resolve -H "$AUTH" -H 'Content-Type: application/json' \
   -d '{"yahoo_symbol": "ASML.AS"}' | jq -r .id)
-PORTFOLIO=$(curl -s $API/portfolios -H "$AUTH" -H 'Content-Type: application/json' \
-  -d '{"name": "Long term"}' | jq -r .id)
-curl -s $API/portfolios/$PORTFOLIO/positions -H "$AUTH" -H 'Content-Type: application/json' \
+curl -s $API/portfolio/positions -H "$AUTH" -H 'Content-Type: application/json' \
   -d "{\"instrument_id\": \"$INSTRUMENT\"}"
 
 just ingest-news
@@ -104,7 +102,7 @@ The interactive docs are at <http://localhost:8000/docs>.
 - [0006](docs/adr/0006-instruments.md): one instrument per Yahoo symbol, grouped into share classes by FIGI, searched with pg_trgm.
 - [0007](docs/adr/0007-market-data.md): Yahoo Finance through yfinance, as `Decimal` prices; daily bars upserted per instrument and day.
 - [0008](docs/adr/0008-security-identifiers.md): OpenFIGI for share class FIGIs and ISIN lookups, behind one rate-limited client.
-- [0009](docs/adr/0009-portfolios.md): several portfolios per user, and a CSV import by ISIN with a per-row report and a dry run.
+- [0009](docs/adr/0009-portfolios.md): one portfolio per user, created at registration, and a CSV import by ISIN with a per-row report and a dry run.
 - [0010](docs/adr/0010-news-ingestion.md): Google News RSS behind a `NewsSource` protocol, and one brief per security, checked in code, citing its headlines.
 - [0011](docs/adr/0011-local-llm-backend.md): briefs from the Anthropic API or the local `claude` CLI, chosen by `LLM_BACKEND`.
 
@@ -274,25 +272,21 @@ the reason).
 
 ## Portfolios
 
-Each user has their own portfolios, managed under `/api/v1/portfolios`: `POST` creates one
-(`{"name": "Long term"}`, 201), `GET` lists yours (paginated), and `GET`, `PATCH` (rename)
-and `DELETE` act on `/portfolios/{id}`. Names are unique per user (409 otherwise). Another
-user's portfolio answers 404, exactly like an id that does not exist.
+Each user has one portfolio, created when they register.
+`GET /api/v1/portfolio` returns yours.
 
-A portfolio's positions are under `/api/v1/portfolios/{id}/positions`: `POST`
-`{"instrument_id": "0193…", "quantity": "10.5", "average_price": "182.25"}` adds one (201;
-both numbers optional, positive, up to 8 decimal places), `GET` lists them (paginated), and
-`PATCH` and `DELETE` act on `/positions/{position_id}`. Each position comes with its
-instrument. Decimals are returned as JSON strings (`"10.50000000"`); send them as strings
-too, to keep every digit. `PATCH` changes only the fields sent, and `null` clears one. An
-unknown instrument answers 404, an instrument already in the portfolio 409.
+Its positions are under `/api/v1/portfolio/positions`: `POST` `{"instrument_id": "0193…", "quantity": "10.5", "average_price": "182.25"}` adds one (201; both numbers optional, positive, up to 8 decimal places), `GET` lists them (paginated), and `PATCH` and `DELETE` act on `/portfolio/positions/{position_id}`.
+Each position comes with its instrument.
+Decimals are returned as JSON strings (`"10.50000000"`); send them as strings too, to keep every digit.
+`PATCH` changes only the fields sent, and `null` clears one.
+An unknown instrument answers 404, an instrument already in the portfolio 409.
+Another user's position answers 404, exactly like an id that does not exist.
 
 ## Importing positions
 
-`POST /api/v1/portfolios/{id}/import` takes a CSV file in the multipart field `file` and adds a
-position for each row, or updates the one already there. With `?dry_run=true`, it returns the
-same report and writes nothing. Each ISIN not stored yet is looked up on OpenFIGI and Yahoo,
-which takes a second or more per row (longer without `OPENFIGI_API_KEY`).
+`POST /api/v1/portfolio/import` takes a CSV file in the multipart field `file` and adds a position to your portfolio for each row, or updates the one already there.
+With `?dry_run=true`, it returns the same report and writes nothing.
+Each ISIN not stored yet is looked up on OpenFIGI and Yahoo, which takes a second or more per row (longer without `OPENFIGI_API_KEY`).
 
 ### File format
 
