@@ -38,6 +38,7 @@ dev = [
     "pyright>=1.1.414",
     "pytest>=9.1.1",
     "pytest-env>=1.8.0",
+    "pytest-socket>=0.8.1",
     "ruff>=0.17.0",
 ]
 
@@ -69,8 +70,9 @@ strict = ["src"]
 
 [tool.pytest]
 testpaths = ["tests"]
+# A test that opens a connection to anything but the local Postgres fails.
+addopts = ["--allow-hosts=127.0.0.1,::1"]
 
+# DATABASE_URL and JWT_SECRET come from the environment: `just api-test` or CI sets them.
 [tool.pytest_env]
 ENVIRONMENT = "test"
-DATABASE_URL = "postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test"
-JWT_SECRET = "test-secret-not-used-anywhere-else-0123456789"

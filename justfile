@@ -11,6 +11,7 @@ api-dev:
 
 api-lint:
     {{api}} run ruff check
+    {{api}} run ruff format --check
 
 api-format:
     {{api}} run ruff format
@@ -18,7 +19,10 @@ api-format:
 api-typecheck:
     {{api}} run pyright
 
+# The test database and secret; the database's credentials are the ones in .env.example
 api-test:
+    DATABASE_URL=postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test \
+    JWT_SECRET=test-secret-not-used-anywhere-else-0123456789 \
     {{api}} run pytest
 
 # Fetch the latest prices of every instrument held in a portfolio, from the real Yahoo Finance
