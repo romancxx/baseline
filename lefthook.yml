@@ -1,5 +1,4 @@
 # The repository's git hooks, installed once per clone with `just hooks-install`.
-# lefthook is a dev dependency of apps/api, so the hooks run it from that environment.
 lefthook: uv run --project apps/api lefthook
 
 commit-msg:
