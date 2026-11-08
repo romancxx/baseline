@@ -22,7 +22,19 @@ They are created lazily when terms or decisions actually get resolved.
     └── web/docs/adr/      ← frontend decisions
 ```
 
-There is no root `docs/adr/`: a skill that looks for ADRs in `docs/adr/` reads the app's folder instead.
+There is no root `docs/adr/`: a skill that reads or writes ADRs in `docs/adr/` uses the app's folder instead.
+
+## Writing ADRs
+
+Write an ADR in the folder of the app the decision concerns.
+Match that folder's conventions, not `domain-modeling`'s `ADR-FORMAT.md`:
+
+- **Format**: copy the shape of the existing records (numbered title, `Status` and `Date` lines, then sections).
+- **API** (`apps/api/docs/adr/`): one record per topic.
+  A decision that changes an existing topic updates that record instead of adding a new one.
+  A new topic gets the next number and a row in `README.md`'s index.
+  Follow the Docs rules in `apps/api/CLAUDE.md`.
+- **Web** (`apps/web/docs/adr/`): one record per implementation phase, indexed in its `README.md`.
 
 ## Use the glossary's vocabulary
 
