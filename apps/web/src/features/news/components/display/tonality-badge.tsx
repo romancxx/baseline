@@ -1,4 +1,4 @@
-import type { Tonality } from "@/features/summarization/schemas/summary.schema";
+import type { Tonality } from "@/features/news/schemas/tonality.schema";
 import { cn } from "@/shared/ui/cn";
 
 export type TonalityBadgeProps = {

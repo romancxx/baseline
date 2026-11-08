@@ -1,8 +1,4 @@
 export {
-  TonalityBadge,
-  type TonalityBadgeProps,
-} from "@/features/summarization/components/display/tonality-badge";
-export {
   type ArticleToSummarize,
   ArticleToSummarizeSchema,
   type ModelOutput,
