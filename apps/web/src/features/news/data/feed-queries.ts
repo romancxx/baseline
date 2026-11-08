@@ -5,8 +5,7 @@ import { createSupabaseServerClient } from "@/shared/supabase/server";
 
 export const FEED_LIMIT = 50;
 
-// The summaries written by the retired web pipeline, which the feed reads until it moves
-// onto the API's briefs.
+/** Model and prompt version whose tonality the feed shows. */
 const SUMMARY_MODEL = "claude-haiku-4-5";
 const SUMMARY_PROMPT_VERSION = "v1";
 

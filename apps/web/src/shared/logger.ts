@@ -16,7 +16,7 @@ function isLevel(value: string | undefined): value is LogLevel {
   return value !== undefined && (LOG_LEVELS as readonly string[]).includes(value);
 }
 
-// Read lazily: the ingest script sets nothing up before importing this.
+// Read on each call, not at import.
 function threshold(): number {
   const configured = process.env.LOG_LEVEL;
   return RANK[isLevel(configured) ? configured : "info"];

@@ -494,7 +494,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **Commits follow Conventional Commits** with a **closed scope list** that mirrors the folder structure (`auth`, `instruments`, `news`, `portfolio`, `shared`, `app`, `config`, `db`, `deps`, `ci`, `docs`).
   Header ≤ 100 characters, subject not in Start/Pascal/Upper case.
   If a commit fits no scope, it is touching too much or a new slice is being born. **[commit]**
-- **Pre-commit runs Biome on staged files** — a convenience, not a gate. CI runs everything.
+- **Pre-commit runs Biome on staged files** — a convenience, not a gate. CI runs lint, typecheck, test and build.
 
 ---
 

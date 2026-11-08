@@ -12,7 +12,7 @@ export function NewsFeed({ items, hasInstruments }: NewsFeedProps) {
     return (
       <p className="rounded-card bg-surface p-card text-detail text-secondary">
         {hasInstruments
-          ? "Nothing published for your instruments yet. The feed fills after the nightly run."
+          ? "Nothing published for your instruments yet."
           : "Add a position, and its news will appear here."}
       </p>
     );
