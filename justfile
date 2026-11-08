@@ -3,6 +3,16 @@ api := "uv --directory apps/api"
 default:
     @just --list
 
+# Install the git hooks of lefthook.yml into this clone; running it again is harmless
+hooks-install:
+    #!/bin/sh
+    if hooks_path=$(git config --get core.hooksPath); then
+        echo "core.hooksPath is set to '$hooks_path', and lefthook installs into .git/hooks." >&2
+        echo "Unset it with 'git config --unset core.hooksPath', then run this again." >&2
+        exit 1
+    fi
+    {{api}} run lefthook install
+
 api-install:
     {{api}} sync
 

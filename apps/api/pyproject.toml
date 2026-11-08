@@ -34,6 +34,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "anyio>=4.15.1",
+    "lefthook>=2.2.2",
     "pandas-stubs>=3.0.5.260914",
     "pyright>=1.1.414",
     "pytest>=9.1.1",
