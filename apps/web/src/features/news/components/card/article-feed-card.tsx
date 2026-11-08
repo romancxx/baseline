@@ -1,7 +1,7 @@
 import { InstrumentAvatar } from "@/features/instruments";
 import { ProvenanceLine } from "@/features/news/components/display/provenance-line";
+import { TonalityBadge } from "@/features/news/components/display/tonality-badge";
 import type { ArticleFeedItem } from "@/features/news/schemas/feed.schema";
-import { TonalityBadge } from "@/features/summarization";
 
 export type ArticleFeedCardProps = {
   readonly item: ArticleFeedItem;

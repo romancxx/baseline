@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { InstrumentSchema } from "@/features/instruments";
-import { TonalitySchema } from "@/features/summarization";
+import { TonalitySchema } from "@/features/news/schemas/tonality.schema";
 
 /** What produced each part of a card, so nothing claims to be generated that was not. */
 export const ArticleProvenanceSchema = z.object({

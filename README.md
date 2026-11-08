@@ -1,6 +1,7 @@
 # StockNews
 
 [![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
+[![Web](https://github.com/romancxx/stock-news-v2/actions/workflows/web.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/web.yml)
 
 A news reader for the stocks you hold: daily prices, headlines, and a short brief per stock written by Claude, citing its sources.
 Not investment advice.

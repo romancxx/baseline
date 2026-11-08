@@ -1,6 +1,6 @@
 # 7. Local summarisation on a Claude subscription
 
-- **Status:** accepted
+- **Status:** superseded by [api 0011](../../../api/docs/adr/0011-local-llm-backend.md)
 - **Date:** 2026-10-05
 - **Phase:** 5 — Summarization & tonality (follow-up)
 

@@ -10,15 +10,13 @@ import {
 
 const stack = inject("stack");
 
-const MODEL = "test-model";
-const PROMPT = "v-test";
+// The feed reports tonality from this model and prompt version only.
+const MODEL = "claude-haiku-4-5";
+const PROMPT = "v1";
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = stack.url;
 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = stack.publishableKey;
 process.env.SUPABASE_SECRET_KEY = stack.secretKey;
-// The feed reports tonality from the configured model only, so point it at the seeded one.
-process.env.SUMMARY_MODEL = MODEL;
-process.env.SUMMARY_PROMPT_VERSION = PROMPT;
 
 const { listFeedWith } = await import("@/features/news/server");
 

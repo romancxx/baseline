@@ -38,7 +38,7 @@ describe("InstrumentSeedSchema", () => {
 });
 
 describe("the seed file", () => {
-  // Guards the file the seed script reads: a bad row fails here, not against the database.
+  // A bad row in the seed file fails here.
   const raw: unknown = JSON.parse(readFileSync("supabase/seed/instruments.json", "utf8"));
 
   it("parses", () => {

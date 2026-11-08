@@ -1,10 +1,13 @@
 import type { Instrument } from "@/features/instruments";
 import { type FeedItem, FeedItemSchema } from "@/features/news/schemas/feed.schema";
 import { chunk, LOOKUP_CHUNK } from "@/shared/collections";
-import { serverEnv } from "@/shared/config/server-env";
 import { createSupabaseServerClient } from "@/shared/supabase/server";
 
 export const FEED_LIMIT = 50;
+
+/** Model and prompt version whose tonality the feed shows. */
+const SUMMARY_MODEL = "claude-haiku-4-5";
+const SUMMARY_PROMPT_VERSION = "v1";
 
 const ARTICLE_COLUMNS =
   "id, title, url, source, published_at, raw_content, article_instruments!inner(instrument_id)";
@@ -26,7 +29,7 @@ type SummaryRow = {
 /** Any client carrying a user's session; RLS scopes every read through it. */
 export type FeedReader = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-/** Tonality for the configured model and prompt only, keyed by article. */
+/** Tonality for one model and prompt only, keyed by article. */
 async function loadSummaries(
   supabase: FeedReader,
   articleIds: readonly string[],
@@ -37,8 +40,8 @@ async function loadSummaries(
     const { data, error } = await supabase
       .from("summaries")
       .select("article_id, tonality, confidence, model, generated_at")
-      .eq("model", serverEnv.SUMMARY_MODEL)
-      .eq("prompt_version", serverEnv.SUMMARY_PROMPT_VERSION)
+      .eq("model", SUMMARY_MODEL)
+      .eq("prompt_version", SUMMARY_PROMPT_VERSION)
       .in("article_id", batch);
 
     if (error) {
