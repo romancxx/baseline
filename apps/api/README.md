@@ -67,6 +67,7 @@ cp apps/api/.env.example apps/api/.env
 # ANTHROPIC_API_KEY, or LLM_BACKEND=cli with the `claude` CLI logged in.
 just db-up
 just api-install
+just hooks-install
 uv --directory apps/api run alembic upgrade head
 just api-dev
 ```

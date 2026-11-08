@@ -9,6 +9,7 @@
 - **`src/` layout**, package `app`: tests import the installed package, so packaging mistakes
   fail instead of being hidden by the working directory.
 - **ruff** (lint + format, 100 columns), **pyright** strict on `src/`, **pytest**.
+- **lefthook**, a dev dependency, runs the repository's git hooks: staged Python goes through `ruff check --fix` and `ruff format` on `pre-commit`.
 - A root **`justfile`** runs everything from the repo root (`api-*`, `db-up`, `db-down`).
 - **GitHub Actions** (`.github/workflows/api.yml`) runs on each push and pull request that touches `apps/api/`: ruff check and format check, pyright and pytest, against a Postgres service container of the version Docker Compose runs.
 
