@@ -49,11 +49,16 @@ class FakeTicker:
     """Stands in for `yf.Ticker`: `info` and `history()` return or raise the given values."""
 
     def __init__(
-        self, *, info: object = None, history: object = None, currency: str = "USD"
+        self,
+        *,
+        info: object = None,
+        history: object = None,
+        currency: str = "USD",
+        instrument_type: str = "EQUITY",
     ) -> None:
         self._info = info
         self._history = history
-        self.history_metadata = {"currency": currency}
+        self.history_metadata = {"currency": currency, "instrumentType": instrument_type}
 
     @property
     def info(self) -> object:
@@ -218,6 +223,18 @@ async def test_get_history_converts_pence_to_pounds(monkeypatch: pytest.MonkeyPa
     history = await YahooClient().get_history("AZN.L")
 
     assert history.bars[0].close == Decimal("126.14")
+
+
+async def test_get_history_of_an_fx_rate_keeps_seven_significant_digits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A JPYEUR=X close as Yahoo returned it.
+    frame = price_frame(("2026-11-06", 0.005661400035023689, 0))
+    fake_tickers(monkeypatch, FakeTicker(history=frame, currency="EUR", instrument_type="CURRENCY"))
+
+    history = await YahooClient().get_history("JPYEUR=X")
+
+    assert history.bars[0].close == Decimal("0.0056614")
 
 
 @pytest.mark.parametrize("missing", [HTTPError(404), YFTzMissingError("ZZZZNOTREAL")])

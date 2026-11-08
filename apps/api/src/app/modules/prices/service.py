@@ -2,6 +2,7 @@ import datetime as dt
 import itertools
 import uuid
 from collections.abc import Awaitable, Sequence
+from decimal import Decimal
 
 import structlog
 from sqlalchemy import Row, exists, select
@@ -9,13 +10,14 @@ from sqlalchemy.dialects.postgresql import Insert, insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ProviderUnavailableError
-from app.integrations.yahoo.client import YahooClient
+from app.core.config import get_settings
+from app.core.exceptions import NotFoundError, ProviderUnavailableError
+from app.integrations.yahoo.client import YahooClient, fx_symbol
 from app.integrations.yahoo.schemas import DailyBar
 from app.modules.instruments.models import Instrument
 from app.modules.instruments.service import followed_instrument_ids, get_instrument
-from app.modules.prices.models import DailyPrice
-from app.modules.prices.schemas import PriceUpdateSummary
+from app.modules.prices.models import DailyPrice, FxRate
+from app.modules.prices.schemas import PriceUpdateSummary, RateUpdateSummary
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -26,6 +28,10 @@ PRICE_COLUMNS = ["open", "high", "low", "close", "adj_close", "volume"]
 RECENT_DAYS = 5
 NO_RECENT_BARS = f"Yahoo Finance has no bar for the last {RECENT_DAYS} days."
 NOT_STORED = "Its prices could not be stored."
+
+
+class MissingRateError(NotFoundError):
+    code = "missing_rate"
 
 
 async def backfill(session: AsyncSession, yahoo: YahooClient, instrument_id: uuid.UUID) -> int:
@@ -103,6 +109,72 @@ async def list_prices(
     return (await session.scalars(statement)).all()
 
 
+async def update_rates(session: AsyncSession, yahoo: YahooClient) -> RateUpdateSummary:
+    """Store the recent FX rates, into the base currency, of every currency held but the base.
+
+    One currency failing does not stop the others.
+    """
+    currencies = await _held_currencies(session)
+    await session.commit()
+
+    base = get_settings().base_currency
+    # Each currency by its FX symbol.
+    by_symbol = {fx_symbol(currency, base): currency for currency in currencies if currency != base}
+    updated: list[str] = []
+    failed: dict[str, str] = {}
+
+    recent = await yahoo.get_recent_bars(list(by_symbol), days=RECENT_DAYS)
+    for symbol, reason in recent.failed.items():
+        failed[by_symbol[symbol]] = reason
+    for symbol in recent.missing:
+        failed[by_symbol[symbol]] = NO_RECENT_BARS
+    # Each currency in its own transaction.
+    for symbol, history in recent.histories.items():
+        currency = by_symbol[symbol]
+        error = await _attempt(session, _store_rates_and_commit(session, currency, history.bars))
+        if error is None:
+            updated.append(currency)
+        else:
+            failed[currency] = error
+
+    summary = RateUpdateSummary(updated=updated, failed=failed)
+    logger.info("rates.update_finished", **summary.model_dump())
+    return summary
+
+
+async def convert(
+    session: AsyncSession, amount: Decimal, currency: str, on_date: dt.date
+) -> Decimal:
+    """`amount` of `currency` in the base currency, at the latest rate on or before `on_date`.
+
+    Raises MissingRateError when no rate of `currency` is stored on or before that date.
+    """
+    base = get_settings().base_currency
+    if currency == base:
+        return amount
+
+    rate = await session.scalar(
+        select(FxRate.rate)
+        .where(FxRate.currency == currency, FxRate.date <= on_date)
+        .order_by(FxRate.date.desc())
+        .limit(1)
+    )
+    if rate is None:
+        raise MissingRateError(f"No {currency} to {base} rate on or before {on_date}.")
+    return amount * rate
+
+
+async def _held_currencies(session: AsyncSession) -> Sequence[str]:
+    """The currency of every instrument in a position, once, in alphabetical order."""
+    statement = (
+        select(Instrument.currency)
+        .where(Instrument.id.in_(followed_instrument_ids()))
+        .distinct()
+        .order_by(Instrument.currency)
+    )
+    return (await session.scalars(statement)).all()
+
+
 async def _followed_instruments(
     session: AsyncSession,
 ) -> Sequence[Row[uuid.UUID, str, bool]]:
@@ -146,6 +218,21 @@ async def _store(session: AsyncSession, instrument_id: uuid.UUID, bars: Sequence
     rows = [{"instrument_id": instrument_id, **bar.model_dump()} for bar in bars]
     for batch in itertools.batched(rows, BATCH_SIZE, strict=False):
         await session.execute(_upsert(), batch)
+
+
+async def _store_rates_and_commit(
+    session: AsyncSession, currency: str, bars: Sequence[DailyBar]
+) -> None:
+    """Upsert each bar's close as the currency's rate on its day."""
+    statement = insert(FxRate)
+    await session.execute(
+        statement.on_conflict_do_update(
+            index_elements=[FxRate.currency, FxRate.date],
+            set_={"rate": statement.excluded.rate},
+        ),
+        [{"currency": currency, "date": bar.date, "rate": bar.close} for bar in bars],
+    )
+    await session.commit()
 
 
 def _upsert() -> Insert:

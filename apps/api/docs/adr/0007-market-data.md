@@ -69,6 +69,27 @@ every exchange tried, and no throttling on a burst of 25 requests.
 - **It runs as a command**, `python -m app.jobs.update_prices` (`just update-prices`), with
   its own session; there is no endpoint and no scheduler yet.
 
+### FX rates
+
+The web app shows totals in one currency while holdings trade in several.
+
+- **One base currency, the `BASE_CURRENCY` setting** (`EUR` by default).
+- **`fx_rates` holds one rate per currency and day**, keyed by `(currency, date)`: base-currency units per 1 unit of `currency`.
+  The key's index serves the lookup of a currency's latest rate on or before a date (a backward scan, one row read).
+  The base currency is not part of the key, so rates stored under another base must be deleted when it changes.
+- **Rates come from Yahoo's FX symbols**, `<currency><base>=X` (`USDEUR=X`: euros per dollar), built only by the client's `fx_symbol`.
+  They go through `get_recent_bars` like prices, and a rate is the day's `close`.
+- **Rates keep 7 significant digits**: Yahoo's FX closes are float32 too, but rounding them to 4 places like prices would make `JPYEUR=X` 0.0057 instead of 0.0056614.
+  The client tells an FX history by its metadata's `instrumentType`, `CURRENCY`.
+  `Numeric(18, 12)` keeps those digits down to rates of 0.00001.
+- **`update_rates()` stores the last 5 days of every currency held** in a position, other than the base, upserted; there is no long backfill.
+  It reports the currencies `updated` and `failed`, logged as `rates.update_finished`, and one currency failing does not stop the others.
+  It is its own function, with its own summary, so instruments and currencies are never reported in the same lists.
+  The `update_prices` command runs it after `update_prices()`.
+- **`convert(amount, currency, on_date)`** returns the amount in the base currency at the latest rate on or before `on_date`, so a weekend or holiday uses the last trading day's.
+  The base currency converts to itself without a rate.
+  No rate on or before the date raises `MissingRateError` (a `NotFoundError`, code `missing_rate`): a missing rate is reported, never guessed.
+
 ## Consequences
 
 Yahoo can change or rate-limit its unofficial API at any time; the only defence is the 503
@@ -86,3 +107,5 @@ multi-row `INSERT … VALUES` per batch instead of `executemany` (about 3 times 
 one statement fails `DO UPDATE`). A commit per batch (shorter transactions, but a failure
 would leave half a history). Prices
 as `float` (binary fractions cannot hold most decimal prices exactly).
+
+For FX rates: the inverse pairs (`EURUSD=X`, then divide), which keep more digits under 4-place rounding, but a division for every conversion; the ECB's reference rates (official, but EUR-based only and a second provider); the base currency in the key (several bases at once, which nothing needs); FX inside `update_prices()`, sharing its one `get_recent_bars` call (it saves no request, since that call makes one per symbol, and it mixes currencies into the instruments' summary); a shared loop for both, with a hook for the instruments' split case (more machinery than the few lines it saves).

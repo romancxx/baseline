@@ -100,7 +100,7 @@ The interactive docs are at <http://localhost:8000/docs>.
 - [0004](docs/adr/0004-database-and-migrations.md): Postgres 18 through async SQLAlchemy, with reviewed Alembic migrations tested up and down.
 - [0005](docs/adr/0005-authentication.md): Argon2id passwords, 15-minute JWTs, single-use refresh tokens in an httpOnly cookie; another user's rows answer 404.
 - [0006](docs/adr/0006-instruments.md): one instrument per Yahoo symbol, grouped into share classes by FIGI, searched with pg_trgm.
-- [0007](docs/adr/0007-market-data.md): Yahoo Finance through yfinance, as `Decimal` prices; daily bars upserted per instrument and day.
+- [0007](docs/adr/0007-market-data.md): Yahoo Finance through yfinance, as `Decimal` prices; daily bars upserted per instrument and day, and daily FX rates into `BASE_CURRENCY`.
 - [0008](docs/adr/0008-security-identifiers.md): OpenFIGI for share class FIGIs and ISIN lookups, behind one rate-limited client.
 - [0009](docs/adr/0009-portfolios.md): one portfolio per user, created at registration, and a CSV import by ISIN with a per-row report and a dry run.
 - [0010](docs/adr/0010-news-ingestion.md): Google News RSS behind a `NewsSource` protocol, and one brief per security, checked in code, citing its headlines.
@@ -134,6 +134,7 @@ Briefs need a model: `ANTHROPIC_API_KEY` for the Anthropic API, or else the `cla
 Without the chosen backend, news has headlines but no briefs.
 `ANTHROPIC_MODEL` picks the model for both (`claude-haiku-5-5` by default).
 The API reads only this key, not an `ant auth login` profile; the CLI never sees the key.
+`BASE_CURRENCY` is the ISO 4217 code FX rates convert into (`EUR` by default); after changing it, empty the `fx_rates` table and run `just update-prices` again.
 
 Postgres runs in Docker and reads its credentials from the same `.env`. From the repo root,
 `just db-up` starts it and waits until it is healthy; `just db-down` stops it and keeps the data.
@@ -269,6 +270,10 @@ for now. It updates every instrument held in a portfolio, from the real Yahoo Fi
 A symbol that fails does not stop the others. The run ends with one log line,
 `prices.update_finished`, listing the symbols `backfilled`, `updated` and `failed` (with
 the reason).
+
+The same command then stores the last 5 days of FX rates of every currency held, other than `BASE_CURRENCY`, from Yahoo's FX symbols (`USDEUR=X`: euros per US dollar).
+It logs `rates.update_finished`, listing the currencies `updated` and `failed`.
+Rates start from the first run: there is no longer history.
 
 ## Portfolios
 

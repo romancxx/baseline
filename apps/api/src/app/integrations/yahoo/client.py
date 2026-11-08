@@ -1,7 +1,8 @@
 import asyncio
 import datetime as dt
 from collections.abc import Callable, Mapping, Sequence
-from decimal import Decimal
+from decimal import Context, Decimal
+from functools import partial
 
 import pandas as pd
 import structlog
@@ -37,6 +38,11 @@ PENCE_CURRENCIES = frozenset({"GBp", "GBX"})
 PENCE_FACTOR = Decimal("0.01")
 # Yahoo's prices carry float32 noise (417.79998779296875 for 417.8).
 PRICE_STEP = Decimal("0.0001")
+# The instrument type of Yahoo's FX symbols (USDEUR=X).
+FX_INSTRUMENT_TYPE = "CURRENCY"
+# FX rates are float32 too, and too small for PRICE_STEP (JPYEUR=X is 0.0056614): they keep
+# float32's 7 significant digits instead.
+RATE_CONTEXT = Context(prec=7)
 
 # Columns of a yfinance price history, in DailyBar's order.
 PRICE_COLUMNS = ["Open", "High", "Low", "Close", "Adj Close"]
@@ -46,6 +52,11 @@ SPLITS_COLUMN = "Stock Splits"
 # Check the shape of yfinance's untyped results.
 QUOTES = TypeAdapter(list[dict[str, object]])
 INFO = TypeAdapter(dict[str, object])
+
+
+def fx_symbol(currency: str, base: str) -> str:
+    """Yahoo's symbol for the value of 1 `currency` in `base`: USDEUR=X for USD in EUR."""
+    return f"{currency}{base}=X"
 
 
 class YahooClient:
@@ -144,9 +155,13 @@ def _fetch_history(yahoo_symbol: str, start: dt.date | None) -> PriceHistory:
     currency = _text(metadata, "currency")
     if currency is None:
         raise ProviderUnavailableError("Yahoo Finance returned prices without a currency.")
-    _, factor = _currency(currency)
+    if _text(metadata, "instrumentType") == FX_INSTRUMENT_TYPE:
+        to_decimal = _rate
+    else:
+        _, factor = _currency(currency)
+        to_decimal = partial(_price, factor=factor)
 
-    return PriceHistory(bars=_bars(frame, factor), splits=_splits(frame))
+    return PriceHistory(bars=_bars(frame, to_decimal), splits=_splits(frame))
 
 
 def _is_not_found(exc: OSError) -> bool:
@@ -187,19 +202,19 @@ def _listing_details(yahoo_symbol: str, info: Mapping[str, object]) -> ListingDe
     )
 
 
-def _bars(frame: pd.DataFrame, factor: Decimal) -> list[DailyBar]:
-    """The rows that have every price, converted with `factor`."""
+def _bars(frame: pd.DataFrame, to_decimal: Callable[[float], Decimal]) -> list[DailyBar]:
+    """The rows that have every price, each price converted with `to_decimal`."""
     # Drop Nan rows
     complete = frame.dropna(subset=PRICE_COLUMNS)
 
     return [
         DailyBar(
             date=_trading_day(day),
-            open=_price(open_, factor),
-            high=_price(high, factor),
-            low=_price(low, factor),
-            close=_price(close, factor),
-            adj_close=_price(adj_close, factor),
+            open=to_decimal(open_),
+            high=to_decimal(high),
+            low=to_decimal(low),
+            close=to_decimal(close),
+            adj_close=to_decimal(adj_close),
             volume=None if pd.isna(volume) else int(volume),
         )
         for day, open_, high, low, close, adj_close, volume in complete[
@@ -229,6 +244,11 @@ def _trading_day(day: pd.Timestamp) -> dt.date:
 def _price(value: float, factor: Decimal) -> Decimal:
     """A Yahoo price rounded to PRICE_STEP, then converted with `factor`."""
     return Decimal(str(value)).quantize(PRICE_STEP) * factor
+
+
+def _rate(value: float) -> Decimal:
+    """A Yahoo FX rate rounded to 7 significant digits: 0.005661400035023689 to 0.005661400."""
+    return RATE_CONTEXT.create_decimal_from_float(value)
 
 
 def _currency(yahoo_currency: str) -> tuple[str, Decimal]:

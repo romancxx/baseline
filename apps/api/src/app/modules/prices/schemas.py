@@ -31,3 +31,12 @@ class PriceUpdateSummary(BaseModel):
     updated: list[str]
     # Why nothing was stored for the symbol.
     failed: dict[str, str]
+
+
+class RateUpdateSummary(BaseModel):
+    """What one FX rate update did, by currency."""
+
+    # Recent rates stored.
+    updated: list[str]
+    # Why no rate was stored for the currency.
+    failed: dict[str, str]

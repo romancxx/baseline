@@ -38,7 +38,7 @@ from app.modules.news.service import title_key
 from app.modules.portfolios.models import Portfolio
 from app.modules.portfolios.service import get_portfolio
 from app.modules.positions.models import Position
-from app.modules.prices.models import DailyPrice
+from app.modules.prices.models import DailyPrice, FxRate
 from app.modules.users.models import User
 from app.modules.users.schemas import UserCreate
 from app.modules.users.service import create_user
@@ -419,6 +419,23 @@ def make_daily_price(db_session: AsyncSession) -> DailyPriceFactory:
         await db_session.commit()
         await db_session.refresh(price)
         return price
+
+    return make
+
+
+class FxRateFactory(Protocol):
+    async def __call__(self, currency: str, date: dt.date, rate: Decimal) -> FxRate: ...
+
+
+@pytest.fixture
+def make_fx_rate(db_session: AsyncSession) -> FxRateFactory:
+    """A function that inserts the rate of `currency` in the base currency on `date`."""
+
+    async def make(currency: str, date: dt.date, rate: Decimal) -> FxRate:
+        fx_rate = FxRate(currency=currency, date=date, rate=rate)
+        db_session.add(fx_rate)
+        await db_session.commit()
+        return fx_rate
 
     return make
 

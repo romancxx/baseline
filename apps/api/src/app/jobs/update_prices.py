@@ -1,4 +1,5 @@
-"""Bring the prices of every followed instrument up to date.
+"""Bring the prices of every followed instrument, and the FX rates of their currencies, up to
+date.
 
 Run with `python -m app.jobs.update_prices` (`just update-prices`).
 """
@@ -9,12 +10,14 @@ from app.core.config import get_settings
 from app.core.database import engine, session_factory
 from app.core.logging import configure_logging
 from app.integrations.yahoo.client import YahooClient
-from app.modules.prices.service import update_prices
+from app.modules.prices.service import update_prices, update_rates
 
 
 async def main() -> None:
+    yahoo = YahooClient()
     async with session_factory() as session:
-        await update_prices(session, YahooClient())
+        await update_prices(session, yahoo)
+        await update_rates(session, yahoo)
     await engine.dispose()
 
 

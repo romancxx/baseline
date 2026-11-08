@@ -27,11 +27,10 @@ holds it in place:
 - Imports are absolute: `from app.modules.health.schemas import HealthResponse`. **[lint]**
 - `core/` never imports from `modules/`, `integrations/` or `jobs/`; `integrations/` never
   imports from `modules/` or `jobs/`. **[lint]**
-- A command run outside FastAPI is `src/app/jobs/<name>.py`, run with
-  `python -m app.jobs.<name>` and a `just` recipe. Only its `if __name__ == "__main__":`
-  block configures logging. Its `main()` opens a session with `session_factory()`, builds the
-  clients, calls one service function and disposes the engine. Its logic lives in that
-  service function. **[review]**
+- A command run outside FastAPI is `src/app/jobs/<name>.py`, run with `python -m app.jobs.<name>` and a `just` recipe.
+  Only its `if __name__ == "__main__":` block configures logging.
+  Its `main()` opens a session with `session_factory()`, builds the clients, calls one service function per task (`update_prices`, then `update_rates`) and disposes the engine.
+  Its logic lives in those service functions. **[review]**
 - A job that loops over items catches each item's expected failures
   (`ProviderUnavailableError`, `DBAPIError`), rolls back, records the reason and goes on. It
   never lets one item stop the run. **[test]**

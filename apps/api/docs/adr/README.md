@@ -11,7 +11,7 @@ its date says when it last changed.
 | [0004](0004-database-and-migrations.md) | Database and migrations | Postgres 18, async SQLAlchemy over asyncpg, a session per request, reviewed Alembic migrations |
 | [0005](0005-authentication.md) | Authentication | Argon2id passwords, 15-minute JWTs, rotated refresh tokens in an httpOnly cookie; user-owned rows scoped to the caller, others' answering 404 |
 | [0006](0006-instruments.md) | Instruments | One row per Yahoo symbol, grouped by share class FIGI, read-only through the API, searched with pg_trgm |
-| [0007](0007-market-data.md) | Market data | Yahoo Finance through yfinance, in worker threads, behind one client returning Pydantic models with `Decimal` prices; daily bars stored per instrument and day, backfilled by upsert |
+| [0007](0007-market-data.md) | Market data | Yahoo Finance through yfinance, in worker threads, behind one client returning Pydantic models with `Decimal` prices; daily bars stored per instrument and day, backfilled by upsert; daily FX rates into one base currency, the last 5 days per run |
 | [0008](0008-security-identifiers.md) | Security identifiers | OpenFIGI share class FIGIs and ISIN lookups through one rate-limited `httpx2` client per app |
 | [0009](0009-portfolios.md) | Portfolios | One per user, created at registration, under `/portfolio`; positions of one instrument each, with optional quantity and average price; CSV import of ISINs with a per-row report and a dry run |
 | [0010](0010-news-ingestion.md) | News ingestion (proposed) | Google News RSS behind a `NewsSource` protocol, one English finance query per security; junk and duplicate titles dropped; one Haiku brief per security over its last 40 headlines, with tone, cited articles and provenance; commands only |

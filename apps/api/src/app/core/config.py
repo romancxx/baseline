@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     anthropic_model: str = "claude-haiku-5-5"
     llm_backend: LlmBackend = LlmBackend.API
+    # ISO 4217 code of the currency totals are shown in.
+    base_currency: str = Field(default="EUR", pattern=r"^[A-Z]{3}$")
 
 
 @lru_cache

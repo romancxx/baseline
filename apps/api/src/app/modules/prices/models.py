@@ -2,7 +2,7 @@ import datetime as dt
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, ForeignKey, Numeric
+from sqlalchemy import BigInteger, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -26,3 +26,16 @@ class DailyPrice(Base):
     close: Mapped[Decimal] = mapped_column(Numeric(18, 6))
     adj_close: Mapped[Decimal] = mapped_column(Numeric(18, 6))
     volume: Mapped[int | None] = mapped_column(BigInteger)
+
+
+class FxRate(Base):
+    """The value of one unit of a currency in the base currency, on one day."""
+
+    __tablename__ = "fx_rates"
+
+    # ISO 4217, e.g. USD.
+    currency: Mapped[str] = mapped_column(String(3), primary_key=True)
+    date: Mapped[dt.date] = mapped_column(primary_key=True)
+    # Base-currency units per 1 unit of `currency`. 12 places keep 7 significant digits of
+    # rates down to 0.00001 (VND in EUR).
+    rate: Mapped[Decimal] = mapped_column(Numeric(18, 12))
