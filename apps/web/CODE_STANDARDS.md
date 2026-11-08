@@ -10,10 +10,10 @@ Each rule is tagged with what holds it in place:
 - **[tsc]** TypeScript (`tsconfig.json`) — fails `pnpm typecheck` and CI.
 - **[db]** Postgres itself — a constraint, policy or grant.
 - **[test]** A test fails if the rule is broken.
-- **[commit]** commitlint, on `commit-msg` and in CI.
+- **[commit]** commitlint, on `commit-msg`.
 - **[review]** Convention only. Nothing catches it but a reader, so read for it.
 
-`pnpm verify` runs everything CI runs except the build and the database suite.
+`pnpm verify` runs everything CI runs except the build.
 
 ---
 
@@ -28,7 +28,6 @@ src/
   shared/               the bottom of the stack: config, clients, UI primitives, utilities
   middleware.ts         session refresh + auth redirect
   instrumentation.ts    validates the server env at boot
-scripts/                CLI entry points (ingest, summarise, seed) — thin, call a feature's server.ts
 supabase/migrations/    the schema; the only place it is defined
 tests/db/               integration suite against a real local Supabase stack
 ```
@@ -48,11 +47,6 @@ thing. Do not invent a new name for something one of these already covers.
 | `actions/` | Server actions (`"use server"`) | server | `portfolio/actions/position-actions.ts` |
 | `data/` | All database / network I/O for the feature | server only | `instruments/data/instrument-directory.ts` |
 | `schemas/` | Zod contracts and the types derived from them | anywhere | `portfolio/schemas/portfolio.schema.ts` |
-| `pipeline/` | Batch stages; pure wherever possible, plus one `run-*.ts` orchestrator | server only | `ingestion/pipeline/` |
-| `adapters/` | One module per external source, converting it to a domain type | server only | `ingestion/adapters/finnhub.ts` |
-| `client/` | Wrappers around a third-party SDK (*API* client, not browser) | server only | `summarization/client/classify-article.ts` |
-| `prompts/` | Versioned LLM prompt text | server only | `summarization/prompts/tonality-prompt.ts` |
-| `embeddings/` | Local model loading and inference | server only | `ingestion/embeddings/embedder.ts` |
 | `fixtures/` | Scaffolding data — delete when real data lands | anywhere | none at present |
 | `index.ts` | Public API, **client-safe** | anywhere | |
 | `server.ts` | Public API, **server-only** | server | |
@@ -75,7 +69,7 @@ means the same thing everywhere; do not invent a new one for something these cov
 | `row/` | One entry of a list | `portfolio/components/row/position-row.tsx` |
 | `form/` | A `<form>`, and controls bound to its submission | `shared/ui/form/submit-button.tsx` |
 | `input/` | One labelled form control | `instruments/components/input/instrument-picker.tsx` |
-| `display/` | Read-only atoms: icon, avatar, badge, chip, a line of text | `summarization/components/display/tonality-badge.tsx` |
+| `display/` | Read-only atoms: icon, avatar, badge, chip, a line of text | `news/components/display/tonality-badge.tsx` |
 
 A component's test sits next to it in the same role folder.
 
@@ -102,14 +96,11 @@ surviving review.
    something in `shared` needs a feature, move the shared piece down or the feature-specific
    piece up. **[lint]**
 3. **Features never import from `app`.** Routes compose features, not the reverse. **[lint]**
-4. **Cross-feature dependencies form a DAG.** Most point at the foundation features `auth`
-   and `instruments`: `portfolio → {auth, instruments}`, `ingestion → instruments`,
-   `summarization → instruments`, `news → {instruments, summarization}`. One edge joins two
-   leaf features, agreed for the Review screen: `news → portfolio` (the screen reads the
-   user's holdings). A new edge pointing the other way, or between two leaf
-   features, is a design question to raise before writing it. **[review]**
-5. **`scripts/` and `tests/db/` reach features only through `server.ts` or `index.ts`**, like
-   any other consumer. **[lint]**
+4. **Cross-feature dependencies form a DAG.**
+   Most point at the foundation features `auth` and `instruments`: `portfolio → {auth, instruments}`, `news → instruments`.
+   One edge joins two leaf features, agreed for the Review screen: `news → portfolio` (the screen reads the user's holdings).
+   A new edge pointing the other way, or between two leaf features, is a design question to raise before writing it. **[review]**
+5. **`tests/db/` reaches features only through `server.ts` or `index.ts`**, like any other consumer. **[lint]**
 
 Because a feature's own files also import absolutely, each feature has an override in
 `biome.jsonc` re-allowing its own internals. A new feature without one fails rule 1 on its
@@ -131,11 +122,11 @@ alias: `globals.css` imports `../shared/ui/theme.css` relatively.
 
 Each feature has two entry points:
 
-- **`index.ts` is client-safe.** It exports components, schemas and types. It must never
-  transitively import `server-env`, `@/shared/supabase/server`, `@/shared/supabase/admin`, or
-  anything under `data/`, `pipeline/`, `adapters/`, `client/` or `embeddings/`.
-- **`server.ts` is server-only.** It exports `data/` functions, pipeline runners, SDK
-  wrappers and server actions that routes call directly (e.g. `signOut`).
+- **`index.ts` is client-safe.**
+  It exports components, schemas and types.
+  It must never transitively import `server-env`, `@/shared/supabase/server`, `@/shared/supabase/admin`, or anything under `data/`.
+- **`server.ts` is server-only.**
+  It exports `data/` functions and the server actions that routes call directly (e.g. `signOut`).
 
 Anything not re-exported from one of the two is internal to the feature. Export the type
 alongside the value (`export { PortfolioSection, type PortfolioSectionProps }`) so consumers
@@ -163,7 +154,7 @@ And in Supabase clients — pick by *who the request is for*, not by convenience
 | --- | --- | --- | --- |
 | `createSupabaseBrowserClient` | client components | user session | applies |
 | `createSupabaseServerClient` | RSC, route handlers, server actions | session from cookies | applies |
-| `createSupabaseAdminClient` | ingest, summarisation, digests, seeds | secret key | **bypassed** |
+| `createSupabaseAdminClient` | background work (none today) | secret key | **bypassed** |
 
 **The admin client is never reachable from a request made on a user's behalf.** Not from a
 page, not from an action, not "just to read a shared table". If user-facing code needs data
@@ -176,22 +167,21 @@ RLS hides, the policy is wrong — change the policy. **[review]**
 - **Strict, plus.** `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
   `noImplicitReturns`, `noImplicitOverride`, `noFallthroughCasesInSwitch`,
   `verbatimModuleSyntax` are all on. Never loosen them locally. **[tsc]**
-- **No `any`** **[lint]**, **no non-null assertions** outside tests **[lint]**. Indexed
-  access returns `T | undefined`; handle it (`embeddings[index]` → `if (!embedding) continue`).
+- **No `any`** **[lint]**, **no non-null assertions** outside tests **[lint]**.
+  Indexed access returns `T | undefined`; handle it.
 - **Type-only imports use `import type`** / inline `type` specifiers. **[lint]**
 - **`node:` protocol** for Node built-ins (`node:crypto`, `node:fs/promises`). **[lint]**
 - **`exactOptionalPropertyTypes`** means an optional prop that may receive `undefined` is
   written `next?: string | undefined` (see `SignInFormProps`). **[tsc]**
 - **Props and parameter objects are `readonly`**; read models are returned as
   `readonly T[]`. **[review]**
-- **Lookup tables are `as const` objects**, not TypeScript `enum`s (`VARIANTS`,
-  `APPEARANCE`, `CONFIDENCE`, `ROUTES`). **[review]**
-- **Expected failure is a value, not an exception.** Use a discriminated union —
-  `{ ok: true; value } | { ok: false; … }` (`ParseResult`, `ClassifyResult`) or
-  `{ status: … }` (`FormState`). Throw only for the unexpected. **[review]**
-- **Casts (`as`) only at an untyped third-party boundary** (`embedder.ts`'s
-  `tolist() as number[][]`, test stubs). Never to silence a type error in our own code. If a
-  value from outside needs a type, parse it with a schema. **[review]**
+- **Lookup tables are `as const` objects**, not TypeScript `enum`s (`VARIANTS`, `APPEARANCE`, `ROUTES`). **[review]**
+- **Expected failure is a value, not an exception.**
+  Use a discriminated union, `{ ok: true; value } | { ok: false; … }` (`ParseResult`) or `{ status: … }` (`FormState`).
+  Throw only for the unexpected. **[review]**
+- **Casts (`as`) only at an untyped third-party boundary** (test stubs).
+  Never to silence a type error in our own code.
+  If a value from outside needs a type, parse it with a schema. **[review]**
 - TypeScript is pinned to 5.9. Do not bump the major without checking the Next type plugin.
 
 ## 3. Naming and files
@@ -203,38 +193,26 @@ RLS hides, the policy is wrong — change the policy. **[review]**
 - **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix:
   `PositionSchema` / `type Position = z.infer<typeof PositionSchema>`. **[review]**
 - **Components are PascalCase and export a `<Component>Props` type.** **[review]**
-- **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not
-  obvious: `REQUEST_SPACING_MS`, `LOOKUP_CHUNK`, `MIN_TICKER_LENGTH`. No magic numbers inline.
-  **[review]**
-- **Data functions start with a verb that says what they cost**: `list*` / `get*` / `search*`
-  for request-scoped reads, `load*` / `find*` / `insert*` for pipeline repositories,
-  `fetch*` for external HTTP. **[review]**
-- **Pipeline orchestrators are `run<Thing>()`** in `pipeline/run-<thing>.ts` and return a
-  `<Thing>Summary` of counts. **[review]**
-- **Database columns are `snake_case`; domain objects are `camelCase`.** The conversion
-  happens once, in `data/`. Two deliberate exceptions keep `snake_case`: seed schemas
-  (they mirror table columns and are upserted as-is) and `ModelOutputSchema` (it is the wire
-  contract sent to the model). **[review]**
-- **Spelling.** Code identifiers use US spelling (`summarization`, `normalize`), matching the
-  libraries. Prose, comments and docs use British spelling (`summarisation`, `colour`).
-  **[review]**
+- **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not obvious: `LOOKUP_CHUNK`, `FEED_LIMIT`.
+  No magic numbers inline. **[review]**
+- **Data functions start with a verb that says what they cost**: `list*` / `get*` / `search*` for request-scoped reads, `fetch*` for external HTTP. **[review]**
+- **Database columns are `snake_case`; domain objects are `camelCase`.**
+  The conversion happens once, in `data/`.
+  One deliberate exception keeps `snake_case`: seed schemas, which mirror table columns. **[review]**
+- **Spelling.** Code identifiers use US spelling (`color`, `normalize`), matching the libraries.
+  Prose, comments and docs use British spelling (`summarisation`, `colour`). **[review]**
 
 ## 4. Data at the boundary
 
-- **Zod schemas are the single source of truth** for anything crossing the app's boundary:
-  HTTP responses, form data, LLM output, seed files, database rows on their way into the
-  domain. **[review]**
+- **Zod schemas are the single source of truth** for anything crossing the app's boundary: HTTP responses, form data, seed files, database rows on their way into the domain. **[review]**
 - **Types are derived with `z.infer`, never hand-written alongside a schema.** **[review]**
-- **Validate at the edge, then trust.** `data/` and `adapters/` parse; everything downstream
-  receives domain objects and never re-validates (see `ingestion/adapters/rss.ts`). **[review]**
+- **Validate at the edge, then trust.**
+  `data/` parses; everything downstream receives domain objects and never re-validates (see `news/data/feed-queries.ts`). **[review]**
 - **Coerce once, at the schema.** Form fields arrive as strings; the schema turns them into
   numbers, `null`s and trimmed strings (`QuantitySchema`, `CostBasisSchema`). Dates become
   `Date` objects in the schema so nothing re-parses them. **[review]**
 - **User-facing validation messages live in the schema** (`{ error: "Pick an instrument." }`),
   written as instructions to the user. **[review]**
-- **Batch sources skip bad items, they do not fail the batch.** An adapter `safeParse`s each
-  entry and counts what it skipped (`finnhub.ts`); a failing upstream request is logged and
-  the loop continues. **[review]**
 - **Fixtures and test data are `.parse()`d, never cast**, so data that drifts from the
   contract fails loudly. **[review]**
 - **Database row types come from `database.types.ts`** (`Pick<Database["public"]["Tables"]…>`),
@@ -251,17 +229,12 @@ RLS hides, the policy is wrong — change the policy. **[review]**
   drift breaks the build. **[test]**
 - **Public variables** go in `env.ts` *and* in `clientRuntimeEnv` written out in full
   (`process.env.NEXT_PUBLIC_FOO`), because Next only inlines literal accesses. **[review]**
-- **Code reads `serverEnv` / `clientEnv`, never `process.env`.** The only exceptions are the
-  ones that must run before or without the parsed env: `instrumentation.ts`
-  (`NEXT_RUNTIME`), `logger.ts` (`LOG_LEVEL`, read lazily), `parseEnv`
-  (`SKIP_ENV_VALIDATION`), and `claude-cli-completion.ts`, which hands the whole environment
-  minus the API key to the child process. **[review]**
-- **Required means required at boot.** A missing key fails `next build` and `register()`,
-  not halfway through a request or a nightly run. Use `.optional()` only for things the app
-  can genuinely run without, and log a `warn` when a feature is skipped because of it
-  (`ingest.finnhub.skipped`). **[review]**
-- **Values that belong together are documented together** (`SUMMARY_MODEL` and its two price
-  variables; `EMBEDDING_DIMENSIONS` and the `articles.embedding` column). **[review]**
+- **Code reads `serverEnv` / `clientEnv`, never `process.env`.**
+  The only exceptions are the ones that must run before or without the parsed env: `instrumentation.ts` (`NEXT_RUNTIME`), `logger.ts` (`LOG_LEVEL`, read lazily), `parseEnv` (`SKIP_ENV_VALIDATION`). **[review]**
+- **Required means required at boot.**
+  A missing key fails `next build` and `register()`, not halfway through a request.
+  Use `.optional()` only for things the app can genuinely run without, and log a `warn` when a feature is skipped because of it. **[review]**
+- **Values that belong together are documented together.** **[review]**
 
 ## 6. Server code
 
@@ -308,11 +281,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **One row mapper per table, owned by its feature.** Any feature reading `instruments`
   selects `INSTRUMENT_COLUMNS` and maps with `toInstrument` from `@/features/instruments`,
   including inside joins (`instruments!inner(${INSTRUMENT_COLUMNS})`). **[review]**
-- **Pipeline repositories** take the admin client as their first parameter
-  (`loadActiveFeeds(db)`) and expose a `<feature>Client()` factory, so the orchestrator owns
-  one client per run and tests can drive the functions against a real stack. **[review]**
-- **A failed query throws** `new Error(\`Could not <verb> <thing>: ${error.message}\`)`. The
-  route's error boundary or the script's top-level catch handles it. **[review]**
+- **A failed query throws** `new Error(\`Could not <verb> <thing>: ${error.message}\`)`.
+  The route's error boundary handles it. **[review]**
 - **Routes fetch in parallel** with `Promise.all` when reads are independent
   (`portfolio/page.tsx`). **[review]**
 - **Count with `.select("id", { count: "exact" }).limit(0)`, not `head: true`.** A `HEAD`
@@ -334,57 +304,13 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   `@/shared/routes`, and redirect to what it returns. `startsWith("/")` alone accepts
   `//evil.com`, which browsers treat as another origin. **[test]**
 
-### 6.4 Pipelines and batch jobs
-
-The ingestion and summarisation phases set the pattern for any future batch work (digests,
-for instance):
-
-- **Functional core, imperative shell.** Everything that can be pure is pure and lives in
-  `pipeline/` with unit tests (`normalize`, `dedup`, `match`). Only `adapters/`, `data/`,
-  `client/` and `embeddings/` touch the outside world. Adding a source means writing one
-  adapter, not changing the pipeline. **[review]**
-- **Re-runs are no-ops.** Idempotency comes from unique constraints in the database plus
-  `upsert(…, { ignoreDuplicates: true })`, not from application bookkeeping. Running the job
-  twice must insert nothing and raise nothing. **[db]** **[review]**
-- **One bad item never sinks the run.** Log it with its identifier, count it, move on.
-  **[review]**
-- **The orchestrator logs `<feature>.start` and `<feature>.done`** with a summary object of
-  counts, and returns that object. **[review]**
-- **Spend is bounded and visible.** Anything that costs money per item has a cap in env
-  (`MAX_SUMMARIES_PER_RUN`), a concurrency limit, a `--dry-run`, and records tokens/cost.
-  **[review]**
-- **Rate limits are respected in the adapter**, as a named spacing constant. **[review]**
-- **Inject what tests need to replace.** Factories take their external client as a defaulted
-  parameter (`createClassifier(complete = configuredCompletion())`,
-  `createApiCompletion(client = anthropic())`, `runSummarization({ classifier })`),
-  so tests pass a stub rather than mocking modules. **[review]**
-- **Scripts are thin.** A file in `scripts/` calls one function from a feature's `server.ts`,
-  catches at the top level, logs `<job>.failed`, and sets `process.exitCode = 1` — never
-  `process.exit()`, which cuts off pending log writes. **[review]**
-- **Avoid a dependency for ten lines of code** (`forEachWithConcurrency` instead of a queue
-  library). **[review]**
-
-### 6.5 LLM calls
-
-- **Prompts live in `prompts/`, versioned in code.** The version is part of the row key, so a
-  prompt change produces new rows instead of overwriting old ones. Bump the version with the
-  text, always. **[review]** **[db]**
-- **The model name is stored on every row.** **[db]**
-- **Constrain the output format at the API** (`zodOutputFormat`) **and re-validate with Zod**
-  for the rules the API cannot express. Allow exactly one corrective retry carrying the
-  rejection reason; then give up and write nothing, so the next run retries. **[review]**
-- **Handle `stop_reason === "refusal"`** explicitly; do not retry it. **[review]**
-- **Generate only what the input can support.** If the source text cannot justify an output
-  (a summary of a 260-character teaser), leave the column null and say why. **[review]**
-
-### 6.6 Logging
+### 6.4 Logging
 
 - **Use `logger` from `@/shared/logger`**, never `console.log` **[lint]**. `console.error` /
   `console.warn` are lint-allowed but `logger.error` / `logger.warn` are preferred, so every
   line is one parseable JSON object. **[review]**
-- **Event names are dotted and stable**: `<feature>.<stage>[.<detail>]` in `snake_case`
-  (`ingest.finnhub.request_failed`, `summarize.prompt_version_mismatch`). Put variable data
-  in fields, never in the event name. **[review]**
+- **Event names are dotted and stable**: `<feature>.<stage>[.<detail>]` in `snake_case`.
+  Put variable data in fields, never in the event name. **[review]**
 - **Never log a secret, a token or a full request URL that carries one.** **[review]**
 
 ## 7. React and UI
@@ -503,8 +429,7 @@ for instance):
   or index does; the reasoning goes in the ADR. **[review]**
 - **RPCs that PostgREST cannot express** (e.g. `<=>` vector search) are granted to
   `service_role` only unless there is a reason otherwise. **[db]**
-- **Seed files** are validated against a schema, upserted on a natural key, re-runnable, and
-  parsed by a unit test. They never overwrite operational flags like `active`. **[test]**
+- **Seed files** are validated against a schema and parsed by a unit test. **[test]**
 
 ## 9. Testing
 
@@ -512,17 +437,14 @@ for instance):
   touch Docker or the network. **[review]**
 - **Default environment is jsdom.** A test that reaches `server-env` must declare
   `// @vitest-environment node` at the top. **[test]**
-- **What must have a unit test:** every pure pipeline stage, every schema with refinements or
-  transforms, every component with conditional rendering, every seed file. **[review]**
+- **What must have a unit test:** every schema with refinements or transforms, every component with conditional rendering, every seed file. **[review]**
 - **Database behaviour is tested against a real database** in `tests/db/` (`pnpm test:db`,
   needs `pnpm db:start`). A new table or policy gets tests proving the second user can
   neither read, update, delete nor impersonate the first, and that anonymous access is
   denied — through PostgREST, with real tokens. **[review]**
 - **Assert what RLS actually does**: a hidden row comes back *empty*, not as an error.
   **[review]**
-- **Test names describe behaviour, including the alternative rejected** — "renders an
-  explicit empty state rather than a blank card", "gives up after one retry rather than
-  looping". **[review]**
+- **Test names describe behaviour, including the alternative rejected**: "renders an explicit empty state rather than a blank card". **[review]**
 - **Test data is built through the schema** (`NewsArticleSchema.parse({ … })`), so test
   fixtures cannot drift from the contract either. **[review]**
 - **Replace dependencies by injection, not module mocking** — pass a stub client to the
@@ -534,9 +456,8 @@ for instance):
 
 ## 10. Comments and documentation
 
-- **Comments describe the code, to make it easier to read**: what a value is, what a block
-  does, what a function returns. `// Cosine distance: 0 is identical, 2 is opposite.` is the
-  shape. **[review]**
+- **Comments describe the code, to make it easier to read**: what a value is, what a block does, what a function returns.
+  `/** The outlet's own standfirst. Not generated, and not a summary. */` is the shape. **[review]**
 - **Comments do not argue for implementation choices.** No "deliberately", "on purpose",
   "we measured", alternatives considered, or the bug that led here. That reasoning goes in an
   ADR, `docs/improvements.md`, or the commit message, where it can be long without cluttering
@@ -570,11 +491,9 @@ for instance):
   **[review]**
 - **Formatting is Biome's**: 2 spaces, 100 columns, double quotes, semicolons, trailing commas,
   sorted imports. Run `pnpm lint:fix`; do not hand-format. **[lint]**
-- **Commits follow Conventional Commits** with a **closed scope list** that mirrors the folder
-  structure (`auth`, `ingestion`, `instruments`, `news`, `portfolio`, `summarization`,
-  `shared`, `app`, `config`, `db`, `deps`, `ci`, `docs`). Header ≤ 100 characters, subject
-  not in Start/Pascal/Upper case. If a commit fits no scope, it is touching too much or a new
-  slice is being born. **[commit]**
+- **Commits follow Conventional Commits** with a **closed scope list** that mirrors the folder structure (`auth`, `instruments`, `news`, `portfolio`, `shared`, `app`, `config`, `db`, `deps`, `ci`, `docs`).
+  Header ≤ 100 characters, subject not in Start/Pascal/Upper case.
+  If a commit fits no scope, it is touching too much or a new slice is being born. **[commit]**
 - **Pre-commit runs Biome on staged files** — a convenience, not a gate. CI runs everything.
 
 ---
@@ -604,17 +523,7 @@ for instance):
 
 1. Add it to `.env.example` with a short comment saying what it is.
 2. Add it to `serverSchema` (secret) or `clientSchema` + `clientRuntimeEnv` (public).
-3. If the nightly job needs it, add it to `.github/workflows/ingest.yml`.
-4. If the db test suite needs it, give it a placeholder in `tests/db/setup.ts`.
-
-### Adding an ingestion source
-
-1. One file in `ingestion/adapters/`, returning `RawArticle[]`, with its own Zod schema for
-   the upstream shape, per-item `safeParse`, rate-limit spacing, and per-request failure
-   logged and skipped.
-2. Extend `ArticleOriginSchema` with the new `kind`, and teach `match.ts` what it implies —
-   with a new `match_method` and a stated confidence.
-3. Call it from `run-ingestion.ts`. Nothing else in the pipeline should need to change.
+3. If the db test suite needs it, give it a placeholder in `tests/db/setup.ts`.
 
 ---
 

@@ -19,77 +19,6 @@ schema would catch a negative quantity before the round-trip.
 **Sorting and grouping.** Positions render in insertion order. Sorting by ticker or grouping
 by `macro_bucket` is the obvious next step once the list outgrows a screen.
 
-## ingestion
-
-**Near-duplicate detection cannot separate two real cases.** Over 403 ingested articles,
-"same story from two outlets" and "same stock, two different stories" both land between
-0.10 and 0.14 cosine distance. At 0.17, roughly a third of collapses were wrong — two
-different Jim Cramer segments merged, as did two unrelated Alphabet pieces.
-`NEAR_DUPLICATE_DISTANCE` is therefore 0.08, which catches only near-verbatim rewording
-and lets most duplicates through. That is the right trade for now, because a false collapse
-means an article never gets summarised and the story silently vanishes, while a missed
-duplicate only costs a repeated line in the digest.
-
-Fixing it properly needs more signal than a headline: full article text, or a cheap
-pre-filter (same day, shared instrument) before trusting the distance at all. Either way it
-wants a labelled sample of a few hundred pairs to tune against, not one day and a guess.
-
-**The text-mention rule barely fires, and an LLM could replace it.** `rss-mention` produced
-9 links across 941 articles — a regex over a headline and one sentence finds almost nothing.
-The summarisation call already sends the article text, and input tokens are what you pay
-for, so asking the same call to return the tickers it noticed costs only a few output
-tokens. Nearly free, and far better recall than the regex.
-
-The reason not to wire it up blindly is that a generative rule can pollute the matching
-data. The shape that avoids it: ask for a per-ticker confidence, keep only tickers already
-in the universe, and write an `llm-mention` link only above a high bar — a company named
-once in passing is not what the article is about, whereas one named throughout is. Because
-`match_method` is stored per link, the rule stays auditable and removable after the fact.
-
-**ETFs have no real news source.** `rss-bucket` links exist because nothing publishes "SPY
-news" — an ETF wraps an index, so what moves it is macro coverage, and a feed tag is a
-proxy for relevance rather than evidence of it. That is why those links sit at 0.5 and why
-summarisation deliberately skips them for now. Doing ETFs properly means an index-level news
-source (or per-index feeds for S&P 500, CAC 40, and so on), not a better threshold.
-
-**Bodies are as short as the feed makes them.** RSS gives a description, Finnhub a summary;
-neither is the article. Embeddings and, later, summaries are working from a headline plus
-a sentence or two. Fetching and extracting the full page would improve both, at the cost of
-scraping, and of respecting each outlet's terms.
-
-**No semiconductor feed.** Every bucket except `big-tech` and `financials` gets its news
-from the broad-market feeds. Stocks in those buckets are covered by Finnhub, but a
-sector-specific ETF like `SMH` currently only matches broad-market coverage.
-
-**Sequential near-duplicate lookups.** Each fresh article makes its own `match_articles`
-round-trip. Fine for the ~50 articles a night this produces; batch it if the universe grows.
-
-**Ingestion is unmonitored.** A failed nightly run shows up as a red cross in the Actions
-tab and nowhere else. Worth a notification once the digest actually depends on it.
-
-## summarisation
-
-**No summaries yet, by design.** `summary_text` is null on every row because the source
-bodies are ~260 characters — the headline already is the summary. This unblocks when article
-text does: either full-page extraction (see the ingestion note above) or a source that
-carries real body text.
-
-**Per-instrument synthesis is probably the better product.** Rather than one summary per
-article, one short paragraph per instrument per day — "what happened to AAPL today" across
-its handful of headlines. It genuinely needs a model (a headline cannot be synthesised from
-itself), costs ~38 calls instead of ~350, and is what a digest actually reads like. It
-belongs in `digests.payload` rather than the per-article `summaries` table, which is why it
-was not folded into this phase.
-
-**Tonality is unevaluated.** There is no labelled set, so the only evidence that the
-classifier is any good is reading its output. Before trusting the colour indicator, hand-label
-a hundred headlines and measure agreement — the same discipline the dedup threshold needed,
-and for the same reason.
-
-**No prompt caching.** The system prompt is ~300 tokens, below the 512-token minimum
-cacheable prefix, so caching cannot engage. It would become worthwhile if the prompt grows
-or few-shot examples are added.
-
 ## instruments
 
 **Real directory API.** `instrument-directory.ts` reads the seeded table. Swapping in EODHD
@@ -115,24 +44,12 @@ else signs up, which brings back the `/auth/callback` route the magic-link flow 
 
 ## news
 
-**`finnhub-symbol` confidence of 1.0 is too generous, and the feed makes it visible.**
-Finnhub's company-news endpoint returns articles loosely associated with a symbol, not only
-articles about it: a Berkshire Hathaway earnings piece arrives under `AAPL`, and a Voya fund
-downgrade under `MSFT`. The link is certain (the symbol was the query) but the *relevance* is
-not, and the card gives both the same prominence. Either lower the confidence for this method
-and sort the feed by it, or check that the company is actually the subject — which is the same
-LLM-mention work described above.
-
 **No pagination or date window.** The feed is a flat `FEED_LIMIT` of 50 ordered by
 publication time. Fine for one user and ~900 articles; it needs a cursor and a "since you last
 looked" marker before it is a daily habit.
 
 **Nothing marks an item as read.** Every visit shows the same cards. A `last_seen_at` per user,
 or per-item read state, is what turns the feed into something you can finish.
-
-**Tonality is absent until the nightly job runs with a key.** Every card currently renders
-"not yet classified", which is honest but makes the colour indicator look broken. Worth a
-one-line hint on the feed when no summaries exist at all.
 
 ## ui
 

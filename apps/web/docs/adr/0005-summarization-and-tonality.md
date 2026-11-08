@@ -1,6 +1,6 @@
 # 5. Summarisation and tonality
 
-- **Status:** accepted
+- **Status:** superseded by [api 0010](../../../api/docs/adr/0010-news-ingestion.md)
 - **Date:** 2026-09-27
 - **Phase:** 5 — Summarization & tonality
 

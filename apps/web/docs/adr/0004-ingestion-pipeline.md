@@ -1,6 +1,6 @@
 # 4. Ingestion pipeline
 
-- **Status:** accepted
+- **Status:** superseded by [api 0010](../../../api/docs/adr/0010-news-ingestion.md)
 - **Date:** 2026-09-26
 - **Phase:** 4 — Ingestion pipeline
 
