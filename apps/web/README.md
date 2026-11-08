@@ -8,6 +8,7 @@ Next.js App Router · TypeScript (strict) · Tailwind CSS v4 · Zod · Biome · 
 
 ```bash
 pnpm install
+just hooks-install   # from the repo root, once per clone; needs uv
 cp .env.example .env.local
 pnpm dev
 ```
@@ -78,9 +79,9 @@ environment yet (e.g. a Docker image built before secrets are attached).
 
 ## Conventions
 
-- **Commits** follow Conventional Commits with a closed scope list; `commitlint` runs on `commit-msg`.
-- **Pre-commit** runs Biome over staged files only. It is a convenience, not a gate — CI
-  runs the full suite.
+- **Commits** follow the repository's convention (`feat(web/news): …`, see the root `CLAUDE.md`), checked by the root `commit-msg` hook.
+- **Pre-commit**: the root hook runs Biome over staged web files only.
+  It is a convenience, not a gate; CI runs the full suite.
 - **Styling** is Tailwind, restricted to the tokens in `src/shared/ui/theme.css` (one dark
   theme). Changing a colour, type role, radius or spacing role there restyles the whole app;
   components carry no raw values.

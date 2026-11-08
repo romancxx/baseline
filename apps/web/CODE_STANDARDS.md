@@ -10,7 +10,7 @@ Each rule is tagged with what holds it in place:
 - **[tsc]** TypeScript (`tsconfig.json`) — fails `pnpm typecheck` and CI.
 - **[db]** Postgres itself — a constraint, policy or grant.
 - **[test]** A test fails if the rule is broken.
-- **[commit]** commitlint, on `commit-msg`.
+- **[commit]** The root `commit-msg` hook (`lefthook.yml`).
 - **[review]** Convention only. Nothing catches it but a reader, so read for it.
 
 `pnpm verify` runs everything CI runs except the build.
@@ -491,10 +491,9 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   **[review]**
 - **Formatting is Biome's**: 2 spaces, 100 columns, double quotes, semicolons, trailing commas,
   sorted imports. Run `pnpm lint:fix`; do not hand-format. **[lint]**
-- **Commits follow Conventional Commits** with a **closed scope list** that mirrors the folder structure (`auth`, `instruments`, `news`, `portfolio`, `shared`, `app`, `config`, `db`, `deps`, `ci`, `docs`).
-  Header ≤ 100 characters, subject not in Start/Pascal/Upper case.
-  If a commit fits no scope, it is touching too much or a new slice is being born. **[commit]**
-- **Pre-commit runs Biome on staged files** — a convenience, not a gate. CI runs lint, typecheck, test and build.
+- **Commits follow the repository's convention** in the root `CLAUDE.md`: `web/<topic>` scopes, with the topic named after the folder touched (`feat(web/news): …`), or `web` alone for several topics.
+  Header ≤ 100 characters, subject not starting upper-case. **[commit]**
+- **The root `pre-commit` hook runs Biome on staged web files**: a convenience, not a gate. CI runs lint, typecheck, test and build.
 
 ---
 
@@ -506,9 +505,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 2. Add `index.ts` (client-safe) and, if needed, `server.ts` (server-only).
 3. Add the feature's override to `biome.jsonc`, copying an existing block and changing the
    name in both `includes` and the `!@/features/<name>/**` exclusion.
-4. Add `<name>` to `scope-enum` in `commitlint.config.js`.
-5. Check the new cross-feature imports keep the dependency graph acyclic (§1.3 rule 4).
-6. Add a section to `docs/improvements.md` for its known gaps, and an ADR if it is a phase.
+4. Check the new cross-feature imports keep the dependency graph acyclic (§1.3 rule 4).
+5. Add a section to `docs/improvements.md` for its known gaps, and an ADR if it is a phase.
 
 ### Adding a table
 

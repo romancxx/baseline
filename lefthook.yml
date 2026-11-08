@@ -1,0 +1,20 @@
+# The repository's git hooks, installed once per clone with `just hooks-install`.
+lefthook: uv run --project apps/api lefthook
+
+commit-msg:
+  jobs:
+    - name: header
+      run: sh scripts/check-commit-msg.sh {1}
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: web
+      root: apps/web/
+      run: pnpm exec biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+    - name: api
+      root: apps/api/
+      glob: "*.py"
+      run: uv run ruff check --fix {staged_files} && uv run ruff format {staged_files}
+      stage_fixed: true
