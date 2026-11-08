@@ -24,23 +24,15 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
-    "db:seed": "pnpm db:seed:instruments && pnpm db:seed:feeds",
-    "db:seed:instruments": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-instruments.ts",
-    "db:seed:feeds": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-feeds.ts",
-    "ingest": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/ingest-news.ts",
-    "summarize": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/summarize.ts",
     "test:db": "vitest run --project db",
     "db:types": "supabase gen types typescript --local --schema public > src/shared/supabase/database.types.ts",
     "db:types:linked": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts",
     "prepare": "husky"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
-    "@huggingface/transformers": "^4.2.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "clsx": "^2.1.1",
-    "fast-xml-parser": "^5.11.1",
     "lucide-react": "^1.52.0",
     "next": "^16.3.2",
     "react": "^19.2.8",
@@ -66,7 +58,6 @@
     "lint-staged": "^17.3.0",
     "supabase": "^2.115.0",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
@@ -77,9 +68,7 @@
     "onlyBuiltDependencies": [
       "@biomejs/biome",
       "esbuild",
-      "onnxruntime-node",
-      "sharp",
-      "unrs-resolver"
+      "sharp"
     ]
   }
 }

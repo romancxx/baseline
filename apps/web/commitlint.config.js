@@ -16,11 +16,9 @@ export default {
       [
         // feature slices
         "auth",
-        "ingestion",
         "instruments",
         "news",
         "portfolio",
-        "summarization",
         // cross-cutting
         "shared",
         "app",

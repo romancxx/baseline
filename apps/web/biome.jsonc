@@ -185,34 +185,6 @@
       }
     },
     {
-      "includes": ["src/features/ingestion/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": ["@/app/**"],
-                    "message": "Features must not import from `app/`. Routes compose features, not the other way round."
-                  },
-                  {
-                    "group": [
-                      "@/features/*/**",
-                      "!@/features/*/server",
-                      "!@/features/ingestion/**"
-                    ],
-                    "message": "Import another feature through its entry point (`@/features/news` or `@/features/news/server`), not its internals."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
       "includes": ["src/features/instruments/**"],
       "linter": {
         "rules": {
@@ -258,34 +230,6 @@
                       "@/features/*/**",
                       "!@/features/*/server",
                       "!@/features/portfolio/**"
-                    ],
-                    "message": "Import another feature through its entry point (`@/features/news` or `@/features/news/server`), not its internals."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/features/summarization/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": ["@/app/**"],
-                    "message": "Features must not import from `app/`. Routes compose features, not the other way round."
-                  },
-                  {
-                    "group": [
-                      "@/features/*/**",
-                      "!@/features/*/server",
-                      "!@/features/summarization/**"
                     ],
                     "message": "Import another feature through its entry point (`@/features/news` or `@/features/news/server`), not its internals."
                   }
