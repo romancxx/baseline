@@ -1,3 +1,0 @@
-# Format and lint only what is being committed. Fast by design: the pre-commit hook is
-# a courtesy to your future self, not a substitute for CI, which runs the full suite.
-pnpm exec lint-staged

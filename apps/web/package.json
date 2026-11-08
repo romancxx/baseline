@@ -26,8 +26,7 @@
     "db:push": "supabase db push",
     "test:db": "vitest run --project db",
     "db:types": "supabase gen types typescript --local --schema public > src/shared/supabase/database.types.ts",
-    "db:types:linked": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts",
-    "prepare": "husky"
+    "db:types:linked": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
@@ -42,8 +41,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",
-    "@commitlint/cli": "^21.2.2",
-    "@commitlint/config-conventional": "^21.2.2",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
@@ -53,16 +50,11 @@
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.0",
     "@vitest/coverage-v8": "^4.1.11",
-    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
-    "lint-staged": "^17.3.0",
     "supabase": "^2.115.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
-  },
-  "lint-staged": {
-    "*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
