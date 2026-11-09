@@ -5,7 +5,6 @@ export type AppShellProps = {
   readonly children: ReactNode;
 };
 
-/** The signed-in page: the top bar, then the screen, which renders inside `<main>`. */
 export function AppShell({ bar, children }: AppShellProps) {
   return (
     <div className="flex min-h-dvh flex-col">

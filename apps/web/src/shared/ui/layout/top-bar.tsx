@@ -12,7 +12,6 @@ export type TopBarProps = {
   readonly account: ReactNode;
 };
 
-/** The logo, the two destinations and search on the left; the as-of stamp and the account on the right. */
 export function TopBar({ navigation, search, asOf, account }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-bar shrink-0 items-center gap-1.5 border-hairline border-b bg-canvas px-5">
