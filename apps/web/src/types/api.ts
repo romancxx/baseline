@@ -25,5 +25,11 @@ export type ApiResult<T> =
   | { readonly ok: true; readonly data: T; readonly response: Response }
   | { readonly ok: false; readonly error: ApiError };
 
+/** A client for the current request, and that request's ID. */
+export type RequestApiClient = {
+  readonly api: ApiClient;
+  readonly requestId: string | null;
+};
+
 /** What an `ApiClient` call resolves to. */
 export type ClientOutcome<T> = { data?: T; error?: unknown; response: Response };

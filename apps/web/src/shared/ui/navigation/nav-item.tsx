@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import type { Route } from "@/shared/routes";
 import { cn } from "@/shared/ui/cn";
+import type { Route } from "@/types/routes";
 
 export type NavItemProps = {
   readonly label: string;

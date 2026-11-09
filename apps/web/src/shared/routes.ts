@@ -1,11 +1,11 @@
+import type { Route } from "@/types/routes";
+
 export const ROUTES = {
   dashboard: "/",
   portfolio: "/portfolio",
   sessionExpired: "/session/expired",
   signIn: "/sign-in",
 } as const;
-
-export type Route = (typeof ROUTES)[keyof typeof ROUTES];
 
 /** Reachable without a session */
 export const PUBLIC_ROUTES: readonly Route[] = [ROUTES.signIn, ROUTES.sessionExpired];

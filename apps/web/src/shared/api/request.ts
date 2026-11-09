@@ -4,7 +4,7 @@ import { createApiClient, REQUEST_ID_HEADER, send } from "@/shared/api/client";
 import { logger } from "@/shared/logger";
 import { ROUTES } from "@/shared/routes";
 import { clearSession, readSession } from "@/shared/session";
-import type { ApiClient, ApiResult, ClientOutcome } from "@/types/api";
+import type { ApiClient, ApiResult, ClientOutcome, RequestApiClient } from "@/types/api";
 
 const UNAUTHORIZED = 401;
 
@@ -14,7 +14,7 @@ export async function currentRequestId(): Promise<string | null> {
 }
 
 /** A client for this request: the session's access token and the request's ID. */
-async function requestApiClient(): Promise<{ api: ApiClient; requestId: string | null }> {
+async function requestApiClient(): Promise<RequestApiClient> {
   const session = readSession(await cookies());
   const requestId = await currentRequestId();
   const accessToken = session.status === "signed-in" ? session.accessToken : null;
