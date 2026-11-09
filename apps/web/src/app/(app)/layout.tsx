@@ -1,5 +1,4 @@
 import { Briefcase, LayoutDashboard, Settings, TextAlignStart } from "lucide-react";
-import type { ReactNode } from "react";
 import { AccountSummary } from "@/features/auth";
 import { requireUser } from "@/features/auth/server";
 import { ROUTES } from "@/shared/routes";
@@ -9,7 +8,7 @@ import { AppShell } from "@/shared/ui/layout/app-shell";
 import { Sidebar } from "@/shared/ui/layout/sidebar";
 import { NavItem } from "@/shared/ui/navigation/nav-item";
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
   return (

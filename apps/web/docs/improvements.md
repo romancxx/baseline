@@ -42,6 +42,10 @@ Today a forgotten password means a manual reset in the API's database.
 **Email confirmation is off.** The API signs a new user in without confirming their email.
 Deliberate for a single-user build; needed before anyone else creates an account, with a confirmation endpoint in the API and a screen the emailed link opens.
 
+**Create-account errors need JavaScript.** The sign-in form posts to one of two actions, each with its own `useActionState`.
+Without JavaScript the browser submits both actions' `$ACTION_KEY` inputs, React reads the first, and the create-account error ("This email already has an account") is not shown; sign-in errors and both successes work.
+Splitting sign-in and create account into two forms, or two screens, fixes it; worth doing with the sign-in screen's redesign.
+
 **One web instance only.** Concurrent refreshes of one token are deduplicated inside Next's process ([ADR 0008](adr/0008-auth-through-the-api.md)).
 Two instances refreshing the same token at once would look like reuse to the API, which then revokes every session of that user.
 The fix is a grace period in the API during which a just-rotated refresh token is still accepted (see the API's improvements list).

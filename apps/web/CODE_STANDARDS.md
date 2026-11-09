@@ -347,9 +347,8 @@ The rules below are for the Supabase reads that remain until the next phase move
 - **Server Components by default.** Add `"use client"` only to the leaf that needs state,
   effects, `useActionState` or `useFormStatus`. A section component composing client forms
   stays a Server Component (`portfolio-section.tsx`). **[review]**
-- **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`,
-  submitted by `SubmitButton` (which handles the pending label via `useFormStatus`). Hidden
-  inputs carry ids. **[review]**
+- **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`, submitted by `SubmitButton` (which handles the pending label via `useFormStatus`).
+  Hidden inputs carry ids. **[review]**
 - **A form with two outcomes gives each submit button its own action**: `formAction` on `SubmitButton`, each with its own `useActionState` (`SignInForm`). **[review]**
 - **Errors render as `<p role="alert" className="text-danger text-detail">`**. **[review]**
 - **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `SubmitButton`) rather than
@@ -501,8 +500,7 @@ The rules below are for the Supabase reads that remain until the next phase move
   the JSX structure — `/** The navigation column: header on top, nav items, footer */` above
   `Sidebar({ header, footer, children })` adds nothing. If deleting the comment loses no
   information, delete it. **[review]**
-- **Short JSDoc on public functions whose behaviour is not obvious from the signature** —
-  one sentence saying what it does (`requireUser`, `refreshSession`). **[review]**
+- **Short JSDoc on public functions whose behaviour is not obvious from the signature** — one sentence saying what it does (`requireUser`, `refreshSession`). **[review]**
 - **Record numbers in the ADR when a decision came from measurement** (the 0.08 dedup
   threshold, the 260-character body average). **[review]**
 - Existing comments that predate this rule are rewritten when their code is touched, not in
