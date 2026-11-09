@@ -152,9 +152,11 @@ From the repo root:
 | Lint       | `just api-lint`      |
 | Type-check | `just api-typecheck` |
 | Test       | `just api-test`      |
+| Schema     | `just api-openapi`   |
 
 `just api-lint` runs `ruff check` and `ruff format --check`.
-GitHub Actions runs lint, the format check, pyright and the tests on each push and pull request that touches `apps/api/`.
+`just api-openapi` writes the OpenAPI schema to `openapi.json`, committed so the web app's types are generated from it; it needs no database.
+GitHub Actions runs lint, the format check, pyright and the tests on each push and pull request that touches `apps/api/`, then fails if `openapi.json` differs from the code's schema.
 
 `just yahoo-search "MSCI World"` searches the real Yahoo Finance and prints each stock or ETF
 found with its exchange code and currency. It is the only command that calls Yahoo; tests
@@ -197,11 +199,10 @@ its own `X-Request-ID` (letters, digits, `.`, `_`, `-`, up to 128 characters) to
 
 ## Authentication
 
-`POST /api/v1/auth/register` creates an account (JSON `email`, `password` of 12 to 128
-characters). `POST /api/v1/auth/login` takes a form (`username` = the email, `password`) and
-returns `{"access_token", "token_type": "bearer", "expires_in"}`. Send the token as
-`Authorization: Bearer <token>`; it expires after `ACCESS_TOKEN_EXPIRE_MINUTES` (15 by
-default). Every endpoint except health, register, login, refresh and logout requires it.
+`POST /api/v1/auth/register` creates an account (JSON `email`, `password` of 12 to 128 characters); an email that already has an account answers 409 with code `email_taken`.
+`POST /api/v1/auth/login` takes a form (`username` = the email, `password`) and returns `{"access_token", "token_type": "bearer", "expires_in"}`.
+Send the token as `Authorization: Bearer <token>`; it expires after `ACCESS_TOKEN_EXPIRE_MINUTES` (15 by default).
+Every endpoint except health, register, login, refresh and logout requires it.
 
 Login also sets a `refresh_token` cookie (`HttpOnly`, `Secure`, `SameSite=Strict`,
 `Path=/api/v1/auth`, valid `REFRESH_TOKEN_EXPIRE_DAYS`, 30 by default). When the access token
