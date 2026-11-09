@@ -7,9 +7,8 @@ export type SubmitButtonProps = {
   readonly label: string;
   readonly pendingLabel: string;
   readonly variant?: keyof typeof VARIANTS;
-  /** Submitted with the form, so one form can carry several intents. */
-  readonly name?: string;
-  readonly value?: string;
+  /** Submits the form to this action instead of the form's own, so one form can carry several. */
+  readonly formAction?: ((formData: FormData) => void) | undefined;
 };
 
 const BOXED = "rounded-control border px-control-x py-control-y text-label";
@@ -24,16 +23,14 @@ export function SubmitButton({
   label,
   pendingLabel,
   variant = "primary",
-  name,
-  value,
+  formAction,
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
-      name={name}
-      value={value}
+      formAction={formAction}
       disabled={pending}
       className={cn("disabled:opacity-disabled", VARIANTS[variant])}
     >

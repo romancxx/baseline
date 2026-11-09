@@ -1,10 +1,10 @@
 import { SignInForm } from "@/features/auth/components/form/sign-in-form";
 
-export type LoginScreenProps = {
+export type SignInScreenProps = {
   readonly searchParams: PageProps<"/sign-in">["searchParams"];
 };
 
-export async function LoginScreen({ searchParams }: LoginScreenProps) {
+export async function SignInScreen({ searchParams }: SignInScreenProps) {
   const { next } = await searchParams;
 
   return (
