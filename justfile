@@ -35,6 +35,12 @@ api-test:
     JWT_SECRET=test-secret-not-used-anywhere-else-0123456789 \
     {{api}} run pytest
 
+# Write the API's OpenAPI schema to apps/api/openapi.json; the settings only need to exist, no database is reached
+api-openapi:
+    DATABASE_URL=postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test \
+    JWT_SECRET=test-secret-not-used-anywhere-else-0123456789 \
+    {{api}} run python scripts/export_openapi.py
+
 # Fetch the latest prices and FX rates of every instrument held in a portfolio, from the real Yahoo Finance
 update-prices:
     {{api}} run python -m app.jobs.update_prices

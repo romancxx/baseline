@@ -26,6 +26,7 @@ pnpm dev
 | `pnpm db:start` / `pnpm db:stop` / `pnpm db:reset` | Local Supabase stack (needs Docker) |
 | `pnpm db:push` / `pnpm db:types` | Apply migrations / regenerate `database.types.ts` from the local stack |
 | `pnpm test:db` | RLS and feed suites against the local stack |
+| `pnpm api:types` | Regenerate `src/shared/api/api.types.ts` from `apps/api/openapi.json` (`just api-openapi`) |
 
 ## Architecture
 
@@ -49,10 +50,13 @@ src/
       index.ts            public API (client-safe)
       server.ts           public API (server-only)
   shared/
+    api/                  the API client, its generated types, read and action helpers (server-only)
     config/               the typed environment contract
-    supabase/             browser, server and admin clients; generated types
+    supabase/             server and admin clients; generated types
     ui/                   form and navigation primitives
-  middleware.ts           session refresh and auth redirect
+    session.ts            the session cookies: read, write, refresh, clear (server-only)
+  types/                  type declarations, one file per module
+  proxy.ts                request ID, session refresh and auth redirect
   instrumentation.ts      validates the server env at boot
 ```
 
@@ -92,12 +96,12 @@ Supabase Postgres. The schema lives in `supabase/migrations/` and is applied wit
 `pnpm db:push`; `pnpm db:types` regenerates `src/shared/supabase/database.types.ts` from
 the linked project, so the types are never hand-written.
 
-Three clients, in `src/shared/supabase/`:
+Two clients, in `src/shared/supabase/`.
+Neither carries a user's session, since signing in moved to the API:
 
-| Client | Where | Auth |
+| Client | Where | Access |
 | --- | --- | --- |
-| `createSupabaseBrowserClient` | client components | user session, RLS applies |
-| `createSupabaseServerClient` | RSC / route handlers / actions | user session from cookies, RLS applies |
+| `createSupabaseServerClient` | RSC / route handlers / actions | publishable key, RLS applies |
 | `createSupabaseAdminClient` | background work (none today) | secret key, **bypasses RLS** |
 
 Articles and summaries are shared across all users — an article is fetched once and
@@ -122,14 +126,27 @@ table, not what reads it.
 
 ## Auth
 
-Email + password, no confirmation step (`enable_confirmations = false`). `src/middleware.ts`
-refreshes the session on every request and redirects anonymous traffic to `/login`, keeping
-the original path in `?next=`. Paths are never hand-written — `src/shared/routes.ts` is the
-single registry, and `PUBLIC_ROUTES` is what the middleware lets through.
+Signing in, creating an account and signing out happen on one screen at `/sign-in`, and all three go through `apps/api` ([ADR 0008](docs/adr/0008-auth-through-the-api.md)).
+Email and password, no confirmation step; a password is 12 to 128 characters, sent exactly as typed.
+Next is a backend-for-frontend: the browser talks only to Next, and Next's server calls the API at `API_BASE_URL`.
 
-Server code that needs a user calls `requireUser()` from `@/features/auth/server`. It is a
-second line of defence: the middleware already redirects, but a route it does not match
-must not silently render as nobody.
+The API's tokens live in two `HttpOnly` cookies on Next's origin, `sn_access` and `sn_refresh`: `Path=/`, `SameSite=Lax`, and `Secure` when `NEXT_PUBLIC_APP_URL` is https.
+The API's own refresh cookie never reaches the browser.
+A session lasts up to 30 days; signing out revokes the refresh token at the API and clears the cookies, even when the API cannot be reached.
+
+`src/proxy.ts` runs before every page and server action.
+It gives the request a new ID, sent to the API as `X-Request-ID` and logged as `requestId`; an ID sent by the browser is replaced.
+It renews an expired access token before rendering, redirects anonymous traffic to `/sign-in` keeping the original path in `?next=`, and sends a signed-in user from `/sign-in` to Review.
+Requests renewing the same refresh token at once share one API call, and its new tokens for 30 seconds, so several tabs or prefetches never look like a stolen token; this holds within one Node process.
+An API outage during a renewal keeps the session; only the API refusing the refresh token ends it.
+Paths are never hand-written — `src/shared/routes.ts` is the single registry, and `PUBLIC_ROUTES` (`/sign-in`, `/session/expired`) is what `proxy.ts` lets through signed out.
+
+Server code that needs a user calls `requireUser()` from `@/features/auth/server`, which reads `GET /users/me` once per request.
+It is a second line of defence: `proxy.ts` decides from the cookies alone, and a route it does not match must not silently render as nobody.
+When the API refuses the access token while a page renders, the page redirects to `/session/expired`, which clears the cookies and redirects to `/sign-in`.
+
+The API client in `src/shared/api/` is typed by `api.types.ts`, generated by `pnpm api:types` from the API's committed `openapi.json`.
+CI fails when either file drifts from the code that produces it.
 
 ### Testing the policies
 
@@ -150,6 +167,8 @@ back *empty rather than failing*, which is what RLS actually does. Unit tests st
 
 ## Portfolio
 
+**Being rebuilt:** `/portfolio` shows only its heading until it reads positions from the API; the rest of this section describes the Supabase version its components still implement.
+
 `/portfolio` holds your positions, over the instrument universe. Reads are
 Server Components going through the user's session client, so RLS scopes them and no
 `user_id` filter is ever written by hand in application code. Mutations are server actions
@@ -163,6 +182,8 @@ also splits the blanket `for all` policy so that a position stays editable after
 instrument is deactivated.
 
 ## Home feed
+
+**Being rebuilt:** `/` shows only its heading until it reads the feed from the API; the rest of this section describes the Supabase version its components still implement.
 
 `/` shows one card per article touching an instrument you hold, most recent first, capped at
 `FEED_LIMIT`. Reads are Server Components through the user's session client, so RLS scopes

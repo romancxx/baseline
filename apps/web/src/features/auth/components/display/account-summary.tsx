@@ -1,4 +1,4 @@
-import { signOut } from "@/features/auth/actions/sign-out";
+import { signOut } from "@/features/auth/actions/auth-actions";
 import { Avatar } from "@/shared/ui/display/avatar";
 import { SubmitButton } from "@/shared/ui/form/submit-button";
 

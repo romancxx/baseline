@@ -10,6 +10,10 @@ from app.modules.users.schemas import UserCreate
 PORTFOLIO_NAME = "My portfolio"
 
 
+class EmailTakenError(ConflictError):
+    code = "email_taken"
+
+
 async def create_user(session: AsyncSession, data: UserCreate) -> User:
     """Create the user and their portfolio, in one transaction."""
     user = User(email=data.email, hashed_password=hash_password(data.password))
@@ -21,6 +25,6 @@ async def create_user(session: AsyncSession, data: UserCreate) -> User:
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
-        raise ConflictError("An account with this email already exists.") from exc
+        raise EmailTakenError("An account with this email already exists.") from exc
     await session.refresh(user)
     return user

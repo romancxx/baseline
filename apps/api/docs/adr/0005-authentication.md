@@ -10,8 +10,9 @@ outlive a short access token without exposing a long-lived credential to JavaScr
 
 ## Decision
 
-- **Passwords**: Argon2id through pwdlib, as FastAPI's docs recommend. Emails are lowercased
-  in the schema and by a database constraint.
+- **Passwords**: Argon2id through pwdlib, as FastAPI's docs recommend.
+  Emails are lowercased in the schema and by a database constraint.
+- **A taken email answers `email_taken`**, a 409 of its own code, so a client tells it apart from other conflicts without reading the message.
 - **Access tokens**: 15-minute HS256 JWTs (PyJWT) with `sub`, `iat`, `exp`, issued by the
   OAuth2 password flow so Swagger's Authorize button works. Unknown email and wrong password
   fail identically, in the same time.

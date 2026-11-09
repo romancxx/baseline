@@ -2,9 +2,9 @@ name: Web
 
 on:
   push:
-    paths: ["apps/web/**", ".github/workflows/web.yml"]
+    paths: ["apps/web/**", "apps/api/openapi.json", ".github/workflows/web.yml"]
   pull_request:
-    paths: ["apps/web/**", ".github/workflows/web.yml"]
+    paths: ["apps/web/**", "apps/api/openapi.json", ".github/workflows/web.yml"]
 
 jobs:
   check:
@@ -23,6 +23,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # The committed types must match the API's committed schema.
+      - run: pnpm api:types
+      - run: git diff --exit-code src/shared/api/api.types.ts
       # The build validates the env against the schemas, so this also catches .env.example drift.
       - run: cp .env.example .env
       - run: pnpm lint
