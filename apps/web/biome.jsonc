@@ -138,6 +138,27 @@
         }
       }
     },
+    // `types` holds declarations only and sits beside `shared` at the bottom of the stack.
+    {
+      "includes": ["src/types/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/**", "@/app/**"],
+                    "message": "`types` is the lowest layer: it must not depend on features or routes."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     // Features may depend on `shared` and on other features' entry points, never on
     // routes. Each feature then re-allows its own internals — add a block per feature.
     {
