@@ -14,21 +14,25 @@ export type Session =
   | { readonly status: "signed-in"; readonly accessToken: string; readonly refreshToken: string }
   | { readonly status: "needs-refresh"; readonly refreshToken: string };
 
-export type SessionCookieOptions = {
+/** One session cookie, with its flags. */
+export type SessionCookie = {
+  readonly name: string;
+  readonly value: string;
   readonly httpOnly: boolean;
   readonly secure: boolean;
   readonly sameSite: "lax";
   readonly path: string;
+  /** Seconds until the browser drops it. */
   readonly maxAge: number;
 };
 
 /**
  * A cookie store: Next's request or response cookies in `proxy.ts`, or `cookies()` in an action
- * or route handler. Request cookies ignore the options.
+ * or route handler. Request cookies keep only the name and value.
  */
 export type SessionCookies = {
   get(name: string): { readonly value: string } | undefined;
-  set(name: string, value: string, options: SessionCookieOptions): unknown;
+  set(cookie: SessionCookie): unknown;
   delete(name: string): unknown;
 };
 

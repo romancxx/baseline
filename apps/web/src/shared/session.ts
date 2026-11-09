@@ -8,7 +8,6 @@ import type {
   RefreshEntry,
   RefreshOutcome,
   Session,
-  SessionCookieOptions,
   SessionCookies,
   SessionResult,
   SessionTokens,
@@ -23,6 +22,7 @@ const API_REFRESH_COOKIE = "refresh_token";
 const ACCESS_EARLY_EXPIRY_SECONDS = 60;
 const REFRESH_LIFETIME_SECONDS = 30 * 24 * 60 * 60;
 const UNAUTHORIZED = 401;
+const COOKIE_FLAGS = { httpOnly: true, sameSite: "lax", path: "/" } as const;
 /** How long a renewal is given to requests still carrying the token it replaced. */
 const RENEWAL_REUSE_MS = 30_000;
 
@@ -38,12 +38,18 @@ export function readSession(cookies: Pick<SessionCookies, "get">): Session {
 
 /** Writes the tokens into the session cookies. */
 export function writeSession(cookies: Pick<SessionCookies, "set">, tokens: SessionTokens): void {
-  cookies.set(ACCESS_COOKIE, tokens.accessToken, {
-    ...cookieOptions(),
+  cookies.set({
+    ...COOKIE_FLAGS,
+    secure: isServedOverHttps(),
+    name: ACCESS_COOKIE,
+    value: tokens.accessToken,
     maxAge: tokens.expiresIn - ACCESS_EARLY_EXPIRY_SECONDS,
   });
-  cookies.set(REFRESH_COOKIE, tokens.refreshToken, {
-    ...cookieOptions(),
+  cookies.set({
+    ...COOKIE_FLAGS,
+    secure: isServedOverHttps(),
+    name: REFRESH_COOKIE,
+    value: tokens.refreshToken,
     maxAge: REFRESH_LIFETIME_SECONDS,
   });
 }
@@ -159,11 +165,6 @@ function apiRefreshToken(response: Response): string | null {
   return null;
 }
 
-function cookieOptions(): Omit<SessionCookieOptions, "maxAge"> {
-  return {
-    httpOnly: true,
-    secure: new URL(serverEnv.NEXT_PUBLIC_APP_URL).protocol === "https:",
-    sameSite: "lax",
-    path: "/",
-  };
+function isServedOverHttps(): boolean {
+  return new URL(serverEnv.NEXT_PUBLIC_APP_URL).protocol === "https:";
 }
