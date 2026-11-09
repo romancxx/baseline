@@ -1,35 +1,28 @@
 import { cn } from "@/shared/ui/cn";
 
 export type AvatarProps = {
-  readonly label: string;
-  readonly tone?: keyof typeof TONES | undefined;
+  /** Shown as given; the caller picks the letters. */
+  readonly initials: string;
   readonly size?: keyof typeof SIZES | undefined;
 };
 
-const INITIALS_LENGTH = 2;
-
-const TONES = {
-  neutral: "bg-surface-raised text-secondary",
-  warm: "bg-warm-tint text-warm",
-  cool: "bg-cool-tint text-cool",
-} as const;
-
 const SIZES = {
-  md: "size-avatar",
-  lg: "size-avatar-lg",
+  sm: "size-avatar-sm text-meta",
+  md: "size-avatar text-tag",
+  lg: "size-avatar-lg text-heading",
 } as const;
 
-export function Avatar({ label, tone = "neutral", size = "md" }: AvatarProps) {
+/** A neutral monogram; the name beside it carries the meaning. */
+export function Avatar({ initials, size = "md" }: AvatarProps) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full text-tag",
-        TONES[tone],
+        "flex shrink-0 items-center justify-center rounded-avatar bg-surface-high font-mono font-semibold text-secondary",
         SIZES[size],
       )}
     >
-      {label.slice(0, INITIALS_LENGTH).toUpperCase()}
+      {initials}
     </span>
   );
 }

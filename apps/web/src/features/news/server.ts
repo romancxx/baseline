@@ -1,1 +1,1 @@
-export { ReviewScreen } from "@/features/news/screens/review-screen";
+export { HomeScreen } from "@/features/news/screens/home-screen";

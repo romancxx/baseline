@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { InstrumentSchema } from "@/features/instruments";
-import { TonalitySchema } from "@/features/news/schemas/tonality.schema";
+import { ToneSchema } from "@/features/news/schemas/tone.schema";
 
 /** What produced each part of a card, so nothing claims to be generated that was not. */
 export const ArticleProvenanceSchema = z.object({
@@ -18,8 +18,7 @@ export const ArticleFeedItemSchema = z.object({
   /** The outlet's own standfirst. Not generated, and not a summary. */
   teaser: z.string().min(1).nullable(),
   instruments: z.array(InstrumentSchema).min(1),
-  tonality: TonalitySchema.nullable(),
-  confidence: z.number().min(0).max(1).nullable(),
+  tone: ToneSchema.nullable(),
   provenance: ArticleProvenanceSchema,
 });
 

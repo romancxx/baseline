@@ -24,9 +24,9 @@ describe("gating", () => {
   it("sends an anonymous visitor on a private page to /sign-in, remembering the page", async () => {
     fakeApi({});
 
-    const response = await visit("/portfolio");
+    const response = await visit("/holdings");
 
-    expect(getRedirectUrl(response)).toBe("http://localhost:3000/sign-in?next=%2Fportfolio");
+    expect(getRedirectUrl(response)).toBe("http://localhost:3000/sign-in?next=%2Fholdings");
   });
 
   it.each(["/sign-in", "/session/expired"])("lets an anonymous visitor open %s", async (path) => {
@@ -35,10 +35,10 @@ describe("gating", () => {
     expect(continues(await visit(path))).toBe(true);
   });
 
-  it("sends a signed-in user on /sign-in to Review", async () => {
+  it("sends a signed-in user on /sign-in to Home", async () => {
     fakeApi({});
 
-    const response = await visit("/sign-in?next=%2Fportfolio", { cookie: SIGNED_IN });
+    const response = await visit("/sign-in?next=%2Fholdings", { cookie: SIGNED_IN });
 
     expect(getRedirectUrl(response)).toBe("http://localhost:3000/");
   });
@@ -46,9 +46,26 @@ describe("gating", () => {
   it("lets a signed-in user through to a private page", async () => {
     const api = fakeApi({});
 
-    expect(continues(await visit("/portfolio", { cookie: SIGNED_IN }))).toBe(true);
+    expect(continues(await visit("/holdings", { cookie: SIGNED_IN }))).toBe(true);
     expect(api.requests).toHaveLength(0);
   });
+});
+
+describe("moved pages", () => {
+  it.each([
+    ["an anonymous visitor", {}],
+    ["a signed-in user", { cookie: SIGNED_IN }],
+  ])(
+    "sends %s on /portfolio permanently to /holdings, before the sign-in gate",
+    async (_, headers) => {
+      fakeApi({});
+
+      const response = await visit("/portfolio?tab=positions", headers);
+
+      expect(response.status).toBe(308);
+      expect(getRedirectUrl(response)).toBe("http://localhost:3000/holdings?tab=positions");
+    },
+  );
 });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -62,8 +79,8 @@ describe("the request ID", () => {
   it("is a new UUID for each request, forwarded to the page", async () => {
     fakeApi({});
 
-    const first = forwarded(await visit("/portfolio", { cookie: SIGNED_IN }), "x-request-id");
-    const second = forwarded(await visit("/portfolio", { cookie: SIGNED_IN }), "x-request-id");
+    const first = forwarded(await visit("/holdings", { cookie: SIGNED_IN }), "x-request-id");
+    const second = forwarded(await visit("/holdings", { cookie: SIGNED_IN }), "x-request-id");
 
     expect(first).toMatch(UUID);
     expect(second).toMatch(UUID);
@@ -73,7 +90,7 @@ describe("the request ID", () => {
   it("replaces one sent by the browser", async () => {
     fakeApi({});
 
-    const response = await visit("/portfolio", { cookie: SIGNED_IN, "x-request-id": "planted" });
+    const response = await visit("/holdings", { cookie: SIGNED_IN, "x-request-id": "planted" });
 
     expect(forwarded(response, "x-request-id")).toMatch(UUID);
   });
@@ -95,7 +112,7 @@ describe("an expired access token", () => {
   it("is renewed before the page renders: the browser keeps the new cookies and the page reads them", async () => {
     const api = fakeApi({ [REFRESH]: renewed("access-new", "refresh-new") });
 
-    const response = await visit("/portfolio", { cookie: "sn_refresh=refresh-old" });
+    const response = await visit("/holdings", { cookie: "sn_refresh=refresh-old" });
 
     expect(continues(response)).toBe(true);
     expect(response.cookies.get("sn_access")?.value).toBe("access-new");
@@ -106,7 +123,7 @@ describe("an expired access token", () => {
     expect(refresh?.headers.get("x-request-id")).toBe(forwarded(response, "x-request-id"));
   });
 
-  it("is renewed before deciding about /sign-in, which then sends the user to Review with the new cookies", async () => {
+  it("is renewed before deciding about /sign-in, which then sends the user to Home with the new cookies", async () => {
     fakeApi({ [REFRESH]: renewed("access-new", "refresh-new") });
 
     const response = await visit("/sign-in", { cookie: "sn_refresh=refresh-on-sign-in" });
@@ -123,9 +140,9 @@ describe("an expired access token", () => {
       }),
     });
 
-    const response = await visit("/portfolio", { cookie: "sn_refresh=refresh-revoked" });
+    const response = await visit("/holdings", { cookie: "sn_refresh=refresh-revoked" });
 
-    expect(getRedirectUrl(response)).toBe("http://localhost:3000/sign-in?next=%2Fportfolio");
+    expect(getRedirectUrl(response)).toBe("http://localhost:3000/sign-in?next=%2Fholdings");
     for (const name of ["sn_access", "sn_refresh"]) {
       expect(response.cookies.get(name)).toMatchObject({ value: "", expires: new Date(0) });
     }
@@ -145,7 +162,7 @@ describe("an expired access token", () => {
   ])("lets the request through after %s, with the cookies untouched", async (_, handler) => {
     fakeApi({ [REFRESH]: handler });
 
-    const response = await visit("/portfolio", { cookie: "sn_refresh=refresh-during-outage" });
+    const response = await visit("/holdings", { cookie: "sn_refresh=refresh-during-outage" });
 
     expect(continues(response)).toBe(true);
     expect(response.cookies.getAll()).toEqual([]);

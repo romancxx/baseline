@@ -1,5 +1,5 @@
-import { ReviewScreen } from "@/features/news/server";
+import { HomeScreen } from "@/features/news/server";
 
-export default function ReviewPage() {
-  return <ReviewScreen />;
+export default function HomePage() {
+  return <HomeScreen />;
 }

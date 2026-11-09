@@ -1,13 +1,26 @@
-import { Pilcrow } from "lucide-react";
-import { Icon } from "@/shared/ui/display/icon";
+import { cn } from "@/shared/ui/cn";
 
-export function Wordmark() {
+export type WordmarkProps = {
+  readonly size?: keyof typeof SIZES | undefined;
+};
+
+const SIZES = {
+  md: { mark: "size-5.5 rounded-control text-caption", name: "text-heading" },
+  lg: { mark: "size-7.5 rounded-avatar text-body", name: "text-title" },
+} as const;
+
+export function Wordmark({ size = "md" }: WordmarkProps) {
+  const { mark, name } = SIZES[size];
+
   return (
-    <span className="flex items-center gap-3">
-      <span className="flex size-7 items-center justify-center rounded-control bg-surface-raised text-secondary">
-        <Icon icon={Pilcrow} />
+    <span className="flex items-center gap-2.5">
+      <span
+        aria-hidden="true"
+        className={cn("flex items-center justify-center bg-inverse font-bold text-inverse", mark)}
+      >
+        S
       </span>
-      <span className="text-heading">StockNews</span>
+      <span className={name}>StockNews</span>
     </span>
   );
 }

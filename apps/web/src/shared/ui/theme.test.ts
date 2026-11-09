@@ -30,10 +30,10 @@ async function compileGlobals(): Promise<Compiler> {
   });
 }
 
-/** Utility classes in string literals of the app's components. */
+/** Utility classes in string literals of the app's source, components and style tables alike. */
 async function usedUtilities(): Promise<string[]> {
   const files = (await readdir(SRC, { recursive: true })).filter(
-    (file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"),
+    (file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file) && !file.endsWith(".d.ts"),
   );
   const found = new Set<string>();
 
@@ -96,6 +96,18 @@ describe("theme", () => {
     ];
 
     expect(unresolved(compiler, defaults)).toEqual(defaults);
+  });
+
+  it("has no brand hue or avatar tints, so the six semantic hues are the only colour", () => {
+    const removed = ["text-accent", "outline-accent", "bg-warm-tint", "text-cool"];
+
+    expect(unresolved(compiler, removed)).toEqual(removed);
+  });
+
+  it("keeps price movement to text colour, so a gain or loss can never be a chip", () => {
+    const misuses = ["bg-up", "bg-down", "border-up"];
+
+    expect(unresolved(compiler, misuses)).toEqual(misuses);
   });
 
   it("keeps width and spacing token names apart, since w-, max-w- and min-w- read spacing first", () => {

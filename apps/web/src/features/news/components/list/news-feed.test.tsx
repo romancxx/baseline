@@ -29,8 +29,7 @@ function articleItem(overrides: Record<string, unknown> = {}): FeedItem {
     url: "https://example.com/apple",
     teaser: "Revenue came in ahead of guidance.",
     instruments: [instrument],
-    tonality: "bullish",
-    confidence: 0.8,
+    tone: "positive",
     provenance: {
       source: "MarketWatch",
       publishedAt: new Date("2026-09-26T07:56:00Z"),
@@ -57,11 +56,10 @@ describe("NewsFeed", () => {
     expect(screen.getByText("Apple")).toBeInTheDocument();
   });
 
-  it("labels tonality and credits the model in the badge's hover text", () => {
+  it("names the article's tone in words", () => {
     render(<NewsFeed items={[articleItem()]} hasInstruments />);
 
-    const badge = screen.getByText("Constructive");
-    expect(badge).toHaveAttribute("title", expect.stringContaining("claude-haiku-4-5"));
+    expect(screen.getByText("Positive")).toBeInTheDocument();
   });
 
   it("attributes the article to its source with a machine-readable UTC stamp", () => {
@@ -81,8 +79,7 @@ describe("NewsFeed", () => {
       <NewsFeed
         items={[
           articleItem({
-            tonality: null,
-            confidence: null,
+            tone: null,
             provenance: {
               source: "CNBC",
               publishedAt: new Date("2026-09-26T07:56:00Z"),
@@ -96,7 +93,7 @@ describe("NewsFeed", () => {
     );
 
     expect(screen.getByText(/not yet classified/)).toBeInTheDocument();
-    expect(screen.queryByText("Constructive")).not.toBeInTheDocument();
+    expect(screen.queryByText("Positive")).not.toBeInTheDocument();
   });
 
   it("heads a multi-instrument card with the first instrument and counts the rest, rather than repeating the card", () => {

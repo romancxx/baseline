@@ -1,6 +1,6 @@
 import { InstrumentAvatar } from "@/features/instruments";
 import { ProvenanceLine } from "@/features/news/components/display/provenance-line";
-import { TonalityBadge } from "@/features/news/components/display/tonality-badge";
+import { ToneChip } from "@/features/news/components/display/tone-chip";
 import type { ArticleFeedItem } from "@/features/news/schemas/feed.schema";
 
 export type ArticleFeedCardProps = {
@@ -13,9 +13,9 @@ export function ArticleFeedCard({ item }: ArticleFeedCardProps) {
   if (!lead) return null;
 
   return (
-    <article className="flex flex-col gap-2 rounded-card bg-surface p-card">
+    <article className="flex flex-col gap-2 rounded-card border border-hairline bg-surface p-card">
       <header className="flex items-start gap-3">
-        <InstrumentAvatar instrument={lead} size="lg" />
+        <InstrumentAvatar instrument={lead} />
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="font-semibold text-detail text-primary">
             {lead.ticker}
@@ -30,13 +30,7 @@ export function ArticleFeedCard({ item }: ArticleFeedCardProps) {
           </p>
           <p className="truncate text-detail text-tertiary">{lead.name}</p>
         </div>
-        {item.tonality === null ? null : (
-          <TonalityBadge
-            tonality={item.tonality}
-            confidence={item.confidence ?? undefined}
-            model={item.provenance.model ?? undefined}
-          />
-        )}
+        {item.tone === null ? null : <ToneChip tone={item.tone} />}
       </header>
 
       <h3 className="mt-1 text-subheading">

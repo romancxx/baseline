@@ -40,7 +40,7 @@ thing. Do not invent a new name for something one of these already covers.
 
 | Directory | Holds | Runs on | Example |
 | --- | --- | --- | --- |
-| `screens/` | One async Server Component per route: loads its data, renders the feature's components | server | `news/screens/review-screen.tsx` |
+| `screens/` | One async Server Component per route: loads its data, renders the feature's components | server | `auth/screens/sign-in-screen.tsx` |
 | `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `portfolio/components/section/portfolio-section.tsx` |
 | `actions/` | Server actions (`"use server"`) | server | `auth/actions/auth-actions.ts` |
 | `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
@@ -59,15 +59,15 @@ means the same thing everywhere; do not invent a new one for something these cov
 
 | Role | Holds | Example |
 | --- | --- | --- |
-| `layout/` | Structure that places other components on the page | `shared/ui/layout/sidebar.tsx` |
-| `navigation/` | Links and menus that move between screens | `shared/ui/navigation/nav-item.tsx` |
+| `layout/` | Structure that places other components on the page | `shared/ui/layout/top-bar.tsx` |
+| `navigation/` | Links, menus and dialogs that move between screens | `shared/ui/navigation/nav-link.tsx` |
 | `section/` | A titled region of a screen composing other roles | `portfolio/components/section/portfolio-section.tsx` |
 | `card/` | A self-contained panel presenting one item | `news/components/card/article-feed-card.tsx` |
 | `list/` | A collection and its empty state | `news/components/list/coverage-list.tsx` |
 | `row/` | One entry of a list | `news/components/row/coverage-row.tsx` |
 | `form/` | A `<form>`, and controls bound to its submission | `shared/ui/form/submit-button.tsx` |
 | `input/` | One labelled form control | `shared/ui/input/text-field.tsx` |
-| `display/` | Read-only atoms: icon, avatar, badge, chip, a line of text | `news/components/display/tonality-badge.tsx` |
+| `display/` | Read-only atoms: icon, avatar, badge, chip, a line of text | `news/components/display/tone-chip.tsx` |
 
 A component's test sits next to it in the same role folder.
 
@@ -75,12 +75,14 @@ A component's test sits next to it in the same role folder.
 list's row is its own file under `row/`. Plain helper functions may share the file.
 **[review]**
 
-**A component lives in the feature that uses it.** `src/shared/ui` holds only basics that
-more than one feature uses today (`Avatar`, `Icon`, the fields, `SubmitButton`, the app
-shell). A screen's header, cards, lists and layout belong to its feature, even when they look
-reusable. Do not build a generic wrapper to make that reuse possible — no polymorphic `as`
-card, no list whose only job is to arrange slots. Write the specific component; it renders
-its own markup. **[review]**
+**A component lives in the feature that uses it.**
+`src/shared/ui` holds two kinds of component.
+One is the basics more than one feature uses today: `Avatar`, `Icon`, the fields, the app shell.
+The other is the design system's primitives, which the design assigns to several screens and which are built before their second consumer: the buttons, `Card`, `Notice`, `Skeleton`, `PriceChange`, `FormError`, and the formatters in `@/shared/format`.
+A screen's header, cards, lists and layout belong to its feature, even when they look reusable.
+Do not build a generic wrapper to make that reuse possible — no polymorphic `as` card, no list whose only job is to arrange slots.
+`Card` is one fixed element with an optional title, not a wrapper with slots.
+Write the specific component; it renders its own markup. **[review]**
 
 ### 1.3 Dependency rules
 
@@ -292,26 +294,26 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 ## 7. React and UI
 
 - **Server Components by default.** Add `"use client"` only to the leaf that needs state, effects, `useActionState` or `useFormStatus`.
-  A component composing client components stays a Server Component (`account-summary.tsx`, around `SubmitButton`). **[review]**
+  A component composing client components stays a Server Component (`sign-in-screen.tsx`, around `SignInForm`). **[review]**
 - **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`, submitted by `SubmitButton` (which handles the pending label via `useFormStatus`).
   Hidden inputs carry ids. **[review]**
-- **A form with two outcomes gives each submit button its own action**: `formAction` on `SubmitButton`, each with its own `useActionState` (`SignInForm`). **[review]**
-- **Errors render as `<p role="alert" className="text-danger text-detail">`**. **[review]**
-- **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `SubmitButton`) rather than
-  styling raw inputs. They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a
-  new primitive must do the same. **[review]**
+- **One form, one action.** A screen offering two submissions renders two forms, each with its own `useActionState` (`SignInForm` and `CreateAccountForm`), so a form posted without JavaScript posts one action. **[review]**
+- **A form's error renders through `FormError`** under its fields; a message about the screen, such as a failed load or partial data, is a `Notice`. **[review]**
+- **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `Button`, `ButtonLink`, `SubmitButton`) rather than styling raw inputs.
+  They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a new primitive must do the same. **[review]**
 - **A page only returns its screen.** `src/app/**/page.tsx` imports one `*Screen` from a
   feature's `server.ts` and returns it, passing `searchParams` through when the route has
   them (typed with Next's generated `PageProps<"/route">`). Data loading and markup live in
   the screen, under the feature's `screens/`. `src/app/pages.test.ts` checks every page file.
   **[test]**
-- **Screens render inside the app shell.** `(app)/layout.tsx` composes `AppShell`, `Sidebar`
-  and `NavItem`; a screen's root is a `<div>`, because the shell owns `<main>`. A new screen
-  is a `NavItem` with an `href`; a planned one has `href={null}` and renders disabled.
-  **[review]**
-- **Icons are `lucide-react`, rendered through `Icon`** (`<Icon icon={Eye} />`), which sets
-  size, stroke and `aria-hidden`. An icon never carries meaning alone; text beside it does.
-  **[review]**
+- **Screens render inside the app shell.**
+  `(app)/layout.tsx` composes `AppShell` and `TopBar`, filled with the `NavLink`s, the search, the as-of stamp and the account menu; a screen's root is a `<div>`, because the shell owns `<main>`.
+  The bar holds Home and Holdings only: a screen reached from a holding, a brief or search, like an instrument page, gets no `NavLink`, and nothing renders disabled. **[review]**
+- **Icons are `lucide-react`, rendered through `Icon`** (`<Icon icon={Eye} />`), which sets size, stroke and `aria-hidden`.
+  An icon never carries meaning alone; text beside it does.
+  The one exception is `ToneChip`'s glyphs, inline SVGs drawn for the four tones, which have no lucide equivalent. **[review]**
+- **Figures go through `@/shared/format`** (`formatMoney`, `formatQuantity`, `formatPercent`) or `PriceChange`, from the API's decimal strings.
+  The web app never turns a figure into a JavaScript number or does arithmetic on one. **[review]**
 - **Every list has an explicit empty state**, never a blank card. **[review]**
 - **Hooks follow the rules**; exhaustive dependencies are an error, and callbacks passed to
   children are stabilised with `useCallback`. **[lint]**
@@ -330,24 +332,27 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   render nothing. **[test]**
 - **Every class must resolve.** `theme.test.ts` compiles the theme and fails on any utility
   in a component that generates no CSS — a stale token name or a reset default. **[test]**
+- **The brand is contrast, and six hues carry meaning.**
+  Buttons, the logo and avatars are white or neutral.
+  `up` and `down` are price movement, as bare text only; the four `tone-*` hues are news tone, as chips only.
+  Nothing else on screen is coloured: an error uses the down hue as `danger`, partial data the amber of `tone-negative`, a success stays neutral. **[review]**
 - **Colours are scoped to the utility they serve**, so a misuse does not exist as a class:
   | Utility | Tokens |
   | --- | --- |
-  | `bg-` | `canvas`, `surface`, `surface-raised`, `inverse`, `tone-{positive,neutral,negative}-tint`, `{warm,cool}-tint` |
-  | `text-` | `primary`, `secondary`, `tertiary`, `inverse` |
-  | `border-` | `hairline` |
-  | any colour utility | `accent`, `danger`, `tone-positive`, `tone-neutral`, `tone-negative`, `warm`, `cool` |
+  | `bg-` | `canvas`, `surface`, `surface-raised`, `surface-high`, `popover`, `scrim`, `inverse`, `tone-{positive,negative,neutral,mixed}-tint`, `{danger,partial,success}-tint` |
+  | `text-` | `primary`, `secondary`, `tertiary`, `inverse`, `up`, `down`, `tone-{positive,negative,neutral,mixed}`, `danger`, `partial` |
+  | `border-` | `hairline`, `hairline-strong`, `focus`, `danger`, `{danger,partial,success}-muted` |
+  | `outline-`, `ring-` | `focus` |
 
-  `bg-primary` and `text-surface` do not exist by design. **[test]**
-- **`text-tertiary` is below WCAG AA for body text** (≈3.4:1 on canvas). Use it only for
-  text that repeats information shown elsewhere — counts, separators. **[review]**
-- **Tints are derived in the theme** (`color-mix` of the tone), never built in a component
-  with an opacity modifier (`bg-accent/20`). **[review]**
-- **Type is a role, not a size.** `text-display`, `text-title`, `text-heading`,
-  `text-subheading`, `text-body`, `text-detail`, `text-label`, `text-caption`, `text-tag`,
-  `text-overline` (uppercase labels, with `uppercase`) and `text-meta` (machine-like lines,
-  with `font-mono uppercase`) each set size and line height, and weight and tracking where
-  they differ. `font-*` may emphasise a word inside a role. **[test]**
+  `bg-primary`, `text-surface` and `bg-up` do not exist by design. **[test]**
+- **`text-tertiary` passes WCAG AA for body text** (≈5.7:1 on canvas, ≈5.3:1 on a surface), but reads as quiet.
+  Use it for labels, hints and text that repeats information shown elsewhere. **[review]**
+- **Tints are derived in the theme** (`color-mix` of the hue), never built in a component with an opacity modifier (`bg-tone-positive/20`). **[review]**
+- **Three typefaces, three jobs.** `font-sans` (Inter, the default) for the interface, `font-mono` (JetBrains Mono) for figures, tickers and provenance, `font-serif` (Newsreader) for brief prose and the sign-in headline.
+  All three load through `next/font` in the root layout. **[review]**
+- **Type is a role, not a size.**
+  `text-display` (large figures, with `font-mono`), `text-headline` (with `font-serif`), `text-title`, `text-heading`, `text-subheading`, `text-brief` (brief prose, with `font-serif`), `text-body`, `text-detail`, `text-label`, `text-caption`, `text-tag`, `text-overline` (uppercase labels, with `uppercase`) and `text-meta` (machine-like lines, with `font-mono uppercase`) each set size and line height, and weight and tracking where they differ.
+  `font-*` may emphasise a word inside a role. **[test]**
 - **Spacing: a role token for what the layout owns, Tailwind's scale inside a component.**
   Page gutter `px-gutter`, page padding `py-page`, between page sections `gap-section`,
   between cards or blocks `gap-stack`, card padding `p-card`, control padding
@@ -355,10 +360,11 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   Steps inside a component
   (`gap-2`, `mt-1`) use Tailwind's numeric scale, itself a token (multiples of `--spacing`).
   **[review]**
-- **Sizes are tokens:** `w-sidebar`, `w-rail`, `max-w-content`, `max-w-narrow`, `min-w-field`,
-  `size-icon`, `size-avatar`, `size-avatar-lg`, `rounded-card`, `rounded-control`,
-  `rounded-tag`, `opacity-disabled`, `opacity-dimmed` (an empty entry kept for context).
-  **[test]**
+- **Sizes are tokens.**
+  Heights and sizes: `h-bar` (the top bar), `min-h-control` (a field), `min-h-button`, `min-h-button-sm`, `size-icon`, `size-glyph`, `size-avatar-sm`, `size-avatar`, `size-avatar-lg`.
+  Widths: `w-rail`, `max-w-content`, `max-w-auth`, `max-w-search`, `w-menu`, `w-dialog`, `max-w-prose` (74 characters of brief).
+  Radii: `rounded-tag`, `rounded-control`, `rounded-avatar`, `rounded-menu`, `rounded-card`, `rounded-pill`.
+  Opacity: `opacity-disabled`, `opacity-dimmed` (an empty entry kept for context). **[test]**
 - **A new token** goes in `theme.css` under the narrowest namespace that uses it
   (`--background-color-*` before `--color-*`). A width (`--container-*`) never reuses a
   spacing name: `w-*`, `max-w-*` and `min-w-*` read `--spacing-*` first, so `w-rail` would
@@ -401,11 +407,10 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   the code. **[review]**
 - **Keep them short — but not absent.** One line is the norm. Write one wherever a reader
   would otherwise have to stop and work something out. **[review]**
-- **Only comment what the code cannot say itself.** The meaning of a `null`, a contract a
-  caller must know ("renders its own `<li>`"), a unit. Never restate a name, a prop, a slot or
-  the JSX structure — `/** The navigation column: header on top, nav items, footer */` above
-  `Sidebar({ header, footer, children })` adds nothing. If deleting the comment loses no
-  information, delete it. **[review]**
+- **Only comment what the code cannot say itself.**
+  The meaning of a `null`, a contract a caller must know ("renders its own `<li>`"), a unit.
+  Never restate a name, a prop, a slot or the JSX structure — `/** The bar: logo and links on the left, account on the right */` above `TopBar({ navigation, search, asOf, account })` adds nothing.
+  If deleting the comment loses no information, delete it. **[review]**
 - **Short JSDoc on public functions whose behaviour is not obvious from the signature** — one sentence saying what it does (`requireUser`, `refreshSession`). **[review]**
 - **Record numbers in the ADR when a decision came from measurement** (the 0.08 dedup
   threshold, the 260-character body average). **[review]**
