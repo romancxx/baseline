@@ -14,17 +14,17 @@ The web prototype (`apps/web`) built a first pipeline. Its records hold what liv
 and this design starts from them:
 
 - Feed teasers and Finnhub summaries average 260 characters, too short to summarise.
-  Summaries need the article's text ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
+  Summaries need the article's text ([web 0005](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0005-summarization-and-tonality.md)).
 - Finnhub's company news returns articles merely associated with a symbol (a Berkshire
   earnings piece under `AAPL`). A ticker tag is a candidate, not proof
-  ([web 0006](../../../web/docs/adr/0006-home-feed.md)).
+  ([web 0006](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0006-home-feed.md)).
 - Regex mentions over headline and teaser found 9 links in 941 articles
-  ([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)).
+  ([web 0004](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0004-ingestion-pipeline.md)).
 - Embedding distance on headlines could not tell "same story, other outlet" from "same stock,
   other story". A false merge silently hides a story; a missed one repeats a line
-  ([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)).
+  ([web 0004](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0004-ingestion-pipeline.md)).
 - Summarising on a small model costs cents a day. Batching and prompt caching did not pay
-  ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
+  ([web 0005](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0005-summarization-and-tonality.md)).
 
 An earlier draft of this record proposed five sources, links confirmed by the model, article
 text, per-article summaries, a scheduler and email digests. That is more than a personal
@@ -213,7 +213,7 @@ handling anyway). Queries in the home market's language (out of scope).
 Decoding the links and normalising publisher URLs (a request per item, and it rate-limits).
 Near-duplicate titles by trigram similarity, or a hash of the text (needs a labelled sample
 to tune; titles are enough for one source). Embeddings
-([web 0004](../../../web/docs/adr/0004-ingestion-pipeline.md)). Publisher tiers in a file
+([web 0004](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0004-ingestion-pipeline.md)). Publisher tiers in a file
 (they decide which copy to keep and what to summarise first, choices a brief over 40
 headlines does not need).
 
@@ -327,7 +327,7 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
   of its articles was published after the newest headline of its latest brief. Older briefs
   are kept.
 - **The prompt is versioned.** `PROMPT_VERSION` in code is stored with each brief
-  ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)).
+  ([web 0005](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0005-summarization-and-tonality.md)).
 - **The provenance line is built when a brief is read**, not stored: the number of cited
   articles still stored, the UTC days from `period_start` to `period_end`, and
   `generated_at`, as in "From 7 articles, 28-30 Oct, generated 2026-10-30 06:00 UTC". It is
@@ -342,10 +342,10 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
 
 - Per-article summaries from extracted text, as in the earlier draft: better briefs, but a
   fetcher, trafilatura, robots.txt and paywall handling, and a call per article.
-- Summarising teasers ([web 0005](../../../web/docs/adr/0005-summarization-and-tonality.md)):
+- Summarising teasers ([web 0005](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0005-summarization-and-tonality.md)):
   Google's teaser repeats the title.
 - The `claude` CLI on a Claude subscription as the only backend
-  ([web 0007](../../../web/docs/adr/0007-local-summarization-backend.md)): no API bill, but
+  ([web 0007](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0007-local-summarization-backend.md)): no API bill, but
   about 10 s a call, and a command tied to a signed-in CLI. It is the second backend
   instead ([0011](0011-local-llm-backend.md)).
 - A local model through Ollama: free and private, but slow on a laptop.

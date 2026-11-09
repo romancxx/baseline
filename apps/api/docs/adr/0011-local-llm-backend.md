@@ -9,7 +9,7 @@ Briefs ([0010](0010-news-ingestion.md)) are written by the Anthropic API, which 
 `ANTHROPIC_API_KEY` and a paid API account. A developer with a Claude subscription and
 Claude Code installed already has a signed-in way to reach the same models. The web
 prototype used it as a second summarisation backend
-([web 0007](../../../web/docs/adr/0007-local-summarization-backend.md)), and a headline-only
+([web 0007](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0007-local-summarization-backend.md)), and a headline-only
 probe through `claude -p … --output-format json` wrote good briefs.
 
 ## Decision
