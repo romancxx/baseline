@@ -2,6 +2,7 @@ export const ROUTES = {
   dashboard: "/",
   login: "/login",
   portfolio: "/portfolio",
+  sessionExpired: "/session/expired",
 } as const;
 
 export type Route = (typeof ROUTES)[keyof typeof ROUTES];

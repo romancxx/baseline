@@ -4,7 +4,8 @@ import { ApiErrorBodySchema } from "@/shared/api/api-error.schema";
 import { serverEnv } from "@/shared/config/server-env";
 import type { ApiClient, ApiClientOptions, ApiError, ApiResult, ClientOutcome } from "@/types/api";
 
-const REQUEST_ID_HEADER = "X-Request-ID";
+/** Carries the request's ID, from `proxy.ts` to the API. */
+export const REQUEST_ID_HEADER = "X-Request-ID";
 
 /** A client for one call site, over the global `fetch` as it is now. */
 export function createApiClient({ accessToken, requestId }: ApiClientOptions): ApiClient {
