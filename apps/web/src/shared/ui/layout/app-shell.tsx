@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 
 export type AppShellProps = {
-  readonly sidebar: ReactNode;
+  readonly bar: ReactNode;
   readonly children: ReactNode;
 };
 
-export function AppShell({ sidebar, children }: AppShellProps) {
+/** The signed-in page: the top bar, then the screen, which renders inside `<main>`. */
+export function AppShell({ bar, children }: AppShellProps) {
   return (
-    <div className="flex min-h-dvh">
-      {sidebar}
+    <div className="flex min-h-dvh flex-col">
+      {bar}
       <main className="min-w-0 flex-1">{children}</main>
     </div>
   );

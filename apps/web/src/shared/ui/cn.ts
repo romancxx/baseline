@@ -5,9 +5,11 @@ import { extendTailwindMerge } from "tailwind-merge";
 export const THEME_TOKENS = {
   text: [
     "display",
+    "headline",
     "title",
     "heading",
     "subheading",
+    "brief",
     "body",
     "detail",
     "label",
@@ -27,12 +29,18 @@ export const THEME_TOKENS = {
     "control-y",
     "tag-x",
     "tag-y",
+    "bar",
+    "control",
+    "button",
+    "button-sm",
     "icon",
+    "glyph",
+    "avatar-sm",
     "avatar",
     "avatar-lg",
   ],
-  container: ["sidebar", "rail", "content", "narrow", "field"],
-  radius: ["card", "control", "tag"],
+  container: ["rail", "content", "auth", "search", "menu", "dialog", "prose"],
+  radius: ["tag", "control", "avatar", "menu", "card", "pill"],
   opacity: ["disabled", "dimmed"],
 } as const;
 

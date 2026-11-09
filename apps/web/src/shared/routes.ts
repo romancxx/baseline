@@ -1,14 +1,20 @@
 import type { Route } from "@/types/routes";
 
 export const ROUTES = {
-  dashboard: "/",
-  portfolio: "/portfolio",
+  home: "/",
+  holdings: "/holdings",
+  holdingsImport: "/holdings/import",
   sessionExpired: "/session/expired",
   signIn: "/sign-in",
 } as const;
 
 /** Reachable without a session */
 export const PUBLIC_ROUTES: readonly Route[] = [ROUTES.signIn, ROUTES.sessionExpired];
+
+/** Paths that moved, and the route each now lives at; redirected permanently. */
+export const MOVED_ROUTES: Readonly<Record<string, Route>> = {
+  "/portfolio": ROUTES.holdings,
+};
 
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));

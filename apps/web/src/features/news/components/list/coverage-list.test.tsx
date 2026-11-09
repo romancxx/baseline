@@ -27,8 +27,7 @@ function article(id: string, instruments: readonly Instrument[]): FeedItem {
     url: "https://example.com/a",
     teaser: null,
     instruments,
-    tonality: null,
-    confidence: null,
+    tone: null,
     provenance: {
       source: "Reuters",
       publishedAt: new Date("2026-08-24T06:12:00Z"),

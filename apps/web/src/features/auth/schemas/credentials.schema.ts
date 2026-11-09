@@ -3,11 +3,11 @@ import { ROUTES, safeRedirectPath } from "@/shared/routes";
 
 const EmailSchema = z.email({ error: "Enter a valid email address." });
 
-/** Where to go once signed in: a same-origin path, or Review. */
+/** Where to go once signed in: a same-origin path, or Home. */
 const NextPathSchema = z
   .string()
-  .transform((value) => safeRedirectPath(value) ?? ROUTES.dashboard)
-  .catch(ROUTES.dashboard);
+  .transform((value) => safeRedirectPath(value) ?? ROUTES.home)
+  .catch(ROUTES.home);
 
 export const SignInSchema = z.object({
   email: EmailSchema,

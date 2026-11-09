@@ -84,9 +84,9 @@ describe("signing in", () => {
   });
 
   it.each([
-    ["the next page when it is on the site", "/portfolio", "/portfolio"],
-    ["Review when next leaves the site", "//evil.example", "/"],
-    ["Review without a next", null, "/"],
+    ["the next page when it is on the site", "/holdings", "/holdings"],
+    ["Home when next leaves the site", "//evil.example", "/"],
+    ["Home without a next", null, "/"],
   ])("writes the session and redirects to %s", async (_, next, target) => {
     answer(LOGIN, signedIn("access-1", "refresh-1"));
     const fields = { email: "alice@example.com", password: "correct-horse-battery" };
@@ -135,8 +135,8 @@ describe("creating an account", () => {
     answer(LOGIN, signedIn("access-1", "refresh-1"));
 
     await expect(
-      createAccount(IDLE, form({ email: "alice@example.com", password, next: "/portfolio" })),
-    ).rejects.toThrow("NEXT_REDIRECT /portfolio");
+      createAccount(IDLE, form({ email: "alice@example.com", password, next: "/holdings" })),
+    ).rejects.toThrow("NEXT_REDIRECT /holdings");
 
     expect(post).toHaveBeenCalledWith(REGISTER, {
       body: { email: "alice@example.com", password: "  twelve ch  " },

@@ -1,15 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { REQUEST_ID_HEADER } from "@/shared/api/client";
-import { isPublicRoute, ROUTES } from "@/shared/routes";
+import { isPublicRoute, MOVED_ROUTES, ROUTES } from "@/shared/routes";
 import { clearSession, readSession, refreshSession, writeSession } from "@/shared/session";
 import type { RefreshOutcome } from "@/types/session";
 
+const MOVED_PERMANENTLY = 308;
+
 /**
- * Runs before every page and action: assigns the request's ID, renews an expired access token,
- * and sends signed-out visitors to `/sign-in` and signed-in ones away from it.
+ * Runs before every page and action: redirects moved paths, assigns the request's ID, renews an
+ * expired access token, and sends signed-out visitors to `/sign-in` and signed-in ones away from it.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const moved = MOVED_ROUTES[request.nextUrl.pathname];
+  if (moved) {
+    const redirect = request.nextUrl.clone();
+    redirect.pathname = moved;
+    return NextResponse.redirect(redirect, MOVED_PERMANENTLY);
+  }
+
   const requestId = randomUUID();
   request.headers.set(REQUEST_ID_HEADER, requestId);
   const refresh = await refreshIfNeeded(request, requestId);
@@ -27,7 +36,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   if (signedIn && pathname === ROUTES.signIn) {
     const redirect = request.nextUrl.clone();
-    redirect.pathname = ROUTES.dashboard;
+    redirect.pathname = ROUTES.home;
     redirect.search = "";
     return respond(NextResponse.redirect(redirect), refresh);
   }

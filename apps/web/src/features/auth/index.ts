@@ -1,4 +1,4 @@
 export {
-  AccountSummary,
-  type AccountSummaryProps,
-} from "@/features/auth/components/display/account-summary";
+  AccountMenu,
+  type AccountMenuProps,
+} from "@/features/auth/components/navigation/account-menu";

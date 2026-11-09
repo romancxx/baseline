@@ -4,8 +4,8 @@ import { isPublicRoute, safeRedirectPath } from "@/shared/routes";
 describe("safeRedirectPath", () => {
   it.each([
     ["/", "/"],
-    ["/portfolio", "/portfolio"],
-    ["/portfolio?tab=positions#top", "/portfolio?tab=positions#top"],
+    ["/holdings", "/holdings"],
+    ["/holdings?tab=positions#top", "/holdings?tab=positions#top"],
   ])("keeps the same-origin path %s", (target, expected) => {
     expect(safeRedirectPath(target)).toBe(expected);
   });
@@ -17,14 +17,14 @@ describe("safeRedirectPath", () => {
     ["a newline the browser strips", "/\n/evil.com"],
     ["an absolute url", "https://evil.com"],
     ["a scheme", "javascript:alert(1)"],
-    ["a relative path", "portfolio"],
+    ["a relative path", "holdings"],
     ["an empty string", ""],
   ])("rejects %s", (_, target) => {
     expect(safeRedirectPath(target)).toBeNull();
   });
 
   it("returns the normalised path rather than the raw input", () => {
-    expect(safeRedirectPath("/a/../portfolio")).toBe("/portfolio");
+    expect(safeRedirectPath("/a/../holdings")).toBe("/holdings");
   });
 });
 

@@ -1,25 +1,29 @@
-import { Briefcase, LayoutDashboard, Settings, TextAlignStart } from "lucide-react";
-import { AccountSummary } from "@/features/auth";
-import { requireUser } from "@/features/auth/server";
+import { AccountMenu } from "@/features/auth";
+import { requireUser, signOut } from "@/features/auth/server";
+import { InstrumentSearch } from "@/features/instruments";
 import { ROUTES } from "@/shared/routes";
-import { Icon } from "@/shared/ui/display/icon";
-import { Wordmark } from "@/shared/ui/display/wordmark";
+import { PricesAsOf } from "@/shared/ui/display/prices-as-of";
 import { AppShell } from "@/shared/ui/layout/app-shell";
-import { Sidebar } from "@/shared/ui/layout/sidebar";
-import { NavItem } from "@/shared/ui/navigation/nav-item";
+import { TopBar } from "@/shared/ui/layout/top-bar";
+import { NavLink } from "@/shared/ui/navigation/nav-link";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
   return (
     <AppShell
-      sidebar={
-        <Sidebar header={<Wordmark />} footer={<AccountSummary email={user.email} />}>
-          <NavItem label="Review" icon={<Icon icon={TextAlignStart} />} href={ROUTES.dashboard} />
-          <NavItem label="Portfolio" icon={<Icon icon={Briefcase} />} href={ROUTES.portfolio} />
-          <NavItem label="Themes" icon={<Icon icon={LayoutDashboard} />} href={null} />
-          <NavItem label="Settings" icon={<Icon icon={Settings} />} href={null} />
-        </Sidebar>
+      bar={
+        <TopBar
+          navigation={
+            <>
+              <NavLink label="Home" href={ROUTES.home} />
+              <NavLink label="Holdings" href={ROUTES.holdings} />
+            </>
+          }
+          search={<InstrumentSearch />}
+          asOf={<PricesAsOf date={null} />}
+          account={<AccountMenu email={user.email} signOut={signOut} />}
+        />
       }
     >
       {children}
