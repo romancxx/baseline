@@ -6,12 +6,19 @@ Next.js App Router · TypeScript (strict) · Tailwind CSS v4 · Zod · Biome · 
 
 ## Getting started
 
+The web app's only backend is `apps/api`, so start it first.
+Follow the [API's quickstart](../api/README.md#quickstart), from the repo root, up to `just api-dev`, which serves the API on `http://localhost:8000`.
+
+Then, in a second terminal, start the web app:
+
 ```bash
+cd apps/web
 pnpm install
-just hooks-install   # from the repo root, once per clone; needs uv
-cp .env.example .env.local
+cp .env.example .env.local   # API_BASE_URL points at the API started above
 pnpm dev
 ```
+
+`just hooks-install`, from the repo root, installs the git hooks once per clone; the API's quickstart already runs it.
 
 ## Scripts
 
@@ -23,9 +30,6 @@ pnpm dev
 | `pnpm typecheck` | `next typegen` then `tsc --noEmit` |
 | `pnpm test` / `pnpm test:watch` / `pnpm test:coverage` | Vitest, unit project only |
 | `pnpm verify` | lint + typecheck + test — what CI runs |
-| `pnpm db:start` / `pnpm db:stop` / `pnpm db:reset` | Local Supabase stack (needs Docker) |
-| `pnpm db:push` / `pnpm db:types` | Apply migrations / regenerate `database.types.ts` from the local stack |
-| `pnpm test:db` | RLS and feed suites against the local stack |
 | `pnpm api:types` | Regenerate `src/shared/api/api.types.ts` from `apps/api/openapi.json` (`just api-openapi`) |
 
 ## Architecture
@@ -38,13 +42,13 @@ src/
   app/                    routes only — each page returns one feature screen
   features/
     auth/                 sign-in, session, requireUser()
-    instruments/          the instrument universe and its lookup
+    instruments/          the instrument contract and its avatar
     portfolio/            positions
     news/                 the digest feed
       screens/            one screen per route: loads data, renders components (server)
       components/         React components, in role folders (layout/, form/, list/, …)
       actions/            server actions
-      data/               database and network I/O (server-only)
+      data/               API reads (server-only)
       schemas/            Zod contracts and derived types
       fixtures/           as needed
       index.ts            public API (client-safe)
@@ -52,7 +56,6 @@ src/
   shared/
     api/                  the API client, its generated types, read and action helpers (server-only)
     config/               the typed environment contract
-    supabase/             server and admin clients; generated types
     ui/                   form and navigation primitives
     session.ts            the session cookies: read, write, refresh, clear (server-only)
   types/                  type declarations, one file per module
@@ -61,13 +64,14 @@ src/
 ```
 
 The rules that keep this shape intact — dependency rules, the client/server split, the full
-feature directory vocabulary, and checklists for adding a feature, table or env variable —
+feature directory vocabulary, and checklists for adding a feature or env variable —
 are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
 
 ## External data
 
 Zod schemas are the single source of truth for anything crossing the app's boundary.
-Types are derived with `z.infer`, never hand-written alongside a schema, and the schema validates at the edge: see `news/schemas/feed.schema.ts` and its use in `news/data/feed-queries.ts`.
+Types are derived with `z.infer`, never hand-written alongside a schema, and the schema validates at the edge: see `auth/schemas/credentials.schema.ts` and its use through `parseForm` in `auth/actions/auth-actions.ts`.
+API responses are the exception: they are typed by the generated `api.types.ts` rather than parsed.
 Test data is `.parse()`d rather than cast for the same reason: a fixture that drifts from the contract fails loudly.
 
 ## Environment
@@ -90,40 +94,6 @@ environment yet (e.g. a Docker image built before secrets are attached).
   theme). Changing a colour, type role, radius or spacing role there restyles the whole app;
   components carry no raw values.
 
-## Database
-
-Supabase Postgres. The schema lives in `supabase/migrations/` and is applied with
-`pnpm db:push`; `pnpm db:types` regenerates `src/shared/supabase/database.types.ts` from
-the linked project, so the types are never hand-written.
-
-Two clients, in `src/shared/supabase/`.
-Neither carries a user's session, since signing in moved to the API:
-
-| Client | Where | Access |
-| --- | --- | --- |
-| `createSupabaseServerClient` | RSC / route handlers / actions | publishable key, RLS applies |
-| `createSupabaseAdminClient` | background work (none today) | secret key, **bypasses RLS** |
-
-Articles and summaries are shared across all users — an article is fetched once and
-summarised once per `(model, prompt_version)`. Only positions and digests are
-per-user, and those are isolated by RLS on `auth.uid()`.
-
-RLS is on for every table, and grants are explicit: `anon` can read nothing, `authenticated`
-reads the shared tables and owns its own rows, `service_role` does the rest. A new table
-therefore needs both a policy and a grant — see `20260825120400_grants.sql` for why.
-
-Queries belong in each feature's `data/` directory, behind that feature's `server.ts`.
-
-### Seeding instruments
-
-`supabase/seed/instruments.json` is the hand-written instrument universe, and a unit test parses it against `InstrumentSeedSchema`.
-There is no seed script any more: a fresh local Supabase has no instruments, so the Portfolio picker is empty until the table is filled by hand.
-Instruments now enter through `apps/api`, which the web is moving onto.
-
-Instrument lookup lives in exactly one module, `instruments/data/instrument-directory.ts`.
-Replacing the JSON with a real directory API (EODHD, ESMA FIRDS) changes what fills the
-table, not what reads it.
-
 ## Auth
 
 Signing in, creating an account and signing out happen on one screen at `/sign-in`, and all three go through `apps/api` ([ADR 0008](docs/adr/0008-auth-through-the-api.md)).
@@ -144,59 +114,22 @@ Paths are never hand-written — `src/shared/routes.ts` is the single registry, 
 Server code that needs a user calls `requireUser()` from `@/features/auth/server`, which reads `GET /users/me` once per request.
 It is a second line of defence: `proxy.ts` decides from the cookies alone, and a route it does not match must not silently render as nobody.
 When the API refuses the access token while a page renders, the page redirects to `/session/expired`, which clears the cookies and redirects to `/sign-in`.
+Authorisation is the API's: it scopes every user-owned resource to the token's user.
 
 The API client in `src/shared/api/` is typed by `api.types.ts`, generated by `pnpm api:types` from the API's committed `openapi.json`.
 CI fails when either file drifts from the code that produces it.
 
-### Testing the policies
-
-Authorisation is enforced in the database, so the tests talk to a real one. `pnpm test:db`
-boots nothing itself — start the stack first:
-
-```bash
-pnpm db:start          # needs Docker
-pnpm test:db
-pnpm db:stop
-```
-
-The suite creates two real users, signs them both in, and drives PostgREST with their
-tokens, so grants and policies are exercised exactly as they are in production. It asserts
-that Bob cannot read, update, delete or impersonate Alice — and that a filtered read comes
-back *empty rather than failing*, which is what RLS actually does. Unit tests stay in the
-`unit` project and never touch Docker; `pnpm test` runs only those.
-
 ## Portfolio
 
-**Being rebuilt:** `/portfolio` shows only its heading until it reads positions from the API; the rest of this section describes the Supabase version its components still implement.
-
-`/portfolio` holds your positions, over the instrument universe. Reads are
-Server Components going through the user's session client, so RLS scopes them and no
-`user_id` filter is ever written by hand in application code. Mutations are server actions
-that `revalidatePath` — no client-side data fetching, no optimistic UI yet.
-
-Users pick from the seeded universe; there is no free-text instrument entry. That is
-enforced in the database, not just the picker: the insert policy on `portfolio_positions`
-requires the referenced instrument to be `active`. Foreign keys are checked without RLS, so
-the constraint had to be spelt out — see `20260909120000_active_instrument_writes.sql`, which
-also splits the blanket `for all` policy so that a position stays editable after its
-instrument is deactivated.
+**Being rebuilt:** `/portfolio` shows only its heading until it reads positions from the API.
+`PortfolioSection` stays for the rebuild: a read-only list of positions with an explicit empty state.
 
 ## Home feed
 
-**Being rebuilt:** `/` shows only its heading until it reads the feed from the API; the rest of this section describes the Supabase version its components still implement.
+**Being rebuilt:** `/` shows only its heading until it reads briefs and news from the API.
+Its components stay for the rebuild.
 
-`/` shows one card per article touching an instrument you hold, most recent first, capped at
-`FEED_LIMIT`. Reads are Server Components through the user's session client, so RLS scopes
-them; the route resolves holdings and passes the instruments into `listFeed`.
-
-The articles and their tonality were written by the web's own ingestion and summarisation pipelines, now retired: `apps/api`'s `ingest-news` and `brief` jobs replace them.
-The feed reads what those pipelines last wrote, and tonality only from the model and prompt version they used, held as constants in `news/data/feed-queries.ts`.
-
-**Every card says where each part came from.**
-The body is the outlet's own teaser, not a generated summary (ADR 5 explains why there is nothing to summarise), so the provenance line reads "Headline and teaser from {source}, published … · tonality by {model}, …", and "not yet classified" when no summary exists for the feed's model.
-A global disclaimer states that tonality is a machine reading of a headline at a point in time, not a prediction and not advice.
-
-An article matching several of your instruments appears once, listing them all.
+**Every card says where each part came from**, through its provenance line, and a global disclaimer states that tonality is a machine reading at a point in time, not a prediction and not advice.
 
 Cards are polymorphic: `FeedItemSchema` is a discriminated union on `kind` and `FeedCard`
 switches on it, so theme cards become a new union member and a renderer rather than a change
@@ -207,7 +140,7 @@ to the feed.
 Why the architecture looks the way it does — one record per phase, with the measurements that
 drove the non-obvious choices — is in [docs/adr/](docs/adr/).
 
-Known gaps and what they should become live in [docs/improvements.md](docs/improvements.md), grouped by feature: optimistic UI, the real instrument directory, feed pagination.
+Known gaps and what they should become live in [docs/improvements.md](docs/improvements.md), grouped by feature.
 
 ## Notes
 
