@@ -56,7 +56,9 @@ export function SignInForm({ next }: SignInFormProps) {
 
 /** The state of whichever action answered last. */
 function useLatest(signInState: FormState, createState: FormState): FormState {
-  const [seen, setSeen] = useState({ signInState, createState, latest: IDLE });
+  // A form posted without JavaScript renders first with its action's state already set.
+  const initial = createState.status === "idle" ? signInState : createState;
+  const [seen, setSeen] = useState({ signInState, createState, latest: initial });
   if (seen.signInState === signInState && seen.createState === createState) return seen.latest;
 
   const latest = seen.signInState === signInState ? createState : signInState;
