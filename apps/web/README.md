@@ -63,9 +63,7 @@ src/
   instrumentation.ts      validates the server env at boot
 ```
 
-The rules that keep this shape intact — dependency rules, the client/server split, the full
-feature directory vocabulary, and checklists for adding a feature or env variable —
-are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
+The rules that keep this shape intact — dependency rules, the client/server split, the full feature directory vocabulary, and checklists for adding a feature or env variable — are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
 
 ## External data
 

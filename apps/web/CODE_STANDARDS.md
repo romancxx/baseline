@@ -95,8 +95,8 @@ surviving review.
    piece up. **[lint]**
 3. **Features never import from `app`.** Routes compose features, not the reverse. **[lint]**
 4. **Cross-feature dependencies form a DAG.**
-   They point at the foundation features `auth` and `instruments`: `portfolio → instruments`, `news → instruments`.
-   One edge between two leaf features is agreed for the Review screen: `news → portfolio` (the screen reads the user's holdings).
+   Today both point at the foundation feature `instruments`: `portfolio → instruments`, `news → instruments`.
+   One edge between two leaf features is agreed for when the Review screen reads the user's holdings: `news → portfolio`.
    A new edge pointing the other way, or between two other leaf features, is a design question to raise before writing it. **[review]**
 5. **`types` sits at the bottom beside `shared`.** It may not import from `features` or `app`; it may import types from `shared` (a schema's `z.infer`, the generated API types). **[lint]**
 
@@ -174,8 +174,7 @@ Both reach `server-env`, so a client import fails loudly. **[review]**
 
 ## 3. Naming and files
 
-- **Filenames are kebab-case** (`sign-in-form.tsx`), except where Next reserves the name
-  (`page.tsx`, `layout.tsx`). **[lint]**
+- **Filenames are kebab-case** (`sign-in-form.tsx`), except where Next reserves the name (`page.tsx`, `layout.tsx`). **[lint]**
 - **Zod schema files end in `.schema.ts`**; tests sit next to their source as
   `<name>.test.ts(x)`. **[review]**
 - **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix:
@@ -256,8 +255,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   Any other failure comes back as an `ApiError`. **[review]**
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
   Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
-- Mutations `revalidatePath`; there is no client-side data fetching and no optimistic UI.
-  **[review]**
+- Mutations `revalidatePath`; there is no client-side data fetching and no optimistic UI. **[review]**
 
 ### 6.2 Reads and repositories
 
@@ -293,9 +291,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 
 ## 7. React and UI
 
-- **Server Components by default.** Add `"use client"` only to the leaf that needs state,
-  effects, `useActionState` or `useFormStatus`. A component composing client components
-  stays a Server Component (`account-summary.tsx`, around `SubmitButton`). **[review]**
+- **Server Components by default.** Add `"use client"` only to the leaf that needs state, effects, `useActionState` or `useFormStatus`.
+  A component composing client components stays a Server Component (`account-summary.tsx`, around `SubmitButton`). **[review]**
 - **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`, submitted by `SubmitButton` (which handles the pending label via `useFormStatus`).
   Hidden inputs carry ids. **[review]**
 - **A form with two outcomes gives each submit button its own action**: `formAction` on `SubmitButton`, each with its own `useActionState` (`SignInForm`). **[review]**
@@ -384,8 +381,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **Default environment is jsdom.** A test that reaches `server-env` must declare
   `// @vitest-environment node` at the top. **[test]**
 - **Test names describe behaviour, including the alternative rejected**: "renders an explicit empty state rather than a blank card". **[review]**
-- **Test data is built through the schema** (`FeedItemSchema.parse({ … })`), so test
-  fixtures cannot drift from the contract either. **[review]**
+- **Test data is built through the schema** (`FeedItemSchema.parse({ … })`), so test fixtures cannot drift from the contract either. **[review]**
 - **Replace dependencies by injection, not module mocking** — pass a stub client to the
   factory. `vi.fn()` for the stub's methods is fine. **[review]**
 - **Code that reaches the API is tested against `fakeApi`** from `@/shared/api/fake-api`, which replaces the global `fetch`, answers by method and path and records each request.

@@ -1,6 +1,6 @@
 # 3. Instruments and portfolio CRUD
 
-- **Status:** Superseded by [api 0006](../../../api/docs/adr/0006-instruments.md) and [api 0009](../../../api/docs/adr/0009-portfolios.md) (data) and [0009](0009-supabase-removed.md) (web conventions)
+- **Status:** Superseded by [api 0006](../../../api/docs/adr/0006-instruments.md) and [api 0009](../../../api/docs/adr/0009-portfolios.md) (data), and by [web 0009](0009-supabase-removed.md) (web conventions)
 - **Date:** 2026-09-10
 - **Phase:** 3 — Instruments & portfolio CRUD
 
