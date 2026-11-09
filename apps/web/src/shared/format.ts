@@ -1,12 +1,13 @@
 import type { DecimalString, SignOptions } from "@/types/format";
 
 /** Fixed, so the server and the browser render the same string. */
-const LOCALE = "en-GB";
+export const LOCALE = "en-GB";
 
 /** Shown in place of a value the app does not have. */
-export const MISSING = "—";
+const MISSING = "—";
 
-const MINUS = "−";
+/** U+2212, written for every negative figure in place of a hyphen */
+export const MINUS = "−";
 
 /** Most decimals `Intl.NumberFormat` accepts; enough to show any recorded quantity unrounded. */
 const MAX_FRACTION_DIGITS = 100;

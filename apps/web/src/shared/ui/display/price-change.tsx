@@ -1,4 +1,4 @@
-import { formatMoney, formatPercent } from "@/shared/format";
+import { formatMoney, formatPercent, MINUS } from "@/shared/format";
 import { cn } from "@/shared/ui/cn";
 import type { DecimalString } from "@/types/format";
 
@@ -16,7 +16,7 @@ const DIRECTIONS = {
 /** The direction the shown text says, so the colour never disagrees with the sign. */
 function direction(text: string): keyof typeof DIRECTIONS {
   if (text.startsWith("+")) return "up";
-  if (text.startsWith("−")) return "down";
+  if (text.startsWith(MINUS)) return "down";
   return "flat";
 }
 

@@ -2,7 +2,7 @@ import { cn } from "@/shared/ui/cn";
 import type { ButtonStyle } from "@/types/ui";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-control border font-semibold transition disabled:opacity-disabled";
+  "inline-flex items-center justify-center gap-2 rounded-control border font-semibold motion-safe:transition disabled:opacity-disabled";
 
 export const BUTTON_VARIANTS = {
   /** White: the one main action on a screen */

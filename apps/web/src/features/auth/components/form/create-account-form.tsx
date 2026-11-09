@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createAccount } from "@/features/auth/actions/auth-actions";
 import { PasswordField } from "@/features/auth/components/input/password-field";
+import { PASSWORD_LENGTH } from "@/features/auth/schemas/credentials.schema";
 import { IDLE } from "@/shared/form-state";
 import { FormError } from "@/shared/ui/display/form-error";
 import { SubmitButton } from "@/shared/ui/form/submit-button";
@@ -30,11 +31,11 @@ export function CreateAccountForm({ next }: CreateAccountFormProps) {
         label="Password"
         name="password"
         required
-        minLength={12}
-        maxLength={128}
+        minLength={PASSWORD_LENGTH.min}
+        maxLength={PASSWORD_LENGTH.max}
         autoComplete="new-password"
-        placeholder="At least 12 characters"
-        hint="12 to 128 characters. Nothing else required."
+        placeholder={`At least ${PASSWORD_LENGTH.min} characters`}
+        hint={`${PASSWORD_LENGTH.min} to ${PASSWORD_LENGTH.max} characters. Nothing else required.`}
       />
       {state.status === "error" ? <FormError message={state.message} /> : null}
       <SubmitButton label="Create account" pendingLabel="Creating your account…" />

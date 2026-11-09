@@ -9,7 +9,6 @@ const SIZES = {
   lg: { mark: "size-7.5 rounded-avatar text-body", name: "text-title" },
 } as const;
 
-/** The white "S" mark beside the product name. */
 export function Wordmark({ size = "md" }: WordmarkProps) {
   const { mark, name } = SIZES[size];
 

@@ -24,7 +24,6 @@ function initials(email: string): string {
   return letters.toUpperCase();
 }
 
-/** The user's initials, opening their email, the CSV import and signing out. */
 export function AccountMenu({ email, signOut }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);

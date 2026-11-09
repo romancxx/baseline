@@ -1,10 +1,12 @@
+import { LOCALE } from "@/shared/format";
+
 export type PricesAsOfProps = {
   /** The close the prices on screen come from; `null` renders nothing. */
   readonly date: Date | null;
 };
 
-/** Fixed locale and time zone: server and client must render the same string. */
-const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+/** Fixed time zone: server and client must render the same string. */
+const DAY = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", timeZone: "UTC" });
 
 /** The stamp qualifying every price on screen: "Prices · close of 5 Nov". */
 export function PricesAsOf({ date }: PricesAsOfProps) {

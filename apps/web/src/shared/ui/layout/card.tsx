@@ -12,7 +12,7 @@ export function Card({ title, children }: CardProps) {
   if (title === undefined) return <div className={SURFACE}>{children}</div>;
 
   return (
-    <section className={SURFACE}>
+    <section aria-label={title} className={SURFACE}>
       <h2 className="mb-3 flex items-center gap-2 text-overline text-tertiary uppercase">
         {title}
         <span aria-hidden="true" className="flex-1 border-hairline border-t" />

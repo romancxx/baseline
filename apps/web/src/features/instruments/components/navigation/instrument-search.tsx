@@ -26,7 +26,6 @@ export function InstrumentSearch() {
     return () => document.removeEventListener("keydown", toggleOnShortcut);
   }, []);
 
-  // After the dialog unmounts, so the button is no longer inert.
   useEffect(() => {
     if (wasOpen.current && !open) button.current?.focus();
     wasOpen.current = open;

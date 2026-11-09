@@ -294,14 +294,13 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 ## 7. React and UI
 
 - **Server Components by default.** Add `"use client"` only to the leaf that needs state, effects, `useActionState` or `useFormStatus`.
-  A component composing client components stays a Server Component (`account-summary.tsx`, around `SubmitButton`). **[review]**
+  A component composing client components stays a Server Component (`sign-in-screen.tsx`, around `SignInForm`). **[review]**
 - **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`, submitted by `SubmitButton` (which handles the pending label via `useFormStatus`).
   Hidden inputs carry ids. **[review]**
 - **One form, one action.** A screen offering two submissions renders two forms, each with its own `useActionState` (`SignInForm` and `CreateAccountForm`), so a form posted without JavaScript posts one action. **[review]**
 - **A form's error renders through `FormError`** under its fields; a message about the screen, such as a failed load or partial data, is a `Notice`. **[review]**
-- **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `Button`, `ButtonLink`, `SubmitButton`) rather than
-  styling raw inputs. They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a
-  new primitive must do the same. **[review]**
+- **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `Button`, `ButtonLink`, `SubmitButton`) rather than styling raw inputs.
+  They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a new primitive must do the same. **[review]**
 - **A page only returns its screen.** `src/app/**/page.tsx` imports one `*Screen` from a
   feature's `server.ts` and returns it, passing `searchParams` through when the route has
   them (typed with Next's generated `PageProps<"/route">`). Data loading and markup live in
@@ -408,11 +407,10 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   the code. **[review]**
 - **Keep them short — but not absent.** One line is the norm. Write one wherever a reader
   would otherwise have to stop and work something out. **[review]**
-- **Only comment what the code cannot say itself.** The meaning of a `null`, a contract a
-  caller must know ("renders its own `<li>`"), a unit. Never restate a name, a prop, a slot or
-  the JSX structure — `/** The bar: logo and links on the left, account on the right */` above
-  `TopBar({ navigation, search, asOf, account })` adds nothing. If deleting the comment loses no
-  information, delete it. **[review]**
+- **Only comment what the code cannot say itself.**
+  The meaning of a `null`, a contract a caller must know ("renders its own `<li>`"), a unit.
+  Never restate a name, a prop, a slot or the JSX structure — `/** The bar: logo and links on the left, account on the right */` above `TopBar({ navigation, search, asOf, account })` adds nothing.
+  If deleting the comment loses no information, delete it. **[review]**
 - **Short JSDoc on public functions whose behaviour is not obvious from the signature** — one sentence saying what it does (`requireUser`, `refreshSession`). **[review]**
 - **Record numbers in the ADR when a decision came from measurement** (the 0.08 dedup
   threshold, the 260-character body average). **[review]**
