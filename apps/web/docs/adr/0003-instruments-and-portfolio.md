@@ -22,8 +22,7 @@ directory API rather than a hand-written file.
   `for all` policy so INSERT can require `active` while UPDATE cannot — a position stays
   editable after its instrument is deactivated.
 - **Reads are RSC, mutations are server actions** with `revalidatePath`. No client fetching.
-- **One page** (`/portfolio`), inside an `(app)` route group whose layout carries
-  the nav, so `/login` stays chrome-free.
+- **One page** (`/portfolio`), inside an `(app)` route group whose layout carries the nav, so `/sign-in` stays chrome-free.
 - **Routes are centralised** in `src/shared/routes.ts`; no hand-written path strings.
 - **Form numbers are coerced by Zod at the action boundary**, empty cost basis becomes null.
 

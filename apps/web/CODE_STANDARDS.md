@@ -26,7 +26,8 @@ src/
   app/                  routes only — each page returns one feature screen
   features/<name>/      one vertical slice per feature
   shared/               the bottom of the stack: config, clients, UI primitives, utilities
-  middleware.ts         session refresh + auth redirect
+  types/                type declarations, at the bottom of the stack beside shared/
+  proxy.ts              request ID, session refresh, auth redirect
   instrumentation.ts    validates the server env at boot
 supabase/migrations/    the schema; the only place it is defined
 tests/db/               integration suite against a real local Supabase stack
@@ -101,6 +102,7 @@ surviving review.
    One edge joins two leaf features, agreed for the Review screen: `news → portfolio` (the screen reads the user's holdings).
    A new edge pointing the other way, or between two leaf features, is a design question to raise before writing it. **[review]**
 5. **`tests/db/` reaches features only through `server.ts` or `index.ts`**, like any other consumer. **[lint]**
+6. **`types` sits at the bottom beside `shared`.** It may not import from `features` or `app`; it may import types from `shared` (a schema's `z.infer`, the generated API types). **[lint]**
 
 Because a feature's own files also import absolutely, each feature has an override in
 `biome.jsonc` re-allowing its own internals. A new feature without one fails rule 1 on its
@@ -124,7 +126,7 @@ Each feature has two entry points:
 
 - **`index.ts` is client-safe.**
   It exports components, schemas and types.
-  It must never transitively import `server-env`, `@/shared/supabase/server`, `@/shared/supabase/admin`, or anything under `data/`.
+  It must never transitively import `server-env`, `@/shared/api/*`, `@/shared/session`, `@/shared/supabase/server`, `@/shared/supabase/admin`, or anything under `data/`.
 - **`server.ts` is server-only.**
   It exports `data/` functions and the server actions that routes call directly (e.g. `signOut`).
 
@@ -148,13 +150,16 @@ loud crash instead of a leaked secret. Do not remove it, and do not add a server
 that bypasses it: every `data/` module reaches either `server-env` or `next/headers`, which is
 what makes an accidental client import fail.
 
-And in Supabase clients — pick by *who the request is for*, not by convenience:
+The API is reached only from the server, through `@/shared/api` (`readApi`, `writeApi`, `createApiClient`), and the session only through `@/shared/session`.
+Both reach `server-env`, so a client import fails loudly. **[review]**
 
-| Client | Use from | Auth | RLS |
-| --- | --- | --- | --- |
-| `createSupabaseBrowserClient` | client components | user session | applies |
-| `createSupabaseServerClient` | RSC, route handlers, server actions | session from cookies | applies |
-| `createSupabaseAdminClient` | background work (none today) | secret key | **bypassed** |
+And in Supabase clients — pick by *who the request is for*, not by convenience.
+Neither carries a user's session: signing in moved to the API (ADR 0008).
+
+| Client | Use from | RLS |
+| --- | --- | --- |
+| `createSupabaseServerClient` | RSC, route handlers, server actions | applies |
+| `createSupabaseAdminClient` | background work (none today) | **bypassed** |
 
 **The admin client is never reachable from a request made on a user's behalf.** Not from a
 page, not from an action, not "just to read a shared table". If user-facing code needs data
@@ -173,6 +178,10 @@ RLS hides, the policy is wrong — change the policy. **[review]**
 - **`node:` protocol** for Node built-ins (`node:crypto`, `node:fs/promises`). **[lint]**
 - **`exactOptionalPropertyTypes`** means an optional prop that may receive `undefined` is
   written `next?: string | undefined` (see `SignInFormProps`). **[tsc]**
+- **Types live in `src/types/`, one file per module, named after it**: `@/types/api` for the API client, `@/types/session`, `@/types/auth`.
+  An implementation file declares no `type` or `interface`, exported or not, and no inline object type in a signature; it imports them.
+  Two exceptions stay where they are: a component's `<Component>Props`, beside its component, and a type inferred from a schema (`z.infer`), in its `.schema.ts`.
+  Files written before this rule move their types when they are next touched. **[review]**
 - **Props and parameter objects are `readonly`**; read models are returned as
   `readonly T[]`. **[review]**
 - **Lookup tables are `as const` objects**, not TypeScript `enum`s (`VARIANTS`, `APPEARANCE`, `ROUTES`). **[review]**
@@ -205,6 +214,11 @@ RLS hides, the policy is wrong — change the policy. **[review]**
 ## 4. Data at the boundary
 
 - **Zod schemas are the single source of truth** for anything crossing the app's boundary: HTTP responses, form data, seed files, database rows on their way into the domain. **[review]**
+  The API is the exception, below.
+- **API responses are typed, not parsed.**
+  Paths, parameters, bodies and responses come from `src/shared/api/api.types.ts`, generated by `pnpm api:types` from `apps/api/openapi.json` and never hand-edited, so a call the API does not accept fails `tsc` **[tsc]**.
+  `data/` maps a response to a camelCase domain object; decimal strings stay strings. **[review]**
+  The API's error body is the one thing parsed, by `ApiErrorBodySchema`, because the OpenAPI schema does not describe it. **[test]**
 - **Types are derived with `z.infer`, never hand-written alongside a schema.** **[review]**
 - **Validate at the edge, then trust.**
   `data/` parses; everything downstream receives domain objects and never re-validates (see `news/data/feed-queries.ts`). **[review]**
@@ -249,13 +263,15 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   const parsed = parseForm(ThingInputSchema, formData);   // 1. validate first
   if (!parsed.ok) return parsed.state;
 
-  const user = await requireUser();                       // 2. only if you need user.id
-  const supabase = await createSupabaseServerClient();    // 3. session client, RLS applies
+  const result = await writeApi((api) =>                  // 2. the session's token; a 401 signs out
+    api.POST("/api/v1/things", { body: parsed.value }),
+  );
+  if (!result.ok) {                                       // 3. expected failures are values
+    if (result.error.code === THING_TAKEN) return formError("This thing already exists");
+    return formError("Could not add the thing. Try again.");
+  }
 
-  const { error } = await supabase.from("things").insert({ … });
-  if (error) return formError(friendlyMessage(error));    // 4. expected failures are values
-
-  revalidatePath(ROUTES.things);                          // 5. path from the registry
+  revalidatePath(ROUTES.things);                          // 4. path from the registry
   return { status: "success" };
 }
 ```
@@ -263,6 +279,10 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - Signature is `(previous: FormState, formData: FormData) => Promise<FormState>` so it plugs
   into `useActionState`. Use `FormState`, `IDLE`, `formError` and `parseForm` from
   `@/shared/form-state` — do not define a per-feature state type. **[review]**
+- **Call the API through `writeApi`** from `@/shared/api/request`: it sends the session's access token and the request's ID, and on a 401 clears the session and redirects to `/sign-in`.
+  Any other failure comes back as an `ApiError`. **[review]**
+- **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
+  Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
 - **Never trust the client for ownership.** Do not filter by `user_id` in application code;
   RLS does it. Set `user_id` on insert from `requireUser()`, never from the form, and let the
   policy's `with check` verify it. **[review]** **[db]**
@@ -274,6 +294,12 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   (see `docs/improvements.md`). **[review]**
 
 ### 6.2 Reads and repositories
+
+- **A read from the API goes through `readApi("<verb> <thing>", (api) => api.GET(…))`** from `@/shared/api/request`.
+  It throws `Could not <verb> <thing>: …` for the route's error boundary, and redirects a 401 to `/session/expired`, which clears the cookies a Server Component cannot.
+  Wrap a read several components need in React `cache()`, so one request makes one call (`getCurrentUser`). **[review]**
+
+The rules below are for the Supabase reads that remain until the next phase moves them onto the API.
 
 - **Request-scoped reads** (`data/` behind `server.ts`) create their own
   `createSupabaseServerClient()` per call, select an explicit column list (never `*`), map
@@ -293,10 +319,12 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 
 ### 6.3 Auth
 
-- **Server code that needs a user calls `requireUser()`** from `@/features/auth/server`. It
-  is the second line of defence behind `middleware.ts`, not a replacement for it. **[review]**
-- **Revalidate the token with `getUser()`; never trust `getSession()`** server-side.
-  **[review]**
+- **Server code that needs a user calls `requireUser()`** from `@/features/auth/server`, which reads `GET /users/me` once per request.
+  It is the second line of defence behind `proxy.ts`, not a replacement for it. **[review]**
+- **Only `proxy.ts` refreshes the session**, before rendering; nothing else calls `refreshSession`.
+  Session cookies are read, written and cleared only through `@/shared/session`, never by name. **[review]**
+- **`proxy.ts` decides "signed in" from the cookies alone**, after refreshing if needed; it never calls the API to check.
+  The first API call of the page is the authoritative check. **[test]**
 - **Paths are never hand-written.** Add them to `ROUTES` in `@/shared/routes`; mark them in
   `PUBLIC_ROUTES` only if they must work signed out. `typedRoutes` catches typos in `href`s.
   **[tsc]**
@@ -312,6 +340,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **Event names are dotted and stable**: `<feature>.<stage>[.<detail>]` in `snake_case`.
   Put variable data in fields, never in the event name. **[review]**
 - **Never log a secret, a token or a full request URL that carries one.** **[review]**
+- **A line about an API call carries the request's ID as `requestId`**, with the status and the API's code: `currentRequestId()` from `@/shared/api/request`. **[review]**
 
 ## 7. React and UI
 
@@ -320,7 +349,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   stays a Server Component (`portfolio-section.tsx`). **[review]**
 - **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`,
   submitted by `SubmitButton` (which handles the pending label via `useFormStatus`). Hidden
-  inputs carry ids; `name="intent"` on the button carries the variant. **[review]**
+  inputs carry ids. **[review]**
+- **A form with two outcomes gives each submit button its own action**: `formAction` on `SubmitButton`, each with its own `useActionState` (`SignInForm`). **[review]**
 - **Errors render as `<p role="alert" className="text-danger text-detail">`**. **[review]**
 - **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `SubmitButton`) rather than
   styling raw inputs. They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a
@@ -449,6 +479,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   fixtures cannot drift from the contract either. **[review]**
 - **Replace dependencies by injection, not module mocking** — pass a stub client to the
   factory. `vi.fn()` for the stub's methods is fine. **[review]**
+- **Code that reaches the API is tested against `fakeApi`** from `@/shared/api/fake-api`, which replaces the global `fetch`, answers by method and path and records each request.
+  Next's request-scoped modules (`next/headers`, `next/navigation`), which take no injection, are mocked with `vi.mock`; so is the API client in the auth action tests. **[review]**
 - **Query by role and accessible name** in component tests (`getByRole("link", { name })`).
   **[review]**
 - Colocated tests may import their own feature's internals; non-null assertions and
@@ -470,7 +502,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   `Sidebar({ header, footer, children })` adds nothing. If deleting the comment loses no
   information, delete it. **[review]**
 - **Short JSDoc on public functions whose behaviour is not obvious from the signature** —
-  one sentence saying what it does (`requireUser`, `updateSession`). **[review]**
+  one sentence saying what it does (`requireUser`, `refreshSession`). **[review]**
 - **Record numbers in the ADR when a decision came from measurement** (the 0.08 dedup
   threshold, the 260-character body average). **[review]**
 - Existing comments that predate this rule are rewritten when their code is touched, not in
