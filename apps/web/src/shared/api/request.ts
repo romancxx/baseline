@@ -3,15 +3,20 @@ import { redirect } from "next/navigation";
 import { createApiClient, REQUEST_ID_HEADER, send } from "@/shared/api/client";
 import { logger } from "@/shared/logger";
 import { ROUTES } from "@/shared/routes";
-import { readSession } from "@/shared/session";
-import type { ApiClient, ClientOutcome } from "@/types/api";
+import { clearSession, readSession } from "@/shared/session";
+import type { ApiClient, ApiResult, ClientOutcome } from "@/types/api";
 
 const UNAUTHORIZED = 401;
+
+/** The ID `proxy.ts` gave this request. */
+export async function currentRequestId(): Promise<string | null> {
+  return (await headers()).get(REQUEST_ID_HEADER);
+}
 
 /** A client for this request: the session's access token and the request's ID. */
 async function requestApiClient(): Promise<{ api: ApiClient; requestId: string | null }> {
   const session = readSession(await cookies());
-  const requestId = (await headers()).get(REQUEST_ID_HEADER);
+  const requestId = await currentRequestId();
   const accessToken = session.status === "signed-in" ? session.accessToken : null;
   return { api: createApiClient({ accessToken, requestId }), requestId };
 }
@@ -33,4 +38,20 @@ export async function readApi<T>(
 
   logger.error("api.read_failed", { action, status, code, requestId });
   throw new Error(`Could not ${action}: ${message}`);
+}
+
+/**
+ * Calls the API from a server action. A 401 clears the session and redirects to `/sign-in`;
+ * any other failure is returned, for the action to turn into a `FormState`.
+ */
+export async function writeApi<T>(
+  call: (api: ApiClient) => Promise<ClientOutcome<T>>,
+): Promise<ApiResult<T>> {
+  const { api } = await requestApiClient();
+  const result = await send(call(api));
+  if (!result.ok && result.error.status === UNAUTHORIZED) {
+    clearSession(await cookies());
+    redirect(ROUTES.signIn);
+  }
+  return result;
 }

@@ -8,13 +8,13 @@ export async function middleware(request: NextRequest) {
 
   if (!user && !isPublicRoute(pathname)) {
     const redirect = request.nextUrl.clone();
-    redirect.pathname = ROUTES.login;
+    redirect.pathname = ROUTES.signIn;
     // Preserve where they were headed, so the callback can send them back there.
     redirect.searchParams.set("next", pathname);
     return NextResponse.redirect(redirect);
   }
 
-  if (user && pathname === ROUTES.login) {
+  if (user && pathname === ROUTES.signIn) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = ROUTES.dashboard;
     redirect.search = "";

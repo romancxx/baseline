@@ -29,12 +29,12 @@ describe("safeRedirectPath", () => {
 });
 
 describe("isPublicRoute", () => {
-  it("lets the login page and its children through", () => {
-    expect(isPublicRoute("/login")).toBe(true);
-    expect(isPublicRoute("/login/anything")).toBe(true);
+  it("lets the sign-in page and its children through", () => {
+    expect(isPublicRoute("/sign-in")).toBe(true);
+    expect(isPublicRoute("/sign-in/anything")).toBe(true);
   });
 
   it("does not match a path that merely shares the prefix", () => {
-    expect(isPublicRoute("/loginx")).toBe(false);
+    expect(isPublicRoute("/sign-inx")).toBe(false);
   });
 });

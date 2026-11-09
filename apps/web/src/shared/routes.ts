@@ -1,14 +1,14 @@
 export const ROUTES = {
   dashboard: "/",
-  login: "/login",
   portfolio: "/portfolio",
   sessionExpired: "/session/expired",
+  signIn: "/sign-in",
 } as const;
 
 export type Route = (typeof ROUTES)[keyof typeof ROUTES];
 
 /** Reachable without a session */
-export const PUBLIC_ROUTES: readonly Route[] = [ROUTES.login];
+export const PUBLIC_ROUTES: readonly Route[] = [ROUTES.signIn, ROUTES.sessionExpired];
 
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));

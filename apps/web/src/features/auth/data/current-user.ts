@@ -18,7 +18,7 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();
   if (!user) {
-    redirect(ROUTES.login);
+    redirect(ROUTES.signIn);
   }
   return user;
 }

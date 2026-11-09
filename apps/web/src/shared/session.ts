@@ -70,6 +70,24 @@ export async function createSession(
   return toTokens(result.data, result.response);
 }
 
+/** Revokes the refresh token at the API, then clears the cookies whatever the API answered. */
+export async function endSession(cookies: SessionCookies, requestId: string | null): Promise<void> {
+  const session = readSession(cookies);
+  if (session.status !== "signed-out") {
+    const api = createApiClient({ requestId });
+    const result = await send(
+      api.POST("/api/v1/auth/logout", {
+        headers: { Cookie: `${API_REFRESH_COOKIE}=${session.refreshToken}` },
+      }),
+    );
+    if (!result.ok) {
+      const { status, code } = result.error;
+      logger.warn("auth.sign_out_failed", { status, code, requestId });
+    }
+  }
+  clearSession(cookies);
+}
+
 /** Refreshes in flight, then renewed for `RENEWAL_REUSE_MS`, by their refresh token's SHA-256. */
 const refreshes = new Map<string, RefreshEntry>();
 

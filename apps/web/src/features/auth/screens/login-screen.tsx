@@ -1,7 +1,7 @@
 import { SignInForm } from "@/features/auth/components/form/sign-in-form";
 
 export type LoginScreenProps = {
-  readonly searchParams: PageProps<"/login">["searchParams"];
+  readonly searchParams: PageProps<"/sign-in">["searchParams"];
 };
 
 export async function LoginScreen({ searchParams }: LoginScreenProps) {
