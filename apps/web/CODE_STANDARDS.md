@@ -8,7 +8,6 @@ Each rule is tagged with what holds it in place:
 
 - **[lint]** Biome (`biome.jsonc`) — fails `pnpm lint` and CI.
 - **[tsc]** TypeScript (`tsconfig.json`) — fails `pnpm typecheck` and CI.
-- **[db]** Postgres itself — a constraint, policy or grant.
 - **[test]** A test fails if the rule is broken.
 - **[commit]** The root `commit-msg` hook (`lefthook.yml`).
 - **[review]** Convention only. Nothing catches it but a reader, so read for it.
@@ -29,8 +28,6 @@ src/
   types/                type declarations, at the bottom of the stack beside shared/
   proxy.ts              request ID, session refresh, auth redirect
   instrumentation.ts    validates the server env at boot
-supabase/migrations/    the schema; the only place it is defined
-tests/db/               integration suite against a real local Supabase stack
 ```
 
 Folders follow **features**, not file types. Adding a feature means adding a directory, not
@@ -45,8 +42,8 @@ thing. Do not invent a new name for something one of these already covers.
 | --- | --- | --- | --- |
 | `screens/` | One async Server Component per route: loads its data, renders the feature's components | server | `news/screens/review-screen.tsx` |
 | `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `portfolio/components/section/portfolio-section.tsx` |
-| `actions/` | Server actions (`"use server"`) | server | `portfolio/actions/position-actions.ts` |
-| `data/` | All database / network I/O for the feature | server only | `instruments/data/instrument-directory.ts` |
+| `actions/` | Server actions (`"use server"`) | server | `auth/actions/auth-actions.ts` |
+| `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
 | `schemas/` | Zod contracts and the types derived from them | anywhere | `portfolio/schemas/portfolio.schema.ts` |
 | `fixtures/` | Scaffolding data — delete when real data lands | anywhere | none at present |
 | `index.ts` | Public API, **client-safe** | anywhere | |
@@ -67,9 +64,9 @@ means the same thing everywhere; do not invent a new one for something these cov
 | `section/` | A titled region of a screen composing other roles | `portfolio/components/section/portfolio-section.tsx` |
 | `card/` | A self-contained panel presenting one item | `news/components/card/article-feed-card.tsx` |
 | `list/` | A collection and its empty state | `news/components/list/coverage-list.tsx` |
-| `row/` | One entry of a list | `portfolio/components/row/position-row.tsx` |
+| `row/` | One entry of a list | `news/components/row/coverage-row.tsx` |
 | `form/` | A `<form>`, and controls bound to its submission | `shared/ui/form/submit-button.tsx` |
-| `input/` | One labelled form control | `instruments/components/input/instrument-picker.tsx` |
+| `input/` | One labelled form control | `shared/ui/input/text-field.tsx` |
 | `display/` | Read-only atoms: icon, avatar, badge, chip, a line of text | `news/components/display/tonality-badge.tsx` |
 
 A component's test sits next to it in the same role folder.
@@ -98,24 +95,18 @@ surviving review.
    piece up. **[lint]**
 3. **Features never import from `app`.** Routes compose features, not the reverse. **[lint]**
 4. **Cross-feature dependencies form a DAG.**
-   Most point at the foundation features `auth` and `instruments`: `portfolio → {auth, instruments}`, `news → instruments`.
-   One edge joins two leaf features, agreed for the Review screen: `news → portfolio` (the screen reads the user's holdings).
-   A new edge pointing the other way, or between two leaf features, is a design question to raise before writing it. **[review]**
-5. **`tests/db/` reaches features only through `server.ts` or `index.ts`**, like any other consumer. **[lint]**
-6. **`types` sits at the bottom beside `shared`.** It may not import from `features` or `app`; it may import types from `shared` (a schema's `z.infer`, the generated API types). **[lint]**
+   Today both point at the foundation feature `instruments`: `portfolio → instruments`, `news → instruments`.
+   One edge between two leaf features is agreed for when the Review screen reads the user's holdings: `news → portfolio`.
+   A new edge pointing the other way, or between two other leaf features, is a design question to raise before writing it. **[review]**
+5. **`types` sits at the bottom beside `shared`.** It may not import from `features` or `app`; it may import types from `shared` (a schema's `z.infer`, the generated API types). **[lint]**
 
 Because a feature's own files also import absolutely, each feature has an override in
 `biome.jsonc` re-allowing its own internals. A new feature without one fails rule 1 on its
 first internal import — deliberately, so the override is not forgotten.
 
-**Relative imports.** There are exactly two places they are allowed:
-
-- `src/shared/config/server-env.ts` reaches `./env` and `../logger` relatively, because
-  `next.config.ts` loads it to validate the environment at build time and Next's config loader
-  cannot resolve `@/` from a nested module. Anything `server-env.ts` imports must therefore
-  also avoid `@/` — keep that module's import graph tiny.
-- `tests/db/` imports its own helpers (`./helpers/seed`), which live outside `src/` and so
-  have no alias.
+**Relative imports** are allowed in one place only.
+`src/shared/config/server-env.ts` reaches `./env` and `../logger` relatively, because `next.config.ts` loads it to validate the environment at build time and Next's config loader cannot resolve `@/` from a nested module.
+Anything `server-env.ts` imports must therefore also avoid `@/`, so keep that module's import graph tiny.
 
 Everywhere else, a relative import is a mistake. **[review]** CSS is not covered by the
 alias: `globals.css` imports `../shared/ui/theme.css` relatively.
@@ -126,7 +117,7 @@ Each feature has two entry points:
 
 - **`index.ts` is client-safe.**
   It exports components, schemas and types.
-  It must never transitively import `server-env`, `@/shared/api/*`, `@/shared/session`, `@/shared/supabase/server`, `@/shared/supabase/admin`, or anything under `data/`.
+  It must never transitively import `server-env`, `@/shared/api/*`, `@/shared/session`, or anything under `data/`.
 - **`server.ts` is server-only.**
   It exports `data/` functions and the server actions that routes call directly (e.g. `signOut`).
 
@@ -152,18 +143,6 @@ what makes an accidental client import fail.
 
 The API is reached only from the server, through `@/shared/api` (`readApi`, `writeApi`, `createApiClient`), and the session only through `@/shared/session`.
 Both reach `server-env`, so a client import fails loudly. **[review]**
-
-And in Supabase clients — pick by *who the request is for*, not by convenience.
-Neither carries a user's session: signing in moved to the API (ADR 0008).
-
-| Client | Use from | RLS |
-| --- | --- | --- |
-| `createSupabaseServerClient` | RSC, route handlers, server actions | applies |
-| `createSupabaseAdminClient` | background work (none today) | **bypassed** |
-
-**The admin client is never reachable from a request made on a user's behalf.** Not from a
-page, not from an action, not "just to read a shared table". If user-facing code needs data
-RLS hides, the policy is wrong — change the policy. **[review]**
 
 ---
 
@@ -195,25 +174,23 @@ RLS hides, the policy is wrong — change the policy. **[review]**
 
 ## 3. Naming and files
 
-- **Filenames are kebab-case** (`add-position-form.tsx`), except where Next reserves the name
-  (`page.tsx`, `layout.tsx`). **[lint]**
+- **Filenames are kebab-case** (`sign-in-form.tsx`), except where Next reserves the name (`page.tsx`, `layout.tsx`). **[lint]**
 - **Zod schema files end in `.schema.ts`**; tests sit next to their source as
   `<name>.test.ts(x)`. **[review]**
 - **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix:
   `PositionSchema` / `type Position = z.infer<typeof PositionSchema>`. **[review]**
 - **Components are PascalCase and export a `<Component>Props` type.** **[review]**
-- **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not obvious: `LOOKUP_CHUNK`, `FEED_LIMIT`.
+- **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not obvious: `LOW_CONFIDENCE`, `RENEWAL_REUSE_MS`.
   No magic numbers inline. **[review]**
 - **Data functions start with a verb that says what they cost**: `list*` / `get*` / `search*` for request-scoped reads, `fetch*` for external HTTP. **[review]**
-- **Database columns are `snake_case`; domain objects are `camelCase`.**
-  The conversion happens once, in `data/`.
-  One deliberate exception keeps `snake_case`: seed schemas, which mirror table columns. **[review]**
+- **API fields are `snake_case`; domain objects are `camelCase`.**
+  The conversion happens once, in `data/`. **[review]**
 - **Spelling.** Code identifiers use US spelling (`color`, `normalize`), matching the libraries.
   Prose, comments and docs use British spelling (`summarisation`, `colour`). **[review]**
 
 ## 4. Data at the boundary
 
-- **Zod schemas are the single source of truth** for anything crossing the app's boundary: HTTP responses, form data, seed files, database rows on their way into the domain. **[review]**
+- **Zod schemas are the single source of truth** for anything crossing the app's boundary: HTTP responses and form data. **[review]**
   The API is the exception, below.
 - **API responses are typed, not parsed.**
   Paths, parameters, bodies and responses come from `src/shared/api/api.types.ts`, generated by `pnpm api:types` from `apps/api/openapi.json` and never hand-edited, so a call the API does not accept fails `tsc` **[tsc]**.
@@ -221,7 +198,7 @@ RLS hides, the policy is wrong — change the policy. **[review]**
   The API's error body is the one thing parsed, by `ApiErrorBodySchema`, because the OpenAPI schema does not describe it. **[test]**
 - **Types are derived with `z.infer`, never hand-written alongside a schema.** **[review]**
 - **Validate at the edge, then trust.**
-  `data/` parses; everything downstream receives domain objects and never re-validates (see `news/data/feed-queries.ts`). **[review]**
+  Actions parse their form data with `parseForm`, `data/` maps API responses; everything downstream receives domain objects and never re-validates. **[review]**
 - **Coerce once, at the schema.** Form fields arrive as strings; the schema turns them into
   numbers, `null`s and trimmed strings (`QuantitySchema`, `CostBasisSchema`). Dates become
   `Date` objects in the schema so nothing re-parses them. **[review]**
@@ -229,11 +206,6 @@ RLS hides, the policy is wrong — change the policy. **[review]**
   written as instructions to the user. **[review]**
 - **Fixtures and test data are `.parse()`d, never cast**, so data that drifts from the
   contract fails loudly. **[review]**
-- **Database row types come from `database.types.ts`** (`Pick<Database["public"]["Tables"]…>`),
-  which is regenerated, never hand-edited. **[review]**
-- **Never interpolate user input into a PostgREST filter string** (`.or("…")`, `.filter()`).
-  Use the typed builders (`.eq`, `.ilike`, `.in`), which encode values, or a helper from
-  `@/shared/supabase/postgrest` (`ilikeAny`) that quotes and escapes them. **[review]**
 
 ## 5. Environment
 
@@ -254,7 +226,7 @@ RLS hides, the policy is wrong — change the policy. **[review]**
 
 ### 6.1 Server actions
 
-Follow `portfolio/actions/position-actions.ts`:
+Follow `auth/actions/auth-actions.ts`:
 
 ```ts
 "use server";
@@ -283,39 +255,14 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   Any other failure comes back as an `ApiError`. **[review]**
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
   Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
-- **Never trust the client for ownership.** Do not filter by `user_id` in application code;
-  RLS does it. Set `user_id` on insert from `requireUser()`, never from the form, and let the
-  policy's `with check` verify it. **[review]** **[db]**
-- **An update or delete that RLS hides matches zero rows; it does not error.** When the
-  difference matters, `.select("id")` and check the length (`updatePosition`). **[review]**
-- **Map known Postgres error codes to human messages** with a named constant
-  (`DUPLICATE_KEY = "23505"`). Fall back to `error.message`. **[review]**
-- Mutations `revalidatePath`; there is no client-side data fetching and no optimistic UI yet
-  (see `docs/improvements.md`). **[review]**
+- Mutations `revalidatePath`; there is no client-side data fetching and no optimistic UI. **[review]**
 
 ### 6.2 Reads and repositories
 
 - **A read from the API goes through `readApi("<verb> <thing>", (api) => api.GET(…))`** from `@/shared/api/request`.
   It throws `Could not <verb> <thing>: …` for the route's error boundary, and redirects a 401 to `/session/expired`, which clears the cookies a Server Component cannot.
   Wrap a read several components need in React `cache()`, so one request makes one call (`getCurrentUser`). **[review]**
-
-The rules below are for the Supabase reads that remain until the next phase moves them onto the API.
-
-- **Request-scoped reads** (`data/` behind `server.ts`) create their own
-  `createSupabaseServerClient()` per call, select an explicit column list (never `*`), map
-  `snake_case → camelCase`, and `.parse()` through the read-model schema. **[review]**
-- **One row mapper per table, owned by its feature.** Any feature reading `instruments`
-  selects `INSTRUMENT_COLUMNS` and maps with `toInstrument` from `@/features/instruments`,
-  including inside joins (`instruments!inner(${INSTRUMENT_COLUMNS})`). **[review]**
-- **A failed query throws** `new Error(\`Could not <verb> <thing>: ${error.message}\`)`.
-  The route's error boundary handles it. **[review]**
-- **Routes fetch in parallel** with `Promise.all` when reads are independent
-  (`portfolio/page.tsx`). **[review]**
-- **Count with `.select("id", { count: "exact" }).limit(0)`, not `head: true`.** A `HEAD`
-  response has no body, so a failure reaches us with an empty message
-  (`getHoldingCounts`). **[review]**
-- **Chunk large `in.(…)` lookups** (`LOOKUP_CHUNK`) — PostgREST answers 414 on long URLs.
-  **[review]**
+- **Screens fetch in parallel** with `Promise.all` when reads are independent. **[review]**
 
 ### 6.3 Auth
 
@@ -344,9 +291,8 @@ The rules below are for the Supabase reads that remain until the next phase move
 
 ## 7. React and UI
 
-- **Server Components by default.** Add `"use client"` only to the leaf that needs state,
-  effects, `useActionState` or `useFormStatus`. A section component composing client forms
-  stays a Server Component (`portfolio-section.tsx`). **[review]**
+- **Server Components by default.** Add `"use client"` only to the leaf that needs state, effects, `useActionState` or `useFormStatus`.
+  A component composing client components stays a Server Component (`account-summary.tsx`, around `SubmitButton`). **[review]**
 - **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`, submitted by `SubmitButton` (which handles the pending label via `useFormStatus`).
   Hidden inputs carry ids. **[review]**
 - **A form with two outcomes gives each submit button its own action**: `formAction` on `SubmitButton`, each with its own `useActionState` (`SignInForm`). **[review]**
@@ -428,53 +374,14 @@ The rules below are for the Supabase reads that remain until the next phase move
 - **The browser `themeColor`** is `BROWSER_THEME_COLOR` from `@/shared/ui/theme`, kept equal
   to the canvas token. **[test]**
 
-## 8. Database
-
-- **The schema lives only in `supabase/migrations/`**, named
-  `YYYYMMDDHHMMSS_<snake_case_description>.sql`. **Never edit a migration that has been
-  applied**; write a new one. **[review]**
-- **After any schema change, run `pnpm db:types`** and commit the regenerated
-  `database.types.ts`. Never hand-edit it. **[review]**
-- **Every new table needs all three:** `enable row level security`, a policy, and an explicit
-  `grant`. Tables created by the migration role get no default privileges, so a missing grant
-  is a `permission denied`, and a missing policy is an empty result. **[db]** **[test]**
-- **Deny by default.** `anon` gets nothing. `authenticated` reads shared tables and owns its
-  own rows. `service_role` writes shared tables. *No write policy is the write policy* for
-  shared tables. **[db]**
-- **Write `(select auth.uid())`, not `auth.uid()`**, in policies, so it is evaluated once per
-  statement. **[review]**
-- **Split `for all` policies** into per-verb policies when the verbs need different rules
-  (`20260909120000_active_instrument_writes.sql`). **[review]**
-- **Invariants belong in the database**: `check` constraints, unique indexes, foreign keys,
-  `not null`. Application validation is for the user's benefit; the database is for
-  correctness. Remember that foreign keys are checked *without* RLS — a rule like "only active
-  instruments" must be spelled out in the policy. **[db]**
-- **Naming**: constraints `<table>_<column>_<rule>` (`portfolio_positions_quantity_positive`),
-  unique indexes `<table>_<column>_key`, other indexes `<table>_<columns>_idx`. Every mutable
-  table has `created_at`, `updated_at` and the `set_updated_at` trigger. **[review]**
-- **Use `numeric`, not `real`/`float`, for anything compared against a threshold** —
-  `0.7::real >= 0.7` is false (`20260927120000_summarization.sql`). **[review]**
-- **SQL follows the same comment rule as TypeScript** (§10): describe what a policy, constraint
-  or index does; the reasoning goes in the ADR. **[review]**
-- **RPCs that PostgREST cannot express** (e.g. `<=>` vector search) are granted to
-  `service_role` only unless there is a reason otherwise. **[db]**
-- **Seed files** are validated against a schema and parsed by a unit test. **[test]**
-
-## 9. Testing
+## 8. Testing
 
 - **Unit tests are colocated** (`foo.ts` → `foo.test.ts`), run with `pnpm test`, and never
   touch Docker or the network. **[review]**
 - **Default environment is jsdom.** A test that reaches `server-env` must declare
   `// @vitest-environment node` at the top. **[test]**
-- **Database behaviour is tested against a real database** in `tests/db/` (`pnpm test:db`,
-  needs `pnpm db:start`). A new table or policy gets tests proving the second user can
-  neither read, update, delete nor impersonate the first, and that anonymous access is
-  denied — through PostgREST, with real tokens. **[review]**
-- **Assert what RLS actually does**: a hidden row comes back *empty*, not as an error.
-  **[review]**
 - **Test names describe behaviour, including the alternative rejected**: "renders an explicit empty state rather than a blank card". **[review]**
-- **Test data is built through the schema** (`NewsArticleSchema.parse({ … })`), so test
-  fixtures cannot drift from the contract either. **[review]**
+- **Test data is built through the schema** (`FeedItemSchema.parse({ … })`), so test fixtures cannot drift from the contract either. **[review]**
 - **Replace dependencies by injection, not module mocking** — pass a stub client to the
   factory. `vi.fn()` for the stub's methods is fine. **[review]**
 - **Code that reaches the API is tested against `fakeApi`** from `@/shared/api/fake-api`, which replaces the global `fetch`, answers by method and path and records each request.
@@ -484,7 +391,7 @@ The rules below are for the Supabase reads that remain until the next phase move
 - Colocated tests may import their own feature's internals; non-null assertions and
   `console` are allowed in tests. **[lint]**
 
-## 10. Comments and documentation
+## 9. Comments and documentation
 
 - **Comments describe the code, to make it easier to read**: what a value is, what a block does, what a function returns.
   `/** The outlet's own standfirst. Not generated, and not a summary. */` is the shape. **[review]**
@@ -512,7 +419,7 @@ The rules below are for the Supabase reads that remain until the next phase move
 - **The README describes behaviour a user or operator sees**; this file describes how to
   write code. Update whichever your change affects. **[review]**
 
-## 11. Tooling and workflow
+## 10. Tooling and workflow
 
 - **pnpm only**, with the version pinned in `packageManager`; Node from `.node-version`.
   CI installs with `--frozen-lockfile`. **[test]**
@@ -537,20 +444,10 @@ The rules below are for the Supabase reads that remain until the next phase move
 4. Check the new cross-feature imports keep the dependency graph acyclic (§1.3 rule 4).
 5. Add a section to `docs/improvements.md` for its known gaps, and an ADR if it is a phase.
 
-### Adding a table
-
-1. New timestamped migration: table with constraints, `created_at`/`updated_at` + trigger,
-   indexes named per §8.
-2. `enable row level security`, policies with `(select auth.uid())`, explicit `grant`s.
-3. `pnpm db:reset && pnpm db:types`; commit the regenerated types.
-4. Add RLS cases to `tests/db/rls.test.ts`; run `pnpm test:db`.
-5. Queries go in the owning feature's `data/`, exported through its `server.ts`.
-
 ### Adding an environment variable
 
 1. Add it to `.env.example` with a short comment saying what it is.
 2. Add it to `serverSchema` (secret) or `clientSchema` + `clientRuntimeEnv` (public).
-3. If the db test suite needs it, give it a placeholder in `tests/db/setup.ts`.
 
 ---
 

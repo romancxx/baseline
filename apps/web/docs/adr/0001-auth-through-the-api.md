@@ -1,15 +1,14 @@
-# 8. Auth through the API
+# 1. Auth through the API
 
 - **Status:** accepted
 - **Date:** 2026-11-09
-- **Phase:** 8 — Auth through the API
+- **Phase:** 1 — Auth through the API
 
 ## Context
 
-Signing in, creating an account and signing out move from Supabase Auth to `apps/api` ([api 0005](../../../api/docs/adr/0005-authentication.md)).
+`apps/api` is the web app's only backend, and signing in, creating an account and signing out go through it ([api 0005](../../../api/docs/adr/0005-authentication.md)).
 The API issues a 15-minute access token and a single-use refresh token in a cookie scoped to `/api/v1/auth`; reusing a refresh token revokes all of the user's tokens.
 The API has no CORS and the web app keeps Server Components for reads and server actions for writes, so Next is a backend-for-frontend: the browser talks only to Next, and Next's server calls the API.
-Supabase stays for data until the next phase removes it.
 
 ## Decision
 
@@ -30,6 +29,9 @@ Supabase stays for data until the next phase removes it.
 - **A 401 while rendering goes through `GET /session/expired`**, a public route handler that clears the cookies and redirects to `/sign-in`.
   Redirecting straight to `/sign-in` with the cookies still set would loop through `proxy.ts`.
   Server actions clear the cookies themselves.
+- **Signed-in pages live in the `(app)` route group.**
+  Its layout requires a user and carries the app shell and navigation, so `/sign-in` and `/session/expired`, outside the group, render without them.
+- **Paths are written only in the routes registry**, `ROUTES`; `PUBLIC_ROUTES` is what `proxy.ts` lets through signed out.
 - **Concurrent refreshes are deduplicated in Next's process.**
   One refresh is in flight per refresh token, keyed by its hash, and its result stays cached for 30 seconds, so prefetches and tabs still carrying the old cookie receive the new tokens instead of reusing the old one.
 - **One request ID per incoming request**, assigned by `proxy.ts`, passed as a request header, sent to the API as `X-Request-ID` and logged.

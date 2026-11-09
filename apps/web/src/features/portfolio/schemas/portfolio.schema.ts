@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { InstrumentSchema } from "@/features/instruments";
 
-/** Form fields arrive as strings; the database wants numbers. Coerce once, here. */
+/** Form fields arrive as strings. Coerce once, here. */
 const QuantitySchema = z.coerce
   .number({ error: "Quantity must be a number." })
   .positive({ error: "Quantity must be greater than zero." })

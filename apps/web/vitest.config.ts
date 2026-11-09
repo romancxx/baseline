@@ -26,19 +26,6 @@ export default defineConfig({
           include: ["src/**/*.test.{ts,tsx}"],
         },
       },
-      {
-        resolve: { tsconfigPaths: true },
-        test: {
-          name: "db",
-          environment: "node",
-          include: ["tests/db/**/*.test.ts"],
-          setupFiles: ["./tests/db/setup.ts"],
-          globalSetup: ["./tests/db/global-setup.ts"],
-          testTimeout: 30_000,
-          hookTimeout: 60_000,
-          fileParallelism: false,
-        },
-      },
     ],
   },
 });
