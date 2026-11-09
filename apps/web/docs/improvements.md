@@ -17,7 +17,7 @@ Deliberate for a single-user build; needed before anyone else creates an account
 Without JavaScript the browser submits both actions' `$ACTION_KEY` inputs, React reads the first, and the create-account error ("This email already has an account") is not shown; sign-in errors and both successes work.
 Splitting sign-in and create account into two forms, or two screens, fixes it; worth doing with the sign-in screen's redesign.
 
-**One web instance only.** Concurrent refreshes of one token are deduplicated inside Next's process ([ADR 0008](adr/0008-auth-through-the-api.md)).
+**One web instance only.** Concurrent refreshes of one token are deduplicated inside Next's process ([ADR 0001](adr/0001-auth-through-the-api.md)).
 Two instances refreshing the same token at once would look like reuse to the API, which then revokes every session of that user.
 The fix is a grace period in the API during which a just-rotated refresh token is still accepted (see the API's improvements list).
 Worth doing when the web app runs as more than one instance.

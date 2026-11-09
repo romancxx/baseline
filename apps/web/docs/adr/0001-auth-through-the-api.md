@@ -1,8 +1,8 @@
-# 8. Auth through the API
+# 1. Auth through the API
 
 - **Status:** accepted
 - **Date:** 2026-11-09
-- **Phase:** 8 — Auth through the API
+- **Phase:** 1 — Auth through the API
 
 ## Context
 

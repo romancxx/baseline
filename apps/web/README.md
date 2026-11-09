@@ -94,7 +94,7 @@ environment yet (e.g. a Docker image built before secrets are attached).
 
 ## Auth
 
-Signing in, creating an account and signing out happen on one screen at `/sign-in`, and all three go through `apps/api` ([ADR 0008](docs/adr/0008-auth-through-the-api.md)).
+Signing in, creating an account and signing out happen on one screen at `/sign-in`, and all three go through `apps/api` ([ADR 0001](docs/adr/0001-auth-through-the-api.md)).
 Email and password, no confirmation step; a password is 12 to 128 characters, sent exactly as typed.
 Next is a backend-for-frontend: the browser talks only to Next, and Next's server calls the API at `API_BASE_URL`.
 
