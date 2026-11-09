@@ -466,7 +466,6 @@ The rules below are for the Supabase reads that remain until the next phase move
   touch Docker or the network. **[review]**
 - **Default environment is jsdom.** A test that reaches `server-env` must declare
   `// @vitest-environment node` at the top. **[test]**
-- **What must have a unit test:** every schema with refinements or transforms, every component with conditional rendering, every seed file. **[review]**
 - **Database behaviour is tested against a real database** in `tests/db/` (`pnpm test:db`,
   needs `pnpm db:start`). A new table or policy gets tests proving the second user can
   neither read, update, delete nor impersonate the first, and that anonymous access is
