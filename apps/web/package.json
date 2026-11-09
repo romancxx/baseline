@@ -20,18 +20,9 @@
     "test:watch": "vitest --project unit",
     "test:coverage": "vitest run --coverage",
     "verify": "pnpm lint && pnpm typecheck && pnpm test",
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:reset": "supabase db reset",
-    "db:push": "supabase db push",
-    "test:db": "vitest run --project db",
-    "api:types": "openapi-typescript ../api/openapi.json --output src/shared/api/api.types.ts",
-    "db:types": "supabase gen types typescript --local --schema public > src/shared/supabase/database.types.ts",
-    "db:types:linked": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts"
+    "api:types": "openapi-typescript ../api/openapi.json --output src/shared/api/api.types.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.5",
-    "@supabase/supabase-js": "^2.112.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.52.0",
     "next": "^16.3.2",
@@ -54,7 +45,6 @@
     "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^30.0.1",
     "openapi-typescript": "^7.13.0",
-    "supabase": "^2.115.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"

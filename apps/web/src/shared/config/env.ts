@@ -7,8 +7,6 @@ import { z } from "zod";
 
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.url({ error: "NEXT_PUBLIC_APP_URL must be an absolute URL" }),
-  NEXT_PUBLIC_SUPABASE_URL: z.url({ error: "NEXT_PUBLIC_SUPABASE_URL must be an absolute URL" }),
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
 });
 
 /**
@@ -18,8 +16,6 @@ const clientSchema = z.object({
  */
 const clientRuntimeEnv = {
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 };
 
 export type ClientEnv = z.infer<typeof clientSchema>;
