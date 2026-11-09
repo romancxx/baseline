@@ -2,11 +2,17 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeApi } from "@/shared/api/fake-api";
-import { readApi } from "@/shared/api/request";
+import { readApi, writeApi } from "@/shared/api/request";
 
-const requestCookies = new NextRequest("http://localhost:3000/", {
-  headers: { cookie: "sn_access=access-1; sn_refresh=refresh-1" },
-}).cookies;
+function cookiesOf(cookie: string) {
+  return new NextRequest("http://localhost:3000/", { headers: { cookie } }).cookies;
+}
+
+const SIGNED_IN = "sn_access=access-1; sn_refresh=refresh-1";
+/** What a page sees when `proxy.ts` could not renew the access token because the API was down. */
+const RENEWAL_UNAVAILABLE = "sn_refresh=refresh-1";
+
+let requestCookies = cookiesOf(SIGNED_IN);
 
 vi.mock("next/headers", () => ({
   cookies: async () => requestCookies,
@@ -14,9 +20,14 @@ vi.mock("next/headers", () => ({
 }));
 
 const ME = "GET /api/v1/users/me";
+const UNAUTHORIZED_ANSWER = {
+  status: 401,
+  body: { code: "unauthorized", message: "Not authenticated", details: null },
+};
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  requestCookies = cookiesOf(SIGNED_IN);
 });
 
 function loadUser() {
@@ -59,5 +70,42 @@ describe("reading from the API while rendering", () => {
     await expect(loadUser()).rejects.toMatchObject({
       digest: expect.stringContaining(";/session/expired;"),
     });
+  });
+
+  it("throws on a 401 to a call made without an access token, rather than ending a session the API never refused", async () => {
+    requestCookies = cookiesOf(RENEWAL_UNAVAILABLE);
+    fakeApi({ [ME]: () => UNAUTHORIZED_ANSWER });
+
+    await expect(loadUser()).rejects.toThrow("Could not load the user: Not authenticated");
+    expect(requestCookies.has("sn_refresh")).toBe(true);
+  });
+});
+
+describe("calling the API from a server action", () => {
+  const REGISTER = "POST /api/v1/auth/register";
+
+  function register() {
+    return writeApi((api) =>
+      api.POST("/api/v1/auth/register", {
+        body: { email: "alice@example.com", password: "correct-horse-battery" },
+      }),
+    );
+  }
+
+  it("clears the session and redirects to /sign-in when the API refuses the access token", async () => {
+    fakeApi({ [REGISTER]: () => UNAUTHORIZED_ANSWER });
+
+    await expect(register()).rejects.toMatchObject({
+      digest: expect.stringContaining(";/sign-in;"),
+    });
+    expect(requestCookies.has("sn_refresh")).toBe(false);
+  });
+
+  it("returns a 401 to a call made without an access token, keeping the session", async () => {
+    requestCookies = cookiesOf(RENEWAL_UNAVAILABLE);
+    fakeApi({ [REGISTER]: () => UNAUTHORIZED_ANSWER });
+
+    expect(await register()).toMatchObject({ ok: false, error: { status: 401 } });
+    expect(requestCookies.has("sn_refresh")).toBe(true);
   });
 });

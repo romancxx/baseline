@@ -18,38 +18,44 @@ async function requestApiClient(): Promise<RequestApiClient> {
   const session = readSession(await cookies());
   const requestId = await currentRequestId();
   const accessToken = session.status === "signed-in" ? session.accessToken : null;
-  return { api: createApiClient({ accessToken, requestId }), requestId };
+  return {
+    api: createApiClient({ accessToken, requestId }),
+    requestId,
+    sendsAccessToken: accessToken !== null,
+  };
 }
 
 /**
- * Reads from the API while rendering. Throws `Could not <action>` on a failure; a 401 redirects
- * to `/session/expired`, which clears the cookies a Server Component cannot.
+ * Reads from the API while rendering. Throws `Could not <action>` on a failure; a 401 to the
+ * session's access token redirects to `/session/expired`, which clears the cookies a Server
+ * Component cannot.
  */
 export async function readApi<T>(
   action: string,
   call: (api: ApiClient) => Promise<ClientOutcome<T>>,
 ): Promise<T> {
-  const { api, requestId } = await requestApiClient();
+  const { api, requestId, sendsAccessToken } = await requestApiClient();
   const result = await send(call(api));
   if (result.ok) return result.data;
 
   const { status, code, message } = result.error;
-  if (status === UNAUTHORIZED) redirect(ROUTES.sessionExpired);
+  if (status === UNAUTHORIZED && sendsAccessToken) redirect(ROUTES.sessionExpired);
 
   logger.error("api.read_failed", { action, status, code, requestId });
   throw new Error(`Could not ${action}: ${message}`);
 }
 
 /**
- * Calls the API from a server action. A 401 clears the session and redirects to `/sign-in`;
- * any other failure is returned, for the action to turn into a `FormState`.
+ * Calls the API from a server action. A 401 to the session's access token clears the session
+ * and redirects to `/sign-in`; any other failure is returned, for the action to turn into a
+ * `FormState`.
  */
 export async function writeApi<T>(
   call: (api: ApiClient) => Promise<ClientOutcome<T>>,
 ): Promise<ApiResult<T>> {
-  const { api } = await requestApiClient();
+  const { api, sendsAccessToken } = await requestApiClient();
   const result = await send(call(api));
-  if (!result.ok && result.error.status === UNAUTHORIZED) {
+  if (!result.ok && result.error.status === UNAUTHORIZED && sendsAccessToken) {
     clearSession(await cookies());
     redirect(ROUTES.signIn);
   }

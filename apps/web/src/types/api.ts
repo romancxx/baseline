@@ -29,6 +29,8 @@ export type ApiResult<T> =
 export type RequestApiClient = {
   readonly api: ApiClient;
   readonly requestId: string | null;
+  /** `false` while the session needs a refresh `proxy.ts` could not make. */
+  readonly sendsAccessToken: boolean;
 };
 
 /** What an `ApiClient` call resolves to. */
