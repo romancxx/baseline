@@ -21,6 +21,8 @@ if (typeof window !== "undefined") {
 
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // The API's origin, without `/api/v1`.
+  API_BASE_URL: z.url({ error: "API_BASE_URL must be an absolute URL" }),
   // Bypasses RLS. Never a request handler that runs on behalf of a signed-in user.
   SUPABASE_SECRET_KEY: z.string().min(1),
   LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
