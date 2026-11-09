@@ -1,6 +1,6 @@
 # 1. Schema and data model
 
-- **Status:** accepted
+- **Status:** Superseded by [api 0004](../../../api/docs/adr/0004-database-and-migrations.md), [0006](../../../api/docs/adr/0006-instruments.md), [0009](../../../api/docs/adr/0009-portfolios.md) and [0010](../../../api/docs/adr/0010-news-ingestion.md)
 - **Date:** 2026-08-26
 - **Phase:** 1 — Supabase setup & data model
 

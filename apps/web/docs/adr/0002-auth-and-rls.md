@@ -1,6 +1,6 @@
 # 2. Auth and row-level security
 
-- **Status:** Superseded by [0008](0008-auth-through-the-api.md) for auth; its RLS part is superseded when Supabase is removed
+- **Status:** Superseded by [0008](0008-auth-through-the-api.md) (auth) and [api 0005](../../../api/docs/adr/0005-authentication.md) (authorisation)
 - **Date:** 2026-09-09
 - **Phase:** 2 — Auth & RLS
 
