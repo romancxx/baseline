@@ -70,7 +70,7 @@ async def test_register_existing_email_returns_409(client: AsyncClient, email: s
     response = await client.post(REGISTER_URL, json=user_payload(email=email))
 
     assert response.status_code == 409
-    assert response.json()["code"] == "conflict"
+    assert response.json()["code"] == "email_taken"
 
 
 async def test_register_rejects_a_short_password_without_echoing_it(
