@@ -8,6 +8,7 @@ Two apps with separate tooling:
 
 The root `justfile` runs the API's tasks (`just` lists them). `docker-compose.yml` runs the
 API's Postgres: `just db-up`, `just db-down`.
+`just dev` starts the whole stack (Postgres, migrations, API, web) and `just web-dev` only the web app.
 
 Commits are Conventional Commits scoped by app and topic: `feat(api/news): …`, `fix(web): …` for several topics of one app, `chore: …` for the whole repository.
 Topics are lower-case kebab-case, the subject does not start upper-case, and the header is at most 100 characters.

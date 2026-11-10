@@ -6,17 +6,19 @@ Next.js App Router · TypeScript (strict) · Tailwind CSS v4 · Zod · Biome · 
 
 ## Getting started
 
-The web app's only backend is `apps/api`, so start it first.
-Follow the [API's quickstart](../api/README.md#quickstart), from the repo root, up to `just api-dev`, which serves the API on `http://localhost:8000`.
+The web app's only backend is `apps/api`.
+Set it up with the [API's quickstart](../api/README.md#quickstart), from the repo root, up to `just hooks-install`.
 
-Then, in a second terminal, start the web app:
+Then set up the web app:
 
 ```bash
 cd apps/web
 pnpm install
-cp .env.example .env.local   # API_BASE_URL points at the API started above
-pnpm dev
+cp .env.example .env.local   # API_BASE_URL points at the API on http://localhost:8000
 ```
+
+From the repo root, `just dev` starts Postgres, applies pending migrations, and serves the API on `http://localhost:8000` and the web app on `http://localhost:3000`; Ctrl-C stops both.
+`just web-dev` serves only the web app, against an API already running.
 
 `just hooks-install`, from the repo root, installs the git hooks once per clone; the API's quickstart already runs it.
 
@@ -24,7 +26,7 @@ pnpm dev
 
 | Script | What it does |
 | --- | --- |
-| `pnpm dev` | Dev server |
+| `pnpm dev` | Dev server (`just web-dev` from the repo root) |
 | `pnpm build` / `pnpm start` | Production build / serve |
 | `pnpm lint` / `pnpm lint:fix` | Biome check (lint + format + import sorting) |
 | `pnpm typecheck` | `next typegen` then `tsc --noEmit` |

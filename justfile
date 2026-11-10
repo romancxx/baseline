@@ -13,6 +13,23 @@ hooks-install:
     fi
     {{api}} run lefthook install
 
+# Start Postgres, apply pending migrations, then serve the API on :8000 and the web app on :3000 until Ctrl-C
+dev: db-up
+    #!/usr/bin/env bash
+    set -eu
+    {{api}} run alembic upgrade head
+    set -m
+    {{just_executable()}} api-dev &
+    api_pid=$!
+    {{just_executable()}} web-dev &
+    web_pid=$!
+    trap 'kill -- -$api_pid -$web_pid 2>/dev/null' INT TERM EXIT
+    wait
+
+# Serve the web app on :3000, against the API at API_BASE_URL of apps/web/.env.local
+web-dev:
+    pnpm --dir apps/web dev
+
 api-install:
     {{api}} sync
 
