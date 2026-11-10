@@ -103,7 +103,7 @@ The interactive docs are at <http://localhost:8000/docs>.
 - [0006](docs/adr/0006-instruments.md): one instrument per Yahoo symbol, grouped into share classes by FIGI, searched with pg_trgm.
 - [0007](docs/adr/0007-market-data.md): Yahoo Finance through yfinance, as `Decimal` prices; daily bars upserted per instrument and day, and daily FX rates into `BASE_CURRENCY`.
 - [0008](docs/adr/0008-security-identifiers.md): OpenFIGI for share class FIGIs and ISIN lookups, behind one rate-limited client.
-- [0009](docs/adr/0009-portfolios.md): one portfolio per user, created at registration, and a CSV import by ISIN with a per-row report and a dry run.
+- [0009](docs/adr/0009-portfolios.md): one portfolio per user, created at registration, a CSV import by ISIN with a per-row report and a dry run, and an overview valuing every position.
 - [0010](docs/adr/0010-news-ingestion.md): Google News RSS behind a `NewsSource` protocol, and one brief per security, checked in code, citing its headlines.
 - [0011](docs/adr/0011-local-llm-backend.md): briefs from the Anthropic API or the local `claude` CLI, chosen by `LLM_BACKEND`.
 
@@ -288,6 +288,20 @@ Decimals are returned as JSON strings (`"10.50000000"`); send them as strings to
 `PATCH` changes only the fields sent, and `null` clears one.
 An unknown instrument answers 404, an instrument already in the portfolio 409.
 Another user's position answers 404, exactly like an id that does not exist.
+
+### Overview
+
+`GET /api/v1/portfolio/overview` returns every position of your portfolio valued at its latest stored close, and the portfolio's totals in `BASE_CURRENCY`.
+It calls no provider: it uses the prices and rates `just update-prices` stored.
+
+Each item of `positions` has the position (instrument nested), `latest_close` and `latest_close_date`, `previous_close`, `day_change` and `day_change_pct`, `value` (in the instrument's currency), `value_base`, `unrealised_gain` and `unrealised_gain_pct`, and `weight` (its share of the total `value_base`).
+Valued positions come first, largest first, then the others.
+`totals` has `base_currency`, `value_base`, `day_change_base` and `day_change_base_pct`, `unrealised_gain_base` and `unrealised_gain_base_pct`, the counts `positions` and `valued_positions`, `prices_as_of` (the latest close date used), and `unvalued`: each position without a `value_base`, with its `reason`, `no_quantity`, `no_price` or `no_rate`.
+Totals cover valued positions only.
+
+Computed figures are strings rounded to 2 places, halves up; percentages are in percent (`"1.91"` is 1.91 %).
+A figure that cannot be computed is `null`, never `"0.00"`.
+Amounts in the base currency use the rate of each position's latest close day, so day change and gain there leave out the currency's own move.
 
 ## Importing positions
 
