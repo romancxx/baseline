@@ -3,7 +3,7 @@ import re
 import unicodedata
 import uuid
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import Protocol
 
 import structlog
@@ -15,15 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ProviderUnavailableError
 from app.core.pagination import KeysetPage, PageRequest, paginate
 from app.modules.instruments.models import Instrument, InstrumentType
-from app.modules.instruments.service import followed_instrument_ids, get_instrument
-from app.modules.news.models import Article, ArticleInstrument, ArticleSource
-from app.modules.news.schemas import (
-    FetchResult,
-    NewsIngestSummary,
-    NewsQuery,
-    RawArticle,
-    SecurityGroup,
+from app.modules.instruments.schemas import SecurityGroup
+from app.modules.instruments.service import (
+    followed_instrument_ids,
+    get_instrument,
+    group_by_share_class,
 )
+from app.modules.news.models import Article, ArticleInstrument, ArticleSource
+from app.modules.news.schemas import FetchResult, NewsIngestSummary, NewsQuery, RawArticle
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -118,22 +117,6 @@ async def followed_groups(session: AsyncSession) -> list[SecurityGroup]:
         )
         for key, listings in group_by_share_class(stocks).items()
     ]
-
-
-def group_by_share_class(instruments: Iterable[Instrument]) -> dict[str, list[Instrument]]:
-    """The instruments by the key of their security group, in the order given, within each group
-    and between groups."""
-    groups: dict[str, list[Instrument]] = {}
-    for instrument in instruments:
-        key = group_key(instrument.share_class_figi, instrument.id)
-        groups.setdefault(key, []).append(instrument)
-    return groups
-
-
-def group_key(share_class_figi: str | None, instrument_id: uuid.UUID) -> str:
-    """The key of an instrument's security group: listings of one share class share a FIGI; an
-    instrument without one is its own group."""
-    return share_class_figi or str(instrument_id)
 
 
 async def list_news(

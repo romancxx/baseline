@@ -1,5 +1,5 @@
 import uuid
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 import structlog
@@ -81,6 +81,22 @@ async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Ins
 def followed_instrument_ids() -> Select[uuid.UUID]:
     """The ids of the instruments in a position, as a subquery."""
     return select(Position.instrument_id)
+
+
+def group_by_share_class(instruments: Iterable[Instrument]) -> dict[str, list[Instrument]]:
+    """The instruments by the key of their security group, in the order given, within each group
+    and between groups."""
+    groups: dict[str, list[Instrument]] = {}
+    for instrument in instruments:
+        key = group_key(instrument.share_class_figi, instrument.id)
+        groups.setdefault(key, []).append(instrument)
+    return groups
+
+
+def group_key(share_class_figi: str | None, instrument_id: uuid.UUID) -> str:
+    """The key of an instrument's security group: listings of one share class share a FIGI; an
+    instrument without one is its own group."""
+    return share_class_figi or str(instrument_id)
 
 
 async def list_instruments(

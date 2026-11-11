@@ -26,11 +26,10 @@ from app.modules.briefs.schemas import (
     SecurityBrief,
 )
 from app.modules.instruments.models import InstrumentType
-from app.modules.instruments.schemas import InstrumentRead
-from app.modules.instruments.service import get_instrument
+from app.modules.instruments.schemas import InstrumentRead, SecurityGroup
+from app.modules.instruments.service import get_instrument, group_by_share_class, group_key
 from app.modules.news.models import Article, ArticleInstrument
-from app.modules.news.schemas import SecurityGroup
-from app.modules.news.service import followed_groups, group_by_share_class, group_key
+from app.modules.news.service import followed_groups
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.service import all_positions
 

@@ -33,6 +33,9 @@ class FIGI ([0006](0006-instruments.md)), and the CSV import for users starts fr
   response of the wrong shape.
 - **Tests answer HTTP with `httpx2.MockTransport`**, so the client's own requests and parsing
   run against canned OpenFIGI responses.
+- **A security group is the listings of one share class**, keyed by their `share_class_figi`; an instrument without one is its own group, keyed by its id.
+  The instruments module owns it: `SecurityGroup`, `group_key` and `group_by_share_class`.
+  News, briefs and the portfolio's briefs group listings with them ([0010](0010-news-ingestion.md)).
 
 ## Consequences
 

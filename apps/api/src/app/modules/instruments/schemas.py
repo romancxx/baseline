@@ -75,6 +75,16 @@ class InstrumentRead(BaseModel):
     updated_at: datetime
 
 
+class SecurityGroup(BaseModel):
+    """Listings of one share class, or one instrument without a FIGI."""
+
+    # The share class FIGI, or the instrument's id.
+    key: str
+    # The name of its first stored listing.
+    name: str
+    instrument_ids: list[uuid.UUID]
+
+
 class LocalSearchResult(InstrumentRead):
     """A stored instrument."""
 
