@@ -25,13 +25,10 @@ Percent = Annotated[Decimal, PlainSerializer(_round_for_display, return_type=Dec
 
 class PositionOverview(BaseModel):
     position: PositionRead
-    # The latest stored bar's close and date, and the close of the bar before it.
+    # The latest stored bar's close and date.
     latest_close: Decimal | None
     latest_close_date: dt.date | None
-    previous_close: Decimal | None
     # Amounts without a `_base` suffix are in the instrument's currency.
-    day_change: Money | None
-    day_change_pct: Percent | None
     value: Money | None
     value_base: Money | None
     unrealised_gain: Money | None
@@ -58,9 +55,6 @@ class OverviewTotals(BaseModel):
 
     base_currency: str
     value_base: Money | None
-    day_change_base: Money | None
-    # Against the previous close's value of the positions with a day change.
-    day_change_base_pct: Percent | None
     unrealised_gain_base: Money | None
     # Against the cost of the positions with a gain.
     unrealised_gain_base_pct: Percent | None

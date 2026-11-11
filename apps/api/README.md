@@ -294,14 +294,14 @@ Another user's position answers 404, exactly like an id that does not exist.
 `GET /api/v1/portfolio/overview` returns every position of your portfolio valued at its latest stored close, and the portfolio's totals in `BASE_CURRENCY`.
 It calls no provider: it uses the prices and rates `just update-prices` stored.
 
-Each item of `positions` has the position (instrument nested), `latest_close` and `latest_close_date`, `previous_close`, `day_change` and `day_change_pct`, `value` (in the instrument's currency), `value_base`, `unrealised_gain` and `unrealised_gain_pct`, and `weight` (its share of the total `value_base`).
+Each item of `positions` has the position (instrument nested), `latest_close` and `latest_close_date`, `value` (in the instrument's currency), `value_base`, `unrealised_gain` and `unrealised_gain_pct`, and `weight` (its share of the total `value_base`).
 Valued positions come first, largest first, then the others.
-`totals` has `base_currency`, `value_base`, `day_change_base` and `day_change_base_pct`, `unrealised_gain_base` and `unrealised_gain_base_pct`, the counts `positions` and `valued_positions`, `prices_as_of` (the latest close date used), and `unvalued`: each position without a `value_base`, with its `reason`, `no_quantity`, `no_price` or `no_rate`.
+`totals` has `base_currency`, `value_base`, `unrealised_gain_base` and `unrealised_gain_base_pct`, the counts `positions` and `valued_positions`, `prices_as_of` (the latest close date used), and `unvalued`: each position without a `value_base`, with its `reason`, `no_quantity`, `no_price` or `no_rate`.
 Totals cover valued positions only.
 
 Computed figures are strings rounded to 2 places, halves up; percentages are in percent (`"1.91"` is 1.91 %).
 A figure that cannot be computed is `null`, never `"0.00"`.
-Amounts in the base currency use the rate of each position's latest close day, so day change and gain there leave out the currency's own move.
+Amounts in the base currency use the rate of each position's latest close day, so the gain there leaves out the currency's move since the purchase.
 
 ## Importing positions
 
