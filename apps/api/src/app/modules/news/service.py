@@ -3,11 +3,11 @@ import re
 import unicodedata
 import uuid
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Protocol
 
 import structlog
-from sqlalchemy import Row, Select, delete, select
+from sqlalchemy import Select, delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,13 +111,23 @@ async def followed_groups(session: AsyncSession) -> list[SecurityGroup]:
     """The stocks held in a portfolio, grouped by share class, in the order they were stored."""
     stocks = await _followed_stocks(session)
 
-    groups: dict[str, SecurityGroup] = {}
-    for stock_id, name, share_class_figi in stocks:
-        key = group_key(share_class_figi, stock_id)
+    return [
         # The stocks come oldest first: the group's name is its first listing's.
-        group = groups.setdefault(key, SecurityGroup(key=key, name=name, instrument_ids=[]))
-        group.instrument_ids.append(stock_id)
-    return list(groups.values())
+        SecurityGroup(
+            key=key, name=listings[0].name, instrument_ids=[stock.id for stock in listings]
+        )
+        for key, listings in group_by_share_class(stocks).items()
+    ]
+
+
+def group_by_share_class(instruments: Iterable[Instrument]) -> dict[str, list[Instrument]]:
+    """The instruments by the key of their security group, in the order given, within each group
+    and between groups."""
+    groups: dict[str, list[Instrument]] = {}
+    for instrument in instruments:
+        key = group_key(instrument.share_class_figi, instrument.id)
+        groups.setdefault(key, []).append(instrument)
+    return groups
 
 
 def group_key(share_class_figi: str | None, instrument_id: uuid.UUID) -> str:
@@ -162,17 +172,17 @@ def _listing_ids(instrument: Instrument) -> Select[uuid.UUID]:
     return select(Instrument.id).where(Instrument.share_class_figi == instrument.share_class_figi)
 
 
-async def _followed_stocks(session: AsyncSession) -> Sequence[Row[uuid.UUID, str, str | None]]:
-    """The id, name and share class FIGI of every stock in a position, oldest first."""
+async def _followed_stocks(session: AsyncSession) -> Sequence[Instrument]:
+    """Every stock in a position, oldest first."""
     statement = (
-        select(Instrument.id, Instrument.name, Instrument.share_class_figi)
+        select(Instrument)
         .where(
             Instrument.id.in_(followed_instrument_ids()),
             Instrument.type == InstrumentType.STOCK,
         )
         .order_by(Instrument.created_at, Instrument.id)
     )
-    return (await session.execute(statement)).all()
+    return (await session.scalars(statement)).all()
 
 
 async def _store(

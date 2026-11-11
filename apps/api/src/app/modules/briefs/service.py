@@ -30,7 +30,7 @@ from app.modules.instruments.schemas import InstrumentRead
 from app.modules.instruments.service import get_instrument
 from app.modules.news.models import Article, ArticleInstrument
 from app.modules.news.schemas import SecurityGroup
-from app.modules.news.service import followed_groups, group_key
+from app.modules.news.service import followed_groups, group_by_share_class, group_key
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
 
@@ -158,10 +158,7 @@ async def list_portfolio_briefs(
         .where(Position.portfolio_id == portfolio.id)
         .order_by(Instrument.created_at, Instrument.id)
     )
-    groups: dict[str, list[Instrument]] = {}
-    for instrument in held:
-        key = group_key(instrument.share_class_figi, instrument.id)
-        groups.setdefault(key, []).append(instrument)
+    groups = group_by_share_class(held)
 
     # News is collected for stocks only.
     collected = [
@@ -171,9 +168,6 @@ async def list_portfolio_briefs(
     ]
     briefs = await _latest_briefs(session, collected)
 
-    newest_first = sorted(
-        briefs, key=lambda key: (briefs[key].generated_at, briefs[key].id), reverse=True
-    )
     by_name = sorted(
         (key for key in groups if key not in briefs),
         key=lambda key: (groups[key][0].name.casefold(), key),
@@ -186,7 +180,7 @@ async def list_portfolio_briefs(
             news_collected=key in collected,
             brief=BriefRead.model_validate(briefs[key]) if key in briefs else None,
         )
-        for key in [*newest_first, *by_name]
+        for key in [*briefs, *by_name]
     ]
     return PortfolioBriefsResponse(items=items)
 
@@ -355,12 +349,15 @@ async def _has_new_articles(session: AsyncSession, group: SecurityGroup) -> bool
 
 
 async def _latest_briefs(session: AsyncSession, keys: Sequence[str]) -> dict[str, Brief]:
-    """The latest brief of each group in `keys` that has one, by group key."""
-    briefs = await session.scalars(
-        select(Brief)
+    """The latest brief of each group in `keys` that has one, by group key, newest first."""
+    latest_ids = (
+        select(Brief.id)
         .where(Brief.group_key.in_(keys))
         .order_by(Brief.group_key, *LATEST_FIRST)
         .ext(distinct_on(Brief.group_key))
+    )
+    briefs = await session.scalars(
+        select(Brief).where(Brief.id.in_(latest_ids)).order_by(*LATEST_FIRST)
     )
     return {brief.group_key: brief for brief in briefs}
 
