@@ -189,7 +189,7 @@ body{
    OVERVIEW STRIP
    ============================================================ */
 .stats{
-  display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:1px;
+  display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:1px;
   background:var(--hairline);border:1px solid var(--hairline);border-radius:var(--r);
   overflow:hidden;margin-bottom:var(--s6);
 }
@@ -628,15 +628,15 @@ body{
   <h2>The two signal systems</h2>
   <div class="cols">
     <div>
-      <h4>Price movement — bare mono text</h4>
+      <h4>Unrealised gain — bare mono text</h4>
       <div style="display:flex;gap:18px;margin-bottom:14px;align-items:baseline">
-        <span class="mv up" style="font-size:17px">+0.65%</span>
-        <span class="mv down" style="font-size:17px">−1.2%</span>
+        <span class="mv up" style="font-size:17px">+€6,105.20</span>
+        <span class="mv down" style="font-size:17px">−4.3%</span>
         <span class="mv flat" style="font-size:17px">0.0%</span>
       </div>
-      <div class="sw"><i style="background:#3FCF8E"></i> Up<code>--up</code></div>
-      <div class="sw"><i style="background:#F2555A"></i> Down<code>--down</code></div>
-      <p style="font-size:12.5px;color:var(--text-3);line-height:1.55;margin-top:10px">Sign and number carry it; colour only supports. Never boxed, never a chip, always tabular mono, always right-aligned in tables.</p>
+      <div class="sw"><i style="background:#3FCF8E"></i> Above cost<code>--up</code></div>
+      <div class="sw"><i style="background:#F2555A"></i> Below cost<code>--down</code></div>
+      <p style="font-size:12.5px;color:var(--text-3);line-height:1.55;margin-top:10px">The only coloured figure in the app, and it compares the close to what you paid &mdash; never to yesterday. Sign and number carry it; colour only supports. Never boxed, never a chip, always tabular mono, right-aligned in tables.</p>
     </div>
     <div>
       <h4>News tone — chip with the word</h4>
@@ -824,11 +824,6 @@ body{
             <div class="m">12 HOLDINGS · EUR</div>
           </div>
           <div class="stat">
-            <div class="k">Day change</div>
-            <div class="v sm mv up">+€312.40</div>
-            <div class="m"><span class="mv up">+0.65%</span> VS PREVIOUS CLOSE</div>
-          </div>
-          <div class="stat">
             <div class="k">Unrealised gain</div>
             <div class="v sm mv up">+€6,105.20</div>
             <div class="m"><span class="mv up">+14.5%</span> · 9 OF 12 PRICED</div>
@@ -926,23 +921,23 @@ body{
               <h3>Holdings<span class="tail"></span></h3>
               <div class="kv">
                 <span class="k" style="display:flex;align-items:center;gap:8px"><span class="av sm b" style="width:22px;height:22px;border-radius:6px;font-size:9px">IW</span>IWDA</span>
-                <span class="v">€12,480<small class="mv up">+0.4% · 25.9%</small></span>
+                <span class="v">€12,480<small style="color:var(--text-3)">25.9% of portfolio</small></span>
               </div>
               <div class="kv">
                 <span class="k" style="display:flex;align-items:center;gap:8px"><span class="av sm a" style="width:22px;height:22px;border-radius:6px;font-size:9px">MC</span>LVMH</span>
-                <span class="v">€2,344<small class="mv down">−1.2% · 4.9%</small></span>
+                <span class="v">€2,344<small style="color:var(--text-3)">4.9% of portfolio</small></span>
               </div>
               <div class="kv">
                 <span class="k" style="display:flex;align-items:center;gap:8px"><span class="av sm d" style="width:22px;height:22px;border-radius:6px;font-size:9px">TT</span>TotalEnergies</span>
-                <span class="v">€1,762<small class="mv up">+2.1% · 3.7%</small></span>
+                <span class="v">€1,762<small style="color:var(--text-3)">3.7% of portfolio</small></span>
               </div>
               <div class="kv">
                 <span class="k" style="display:flex;align-items:center;gap:8px"><span class="av sm b" style="width:22px;height:22px;border-radius:6px;font-size:9px">AS</span>ASML</span>
-                <span class="v">€4,108<small class="mv down">−0.8% · 8.5%</small></span>
+                <span class="v">€4,108<small style="color:var(--text-3)">8.5% of portfolio</small></span>
               </div>
               <div class="kv">
                 <span class="k" style="display:flex;align-items:center;gap:8px"><span class="av sm c" style="width:22px;height:22px;border-radius:6px;font-size:9px">NV</span>NVDA</span>
-                <span class="v">$1,200<small style="color:var(--text-3)">€1,105 · 2.3%</small></span>
+                <span class="v">$1,200<small style="color:var(--text-3)">€1,105 · 2.3% of portfolio</small></span>
               </div>
               <button class="btn ghost sm" style="width:100%;margin-top:12px">See all 12</button>
             </div>
@@ -1012,7 +1007,6 @@ body{
           <h4 style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px">Loading — reserved space, no layout shift</h4>
           <div class="stats">
             <div class="stat"><div class="k">Total value</div><span class="sk" style="width:142px;height:26px;margin-top:7px"></span><span class="sk" style="width:94px;height:11px;margin-top:8px"></span></div>
-            <div class="stat"><div class="k">Day change</div><span class="sk" style="width:104px;height:20px;margin-top:7px"></span><span class="sk" style="width:120px;height:11px;margin-top:8px"></span></div>
             <div class="stat"><div class="k">Unrealised gain</div><span class="sk" style="width:112px;height:20px;margin-top:7px"></span><span class="sk" style="width:110px;height:11px;margin-top:8px"></span></div>
             <div class="stat"><div class="k">Briefs</div><span class="sk" style="width:34px;height:20px;margin-top:7px"></span><span class="sk" style="width:116px;height:11px;margin-top:8px"></span></div>
           </div>
@@ -1077,7 +1071,6 @@ body{
               <th class="num">Quantity</th>
               <th class="num">Average price</th>
               <th class="num">Latest close</th>
-              <th class="num">Day</th>
               <th class="num">Value</th>
               <th class="num">Unrealised</th>
               <th class="num">Weight</th>
@@ -1091,7 +1084,6 @@ body{
               <td class="num">4</td>
               <td class="num">€612.30</td>
               <td class="num">€586.10</td>
-              <td class="num mv down">−1.2%</td>
               <td class="num"><b>€2,344.40</b></td>
               <td class="num mv down">−€104.80<span class="eur mv down">−4.3%</span></td>
               <td class="num">4.9%</td>
@@ -1106,7 +1098,6 @@ body{
               <td class="num">125</td>
               <td class="num">€98.10</td>
               <td class="num">€99.84</td>
-              <td class="num mv up">+0.4%</td>
               <td class="num"><b>€12,480.00</b></td>
               <td class="num mv up">+€217.50<span class="eur mv up">+1.8%</span></td>
               <td class="num">25.9%</td>
@@ -1121,7 +1112,6 @@ body{
               <td class="num">6</td>
               <td class="num">$164.20</td>
               <td class="num">$200.00</td>
-              <td class="num mv up">+1.9%</td>
               <td class="num"><b>$1,200.00</b><span class="eur">€1,105.60</span></td>
               <td class="num mv up">+$214.80<span class="eur mv up">+21.8%</span></td>
               <td class="num">2.3%</td>
@@ -1140,7 +1130,6 @@ body{
                 <span class="inp" style="min-height:30px;padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;justify-content:flex-end">58.75<span class="suffix" style="margin-left:6px">EUR</span></span>
               </td>
               <td class="num">€58.74</td>
-              <td class="num mv up">+2.1%</td>
               <td class="num"><b>€1,762.20</b></td>
               <td class="num mv flat">−€0.30<span class="eur">−0.0%</span></td>
               <td class="num">3.7%</td>
@@ -1155,7 +1144,6 @@ body{
               <td class="num none">—</td>
               <td class="num none">—</td>
               <td class="num">€168.42</td>
-              <td class="num mv up">+0.3%</td>
               <td class="num none">—</td>
               <td class="num none">—</td>
               <td class="num none">—</td>
@@ -1170,7 +1158,6 @@ body{
               <td class="num">12</td>
               <td class="num">€198.40</td>
               <td class="num"><span class="sk" style="width:52px;height:12px;display:inline-block"></span></td>
-              <td class="num"><span class="sk" style="width:38px;height:12px;display:inline-block"></span></td>
               <td class="num"><span class="sk" style="width:62px;height:12px;display:inline-block"></span></td>
               <td class="num"><span class="sk" style="width:56px;height:12px;display:inline-block"></span></td>
               <td class="num"><span class="sk" style="width:32px;height:12px;display:inline-block"></span></td>
@@ -1274,7 +1261,7 @@ body{
               <tr>
                 <th>Security</th><th>Exchange</th><th class="num">Quantity</th>
                 <th class="num">Average price</th><th class="num">Latest close</th>
-                <th class="num">Day</th><th class="num">Value</th><th class="num">Weight</th>
+                <th class="num">Value</th><th class="num">Weight</th>
               </tr>
             </thead>
             <tbody>
@@ -1282,25 +1269,25 @@ body{
                 <td><span class="nm"><span class="av a">MC</span><span><b>LVMH</b><span class="sy">MC.PA</span></span></span></td>
                 <td><span class="sub2">Paris</span> <span class="kind">Stock</span></td>
                 <td class="num">4</td><td class="num">€612.30</td><td class="num">€586.10</td>
-                <td class="num mv down">−1.2%</td><td class="num"><b>€2,344.40</b></td><td class="num">4.9%</td>
+                <td class="num"><b>€2,344.40</b></td><td class="num">4.9%</td>
               </tr>
               <tr>
                 <td><span class="nm"><span class="av b">IW</span><span><b>iShares Core MSCI World</b><span class="sy">IWDA.AS</span></span></span></td>
                 <td><span class="sub2">Amsterdam</span> <span class="kind">ETF</span></td>
                 <td class="num">125</td><td class="num">€98.10</td><td class="num">€99.84</td>
-                <td class="num mv up">+0.4%</td><td class="num"><b>€12,480.00</b></td><td class="num">25.9%</td>
+                <td class="num"><b>€12,480.00</b></td><td class="num">25.9%</td>
               </tr>
               <tr>
                 <td><span class="nm"><span class="av c">NV</span><span><b>NVIDIA</b><span class="sy">NVDA</span></span></span></td>
                 <td><span class="sub2">NASDAQ</span> <span class="kind">Stock</span></td>
                 <td class="num">6</td><td class="num">$164.20</td><td class="num">$200.00</td>
-                <td class="num mv up">+1.9%</td><td class="num"><b>$1,200.00</b><span class="eur">€1,105.60</span></td><td class="num">2.3%</td>
+                <td class="num"><b>$1,200.00</b><span class="eur">€1,105.60</span></td><td class="num">2.3%</td>
               </tr>
               <tr>
                 <td><span class="nm"><span class="av d">TT</span><span><b>TotalEnergies</b><span class="sy">TTE.PA</span></span></span></td>
                 <td><span class="sub2">Paris</span> <span class="kind">Stock</span></td>
                 <td class="num">30</td><td class="num">€58.75</td><td class="num">€58.74</td>
-                <td class="num mv up">+2.1%</td><td class="num"><b>€1,762.20</b></td><td class="num">3.7%</td>
+                <td class="num"><b>€1,762.20</b></td><td class="num">3.7%</td>
               </tr>
             </tbody>
           </table>
@@ -1701,7 +1688,6 @@ US67066G1040,6,164.20,USD</div>
             <div class="meta">MC.PA · PARIS · STOCK · EUR</div>
             <div class="px">
               <span class="big">€586.10</span>
-              <span class="mv down" style="font-size:15px">−1.2%</span>
               <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)">Close of 5 Nov</span>
             </div>
           </div>
@@ -1826,7 +1812,7 @@ US67066G1040,6,164.20,USD</div>
               <div class="t">
                 <h1 style="font-size:20px">iShares Core MSCI World</h1>
                 <div class="meta">IWDA.AS · AMSTERDAM · ETF · EUR</div>
-                <div class="px"><span class="big" style="font-size:22px">€99.84</span><span class="mv up" style="font-size:14px">+0.4%</span></div>
+                <div class="px"><span class="big" style="font-size:22px">€99.84</span><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)">Close of 5 Nov</span></div>
               </div>
             </div>
             <div class="card" style="margin-bottom:12px">
@@ -1897,9 +1883,9 @@ US67066G1040,6,164.20,USD</div>
     <div>
       <h4>Separating the two signals</h4>
       <ul>
-        <li><b>Price change is bare mono text</b>, green or red, sign first. Conventional, and your brief permits colour as support.</li>
+        <li><b>Unrealised gain is bare mono text</b>, green or red, sign first. It is the only comparison the app makes &mdash; close against cost basis, never against the previous close.</li>
         <li><b>News tone is a chip</b> in azure, amber, slate or violet — deliberately off the profit/loss axis, so a Negative brief never reads as &ldquo;sell&rdquo;.</li>
-        <li>They differ in <b>hue, form and placement</b>, not hue alone. Tone chips sit at the top-right of a brief card; price changes only ever sit in a numeric column.</li>
+        <li>They differ in <b>hue, form and placement</b>, not hue alone. Tone chips sit at the top-right of a brief card; gain figures only ever sit in a numeric column or a position row.</li>
         <li>Each tone also carries a <b>distinct glyph</b> — filled, outlined, bar, half-filled. Tone survives greyscale and colour-blindness, which the colour-only rule rates High severity.</li>
       </ul>
     </div>
@@ -1910,6 +1896,7 @@ US67066G1040,6,164.20,USD</div>
         <li><b>Brief text caps at 74 characters</b> per line even on a wide screen, because a 600-character brief across 1200&nbsp;px is unreadable.</li>
         <li><b>Dense spacing scale</b> (4–32&nbsp;px) for a dashboard, but the brief card breathes — it is the one thing being read rather than scanned.</li>
         <li><b>Numeric columns are right-aligned tabular mono</b>, so decimal points line up down the table.</li>
+        <li><b>No day change anywhere.</b> There is one close and one cost basis; the app never compares a price to the one before it, so there is no &ldquo;today&rdquo; to be wrong about.</li>
       </ul>
     </div>
     <div>
@@ -1922,6 +1909,7 @@ US67066G1040,6,164.20,USD</div>
         <li><b>Also:</b> green is reserved for price. The CSV stepper, the &ldquo;Will import&rdquo; status and the success banner use neutral white instead, so nothing outside a price reads as a gain.</li>
         <li><b>The provenance line</b> is unchanged from the LSEG pattern: article count, window, generation timestamp, in mono, under every brief.</li>
         <li><b>Prices never appear without an as-of stamp</b> — in the top bar for the page, next to the figure on an instrument.</li>
+        <li><b>Prices only exist for securities you hold.</b> An unheld instrument page shows identity and the add card, nothing numeric.</li>
         <li><b>Every empty state proposes an action</b>; every error says what to do next rather than apologising.</li>
       </ul>
     </div>
