@@ -8,6 +8,7 @@ from typing import Protocol
 import structlog
 from pydantic import BaseModel
 from sqlalchemy import Row, select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,11 +18,21 @@ from app.integrations.anthropic.client import AnthropicClient, InvalidOutputErro
 from app.integrations.anthropic.schemas import Generation
 from app.integrations.claude_cli.client import ClaudeCliClient
 from app.modules.briefs.models import Brief, BriefArticle
-from app.modules.briefs.schemas import BriefDraft, BriefRunSummary
+from app.modules.briefs.schemas import (
+    BriefDraft,
+    BriefRead,
+    BriefRunSummary,
+    PortfolioBriefsResponse,
+    SecurityBrief,
+)
+from app.modules.instruments.models import Instrument, InstrumentType
+from app.modules.instruments.schemas import InstrumentRead
 from app.modules.instruments.service import get_instrument
 from app.modules.news.models import Article, ArticleInstrument
 from app.modules.news.schemas import SecurityGroup
 from app.modules.news.service import followed_groups, group_key
+from app.modules.portfolios.models import Portfolio
+from app.modules.positions.models import Position
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -77,6 +88,8 @@ DENIED_PHRASES = (
 DENY_LIST = re.compile("|".join(DENIED_PHRASES), re.IGNORECASE)
 # Attempts after the first, each told why the previous answer was rejected.
 CORRECTIVE_RETRIES = 1
+# Briefs newest generated first, ties by id.
+LATEST_FIRST = (Brief.generated_at.desc(), Brief.id.desc())
 NO_BACKEND = "no LLM backend: set ANTHROPIC_API_KEY or install the claude CLI"
 NOT_STORED = "The brief could not be stored."
 
@@ -126,12 +139,56 @@ async def get_latest_brief(session: AsyncSession, instrument_id: uuid.UUID) -> B
     brief = await session.scalar(
         select(Brief)
         .where(Brief.group_key == group_key(instrument.share_class_figi, instrument.id))
-        .order_by(Brief.generated_at.desc(), Brief.id.desc())
+        .order_by(*LATEST_FIRST)
         .limit(1)
     )
     if brief is None:
         raise NotFoundError(f"Instrument {instrument_id} has no brief yet.")
     return brief
+
+
+async def list_portfolio_briefs(
+    session: AsyncSession, portfolio: Portfolio
+) -> PortfolioBriefsResponse:
+    """The portfolio's held instruments grouped by share class, each group with its latest
+    brief: newest generated first, then the groups without one by name."""
+    held = await session.scalars(
+        select(Instrument)
+        .join(Position, Position.instrument_id == Instrument.id)
+        .where(Position.portfolio_id == portfolio.id)
+        .order_by(Instrument.created_at, Instrument.id)
+    )
+    groups: dict[str, list[Instrument]] = {}
+    for instrument in held:
+        key = group_key(instrument.share_class_figi, instrument.id)
+        groups.setdefault(key, []).append(instrument)
+
+    # News is collected for stocks only.
+    collected = [
+        key
+        for key, listings in groups.items()
+        if any(listing.type == InstrumentType.STOCK for listing in listings)
+    ]
+    briefs = await _latest_briefs(session, collected)
+
+    newest_first = sorted(
+        briefs, key=lambda key: (briefs[key].generated_at, briefs[key].id), reverse=True
+    )
+    by_name = sorted(
+        (key for key in groups if key not in briefs),
+        key=lambda key: (groups[key][0].name.casefold(), key),
+    )
+    items = [
+        SecurityBrief(
+            key=key,
+            name=groups[key][0].name,
+            instruments=[InstrumentRead.model_validate(listing) for listing in groups[key]],
+            news_collected=key in collected,
+            brief=BriefRead.model_validate(briefs[key]) if key in briefs else None,
+        )
+        for key in [*newest_first, *by_name]
+    ]
+    return PortfolioBriefsResponse(items=items)
 
 
 def llm_client(settings: Settings) -> LLMClient:
@@ -285,7 +342,7 @@ async def _has_new_articles(session: AsyncSession, group: SecurityGroup) -> bool
     latest_end = await session.scalar(
         select(Brief.period_end)
         .where(Brief.group_key == group.key)
-        .order_by(Brief.generated_at.desc(), Brief.id.desc())
+        .order_by(*LATEST_FIRST)
         .limit(1)
     )
     linked = select(ArticleInstrument.article_id).where(
@@ -295,6 +352,17 @@ async def _has_new_articles(session: AsyncSession, group: SecurityGroup) -> bool
     if latest_end is not None:
         articles = articles.where(Article.published_at > latest_end)
     return bool(await session.scalar(select(articles.exists())))
+
+
+async def _latest_briefs(session: AsyncSession, keys: Sequence[str]) -> dict[str, Brief]:
+    """The latest brief of each group in `keys` that has one, by group key."""
+    briefs = await session.scalars(
+        select(Brief)
+        .where(Brief.group_key.in_(keys))
+        .order_by(Brief.group_key, *LATEST_FIRST)
+        .ext(distinct_on(Brief.group_key))
+    )
+    return {brief.group_key: brief for brief in briefs}
 
 
 async def _headlines(

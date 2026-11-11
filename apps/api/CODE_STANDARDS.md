@@ -101,7 +101,7 @@ holds it in place:
   returns `<Entity>sResponse` (`items`), oldest first. **[test]**
 - A search with a fixed result limit is not paginated: it takes an `<Entity>Search` model with
   `Depends()` and returns `<Entity>SearchResponse` (`items`), never a bare list. **[review]**
-- A summary computed over all of a portfolio's positions is not paginated: it returns `<Name>Response` with its items and totals (`PortfolioOverviewResponse`). **[review]**
+- A summary computed over all of a portfolio's positions is not paginated: it returns `<Name>Response` with its items, and its totals when it has some (`PortfolioOverviewResponse`, `PortfolioBriefsResponse`). **[review]**
 - A service builds the list's `select()` with its filters and returns
   `await paginate(session, statement, Model, page)`, adding `order_by=Model.<column>` only
   when the list is ordered by another timestamp than `created_at`; the router returns

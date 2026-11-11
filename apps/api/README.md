@@ -414,6 +414,34 @@ what was fetched for MC.PA.
 `articles` are the ones the brief cites. The provenance line counts them, and gives the days
 of the headlines it was written from (UTC) and when it was generated.
 
+`GET /api/v1/portfolio/briefs` returns the latest brief of each security held in the portfolio, not paginated.
+Listings of one share class held together give one entry, with the listings held.
+`brief` has the shape above, or is `null`; an ETF has `news_collected: false` and never a brief, as news is collected for stocks only.
+Entries with a brief come newest generated first, then the others by name, ignoring case:
+
+```json
+{
+  "items": [
+    {
+      "key": "BBG000BC7Q05",
+      "name": "LVMH Moët Hennessy - Louis Vuitton, Société Européenne",
+      "instruments": [{ "yahoo_symbol": "MC.PA", … }, { "yahoo_symbol": "MOH.DE", … }],
+      "news_collected": true,
+      "brief": { "text": "Reuters reports LVMH's third-quarter sales rose 4%…", … }
+    },
+    {
+      "key": "BBG005MX5GZ2",
+      "name": "iShares Core MSCI World UCITS ETF",
+      "instruments": [{ "yahoo_symbol": "IWDA.AS", … }],
+      "news_collected": false,
+      "brief": null
+    }
+  ]
+}
+```
+
+`key` is the share class FIGI, or the instrument's id when it has none.
+
 ## Project layout
 
 ```

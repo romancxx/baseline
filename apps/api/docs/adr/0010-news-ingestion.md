@@ -368,17 +368,23 @@ A `brief_instruments` table of the group's instruments (a row per listing for wh
   - `GET /instruments/{id}/news`: the group's articles, newest published first,
     keyset-paginated on `(published_at, id)`: `paginate()` takes the order column, and
     defaults to `created_at` for every other list.
+- **The latest brief of each held security, by portfolio**: `GET /portfolio/briefs` groups the portfolio's held instruments by share class, with the same `group_key` as the jobs, and gives each group its held listings and its latest brief, in the shape of `GET /instruments/{id}/brief`, or `null`.
+  ETF groups are listed with `news_collected: false` and no brief, so a client tells "no news for ETFs" from "no brief yet".
+  Groups with a brief come newest generated first, then the others by name, ignoring case.
+  One `DISTINCT ON (group_key)` query reads the latest brief of every group, with the same order as the instrument endpoint (`LATEST_FIRST`).
+  Not paginated: a personal portfolio holds tens of securities, as for the overview ([0009](0009-portfolios.md)).
 - **The cited articles load with the brief**: `Brief.articles` is a read-only relationship
   through `brief_articles`, loaded with `selectin` (a second `SELECT … WHERE id IN`). The job
   writes citations as `BriefArticle` rows and never touches it.
 
 ### Alternatives considered
 
-A scheduler process, digests and email, as in the earlier draft (deferred). A `GET /news`
-feed over every followed security (deferred until the web app has a home feed). One endpoint
-with the brief and the 40 headlines it was written from (no way to read older articles; the
-brief's cited articles already show its sources). Paginating news on `created_at` (the order
-the job stored them, not the order they were published).
+A scheduler process, digests and email, as in the earlier draft (deferred).
+A `GET /news` feed over every followed security (deferred until the web app has a home feed).
+One endpoint with the brief and the 40 headlines it was written from (no way to read older articles; the brief's cited articles already show its sources).
+Paginating news on `created_at` (the order the job stored them, not the order they were published).
+The web calling `GET /instruments/{id}/brief` once per position (one request per holding, a 404 to read as "no brief", and the share-class grouping and the stocks-only rule copied into the browser).
+Leaving ETFs out of the portfolio's briefs (the web could not tell a held ETF from a stock still waiting for its first brief).
 
 ## Evaluation
 

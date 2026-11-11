@@ -4,6 +4,7 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.modules.briefs.models import Tone
+from app.modules.instruments.schemas import InstrumentRead
 from app.modules.news.schemas import ArticleRead
 
 DISCLAIMER = "Describes news as reported. Not investment advice."
@@ -38,6 +39,27 @@ class BriefRead(BaseModel):
     @property
     def disclaimer(self) -> str:
         return DISCLAIMER
+
+
+class SecurityBrief(BaseModel):
+    """A security group held in a portfolio, and its latest brief."""
+
+    # The share class FIGI, or the id of an instrument without one.
+    key: str
+    # The name of its first stored held listing.
+    name: str
+    # Its held listings, oldest stored first.
+    instruments: list[InstrumentRead]
+    # False for ETFs, whose news is not collected: their brief is always null.
+    news_collected: bool
+    brief: BriefRead | None
+
+
+class PortfolioBriefsResponse(BaseModel):
+    """Every security group held in the portfolio, newest brief first, then those without one
+    by name."""
+
+    items: list[SecurityBrief]
 
 
 class BriefDraft(BaseModel):
