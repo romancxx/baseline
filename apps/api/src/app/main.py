@@ -15,6 +15,7 @@ from app.modules.health.router import router as health_router
 from app.modules.imports.router import router as imports_router
 from app.modules.instruments.router import router as instruments_router
 from app.modules.news.router import router as news_router
+from app.modules.overview.router import router as overview_router
 from app.modules.portfolios.router import router as portfolios_router
 from app.modules.positions.router import router as positions_router
 from app.modules.prices.router import router as prices_router
@@ -49,6 +50,7 @@ def create_app() -> FastAPI:
     api.include_router(instruments_router)
     api.include_router(portfolios_router)
     api.include_router(positions_router)
+    api.include_router(overview_router)
     api.include_router(imports_router)
     api.include_router(prices_router)
     api.include_router(news_router)
