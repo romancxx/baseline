@@ -25,14 +25,14 @@ from app.modules.briefs.schemas import (
     PortfolioBriefsResponse,
     SecurityBrief,
 )
-from app.modules.instruments.models import Instrument, InstrumentType
+from app.modules.instruments.models import InstrumentType
 from app.modules.instruments.schemas import InstrumentRead
 from app.modules.instruments.service import get_instrument
 from app.modules.news.models import Article, ArticleInstrument
 from app.modules.news.schemas import SecurityGroup
 from app.modules.news.service import followed_groups, group_by_share_class, group_key
 from app.modules.portfolios.models import Portfolio
-from app.modules.positions.models import Position
+from app.modules.positions.service import all_positions
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -152,11 +152,9 @@ async def list_portfolio_briefs(
 ) -> PortfolioBriefsResponse:
     """The portfolio's held instruments grouped by share class, each group with its latest
     brief: newest generated first, then the groups without one by name."""
-    held = await session.scalars(
-        select(Instrument)
-        .join(Position, Position.instrument_id == Instrument.id)
-        .where(Position.portfolio_id == portfolio.id)
-        .order_by(Instrument.created_at, Instrument.id)
+    held = sorted(
+        (position.instrument for position in await all_positions(session, portfolio)),
+        key=lambda instrument: (instrument.created_at, instrument.id),
     )
     groups = group_by_share_class(held)
 

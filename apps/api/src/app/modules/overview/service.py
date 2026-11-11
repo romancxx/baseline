@@ -18,6 +18,7 @@ from app.modules.overview.schemas import (
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
 from app.modules.positions.schemas import PositionRead
+from app.modules.positions.service import all_positions
 from app.modules.prices.models import DailyPrice
 from app.modules.prices.service import MissingRateError, convert
 
@@ -91,9 +92,7 @@ class Valuation:
 
 async def get_overview(session: AsyncSession, portfolio: Portfolio) -> PortfolioOverviewResponse:
     """The portfolio's positions valued at their latest stored close, and their totals."""
-    positions = (
-        await session.scalars(select(Position).where(Position.portfolio_id == portfolio.id))
-    ).all()
+    positions = await all_positions(session, portfolio)
     latest_closes = await _latest_closes(session, portfolio)
 
     rates: dict[tuple[str, dt.date], Decimal | None] = {}

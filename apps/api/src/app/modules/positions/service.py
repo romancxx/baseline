@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -46,6 +47,16 @@ async def list_positions(
     """One page of the portfolio's positions, newest first."""
     statement = select(Position).where(Position.portfolio_id == portfolio.id)
     return await paginate(session, statement, Position, page)
+
+
+async def all_positions(session: AsyncSession, portfolio: Portfolio) -> Sequence[Position]:
+    """Every position of the portfolio, with its instrument, oldest first."""
+    statement = (
+        select(Position)
+        .where(Position.portfolio_id == portfolio.id)
+        .order_by(Position.created_at, Position.id)
+    )
+    return (await session.scalars(statement)).all()
 
 
 async def update_position(
