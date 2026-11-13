@@ -257,9 +257,10 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
   Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
 - Mutations `revalidatePath`; there is no optimistic UI. **[review]**
-- **Data reaches the browser through server rendering**, with two exceptions ([ADR 0003](docs/adr/0003-holdings-search-and-instrument-page.md)).
+- **Data reaches the browser through server rendering**, with three exceptions ([ADR 0003](docs/adr/0003-holdings-search-and-instrument-page.md), [ADR 0004](docs/adr/0004-csv-import.md)).
   Search: `useSecuritySearch` fetches the `/search` route handler while the user types, so a newer query can cancel the one in flight, which a server action cannot; the answer is parsed with `SecuritySearchSchema`, since it crosses the network.
-  "Load more": `loadMoreNews` is a server action returning the next page, which `InstrumentNewsList` appends to the first, rendered on the server. **[review]**
+  "Load more": `loadMoreNews` is a server action returning the next page, which `InstrumentNewsList` appends to the first, rendered on the server.
+  The CSV import: `previewImport` and `confirmImport` are server actions `useImportFlow` calls with the chosen `File`, not bound to a form, because the preview returns the dry run's report and the confirm sends the same `File` again. **[review]**
 
 ### 6.2 Reads and repositories
 
