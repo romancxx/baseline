@@ -6,7 +6,6 @@ export type ImportStatusProps = {
   readonly row: ImportRowReport;
 };
 
-/** The row's status, in the partial hue when the row is skipped, with the reason under it. */
 export function ImportStatus({ row: { status, reason } }: ImportStatusProps) {
   return (
     <div className="flex flex-col gap-1">

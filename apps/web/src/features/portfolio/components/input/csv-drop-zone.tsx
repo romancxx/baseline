@@ -7,7 +7,6 @@ import { cn } from "@/shared/ui/cn";
 import { Icon } from "@/shared/ui/display/icon";
 
 export type CsvDropZoneProps = {
-  /** "up to 64 KB" */
   readonly limit: string;
   /** A file is being read; the zone takes no other. */
   readonly pending: boolean;

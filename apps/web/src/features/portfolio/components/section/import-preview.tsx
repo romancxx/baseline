@@ -12,7 +12,6 @@ import type { ImportFailure, ImportPreview as Preview } from "@/types/portfolio"
 
 export type ImportPreviewProps = {
   readonly preview: Preview;
-  /** Why the confirm failed; `null` otherwise. */
   readonly failure: ImportFailure | null;
   readonly confirming: boolean;
   readonly onConfirm: () => void;
