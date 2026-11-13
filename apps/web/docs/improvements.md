@@ -30,6 +30,17 @@ The API has no names for its codes; a table of names, in the API or here, would 
 **No buttons in the instrument header.** The design puts "Add to holdings" or "Edit position" beside the header, duplicating the position card next to it.
 Worth adding if the card ends up below the fold on a smaller screen.
 
+## portfolio
+
+**The import preview names no security and shows no position.** Screen 08 shows each row's matched name and exchange, its quantity and its average price; the API's row report carries only the matched symbol, so the preview shows the line, ISIN, status, symbol and other listings ([ADR 0004](adr/0004-csv-import.md)).
+Adding the matched listing and the row's quantity, average price and currency to the API's report would let the user check figures before importing them.
+
+**Every unreadable file gets the same heading.** Unknown columns, a missing column, an empty file and text that is not UTF-8 all reach the web app as `invalid_file`, so the upload heads them all "That file can't be imported" and relies on the API's message for the cause; screen 07 heads each cause on its own ("That file is missing a column").
+Distinct codes from the API would allow that.
+
+**The import's size limit is copied from the API.** `IMPORT_MAX_FILE_BYTES` mirrors the API's `MAX_FILE_SIZE`, which its OpenAPI document does not carry; a change there must be repeated here.
+Exposing it in the document, for instance as the file field's `maxLength`, would let the web app read it from the generated types.
+
 ## ui
 
 **The app is desktop only.** The top bar holds the logo, two links, a search button up to 460 px wide and the account menu in one row, which needs roughly 900 px.

@@ -1,4 +1,5 @@
 import type { PriceRange } from "@/types/instruments";
+import type { ImportCounts } from "@/types/portfolio";
 import type { Route } from "@/types/routes";
 
 export const ROUTES = {
@@ -24,6 +25,15 @@ export function instrumentRoute(instrumentId: string) {
 
 export function priceRangeRoute(instrumentId: string, range: PriceRange) {
   return `/instruments/${instrumentId}?range=${range}` as const;
+}
+
+/** Holdings, told how many rows of each status an import had; statuses without rows are left out. */
+export function importedHoldingsRoute(counts: ImportCounts) {
+  const query = new URLSearchParams();
+  for (const [status, count] of Object.entries(counts)) {
+    if (count > 0) query.set(status, String(count));
+  }
+  return query.size === 0 ? ROUTES.holdings : (`${ROUTES.holdings}?${query}` as const);
 }
 
 export function isPublicRoute(pathname: string): boolean {

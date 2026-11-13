@@ -44,6 +44,95 @@ export type PricedCount = {
   readonly of: number;
 };
 
+export type ImportStatus = components["schemas"]["ImportStatus"];
+
+/** The import's multipart body. */
+export type ImportUpload = components["schemas"]["Body_import_csv_api_v1_portfolio_import_post"];
+
+/** What the import did, or would do in a dry run, with one line of the CSV. */
+export type ImportRowReport = {
+  /** The line in the file; the header is line 1. */
+  readonly line: number;
+  /** As written in the file; `null` when the row has no cell for it. */
+  readonly isin: string | null;
+  readonly status: ImportStatus;
+  /** The matched listing's symbol; `null` when none was matched. */
+  readonly symbol: string | null;
+  /** Up to three other listings of the security, by symbol. */
+  readonly alternatives: readonly string[];
+  /** Why the row is skipped; `null` for a row that is saved. */
+  readonly reason: string | null;
+};
+
+export type ImportReport = {
+  readonly rows: readonly ImportRowReport[];
+};
+
+/** Rows by status. */
+export type ImportCounts = Readonly<Record<ImportStatus, number>>;
+
+/** A notice's title and the line under it. */
+export type ImportSummary = {
+  readonly title: string;
+  readonly detail: string;
+};
+
+/** Why the file was refused before any row was read. */
+export type ImportFailure = {
+  readonly ok: false;
+  readonly title: string;
+  readonly message: string;
+};
+
+export type ImportPreviewResult =
+  | { readonly ok: true; readonly report: ImportReport }
+  | ImportFailure;
+
+/** Sends the CSV in `file` as a dry run. */
+export type PreviewImport = (formData: FormData) => Promise<ImportPreviewResult>;
+
+/** Imports the CSV in `file`, then redirects to Holdings; `undefined` once it has redirected. */
+export type ConfirmImport = (formData: FormData) => Promise<ImportFailure | undefined>;
+
+/** How a status reads, and whether its row is saved or skipped. */
+export type ImportStatusText = {
+  /** In the preview: "Will import". */
+  readonly label: string;
+  /** After the import: "imported". */
+  readonly done: string;
+  readonly saved: boolean;
+};
+
+export type ImportStep = "upload" | "preview" | "confirm";
+
+export type ImportStepEntry = {
+  readonly step: ImportStep;
+  readonly label: string;
+  readonly state: "done" | "current" | "next";
+};
+
+/** A dry run's report, with the file it read, to be sent again by the confirm. */
+export type ImportPreview = {
+  readonly file: File;
+  readonly report: ImportReport;
+};
+
+export type ImportFlow = {
+  readonly step: ImportStep;
+  /** `null` until a file is previewed. */
+  readonly preview: ImportPreview | null;
+  /** Why the last upload or confirm failed; `null` otherwise. */
+  readonly failure: ImportFailure | null;
+  /** The dry run is in flight. */
+  readonly reading: boolean;
+  /** The import is in flight. */
+  readonly confirming: boolean;
+  readonly choose: (file: File) => void;
+  readonly confirm: () => void;
+  /** Back to the upload, forgetting the file and its report. */
+  readonly reset: () => void;
+};
+
 export type PortfolioOverview = {
   /** Largest value first, then those not valued. */
   readonly holdings: readonly Holding[];

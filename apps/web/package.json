@@ -20,7 +20,7 @@
     "test:watch": "vitest --project unit",
     "test:coverage": "vitest run --coverage",
     "verify": "pnpm lint && pnpm typecheck && pnpm test",
-    "api:types": "openapi-typescript ../api/openapi.json --output src/shared/api/api.types.ts"
+    "api:types": "node scripts/api-types.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

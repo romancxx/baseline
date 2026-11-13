@@ -358,7 +358,7 @@ export interface components {
         /** Body_import_csv_api_v1_portfolio_import_post */
         Body_import_csv_api_v1_portfolio_import_post: {
             /** File */
-            file: string;
+            file: Blob;
         };
         /** Body_login_api_v1_auth_login_post */
         Body_login_api_v1_auth_login_post: {

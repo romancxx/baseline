@@ -32,7 +32,7 @@ From the repo root, `just dev` starts Postgres, applies pending migrations, and 
 | `pnpm typecheck` | `next typegen` then `tsc --noEmit` |
 | `pnpm test` / `pnpm test:watch` / `pnpm test:coverage` | Vitest, unit project only |
 | `pnpm verify` | lint + typecheck + test — what CI runs |
-| `pnpm api:types` | Regenerate `src/shared/api/api.types.ts` from `apps/api/openapi.json` (`just api-openapi`) |
+| `pnpm api:types` | Regenerate `src/shared/api/api.types.ts` from `apps/api/openapi.json` (`just api-openapi`), typing uploaded files as `Blob` |
 
 ## Architecture
 
@@ -163,11 +163,19 @@ Rows come largest value first, then the holdings that could not be valued.
 A value in another currency than the portfolio's base currency (EUR) shows its EUR amount underneath.
 A holding without a quantity shows its latest close and "—" elsewhere; a missing price or exchange rate shows "—" too, never zero.
 When a price or a rate is missing, a notice says how many holdings are priced, since the totals cover only those.
+After an import, a notice says how many rows were imported, updated or skipped.
 Quantity and average price are edited in the row; clearing both keeps the security but drops the position.
 Removing a holding asks first.
 Every figure is the API's, from `GET /portfolio/overview`; the web app does no arithmetic on them.
 
-**Being rebuilt:** `/holdings/import` shows only its heading until it imports positions through the API.
+## Importing holdings
+
+`/holdings/import` adds or updates holdings from a CSV in three steps: upload, preview, confirm.
+The upload shows the format (`isin,quantity,average_price,currency`, quantity and average price optional) with an example, and a prompt to copy into an AI tool to convert a broker export into it.
+A file is dropped or chosen, up to 64 KB, the API's limit.
+The preview is the API's dry run: one row per line of the file, with its status ("Will import", "Will update", "Not found", "Invalid", "Currency mismatch"), the reason a row is skipped, the matched listing's symbol and up to three other listings, under a summary of what will import, update and be skipped.
+Nothing is saved until "Import N rows", which sends the same file again for real and opens Holdings with a notice of what was imported ("9 imported, 2 updated, 1 not found").
+A file the API cannot read (not UTF-8, unknown or missing columns, empty) or too large stays on the upload with the reason.
 
 ## Home feed
 
