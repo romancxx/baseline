@@ -142,7 +142,7 @@ loud crash instead of a leaked secret. Do not remove it, and do not add a server
 that bypasses it: every `data/` module reaches either `server-env` or `next/headers`, which is
 what makes an accidental client import fail.
 
-The API is reached only from the server, through `@/shared/api` (`readApi`, `findApi`, `writeApi`, `createApiClient`), and the session only through `@/shared/session`.
+The API is reached only from the server, through `@/shared/api` (`api` with `dataOrThrow`, `dataOrNull` or `resultOf`; `createApiClient` for `session.ts`), and the session only through `@/shared/session`.
 Both reach `server-env`, so a client import fails loudly. **[review]**
 
 ---
@@ -235,7 +235,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   const parsed = parseForm(ThingInputSchema, formData);   // 1. validate first
   if (!parsed.ok) return parsed.state;
 
-  const result = await writeApi((api) =>                  // 2. the session's token; a 401 signs out
+  const result = await resultOf(                          // 2. the session's token; a 401 signs out
     api.POST("/api/v1/things", { body: parsed.value }),
   );
   if (!result.ok) {                                       // 3. expected failures are values
@@ -251,7 +251,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - Signature is `(previous: FormState, formData: FormData) => Promise<FormState>` so it plugs
   into `useActionState`. Use `FormState`, `IDLE`, `formError` and `parseForm` from
   `@/shared/form-state` — do not define a per-feature state type. **[review]**
-- **Call the API through `writeApi`** from `@/shared/api/request`: it sends the session's access token and the request's ID, and on a 401 clears the session and redirects to `/sign-in`.
+- **Call the API with `api` and pass the call to `resultOf`**, both from `@/shared/api/request`: `api` sends the session's access token and the request's ID, and `resultOf` on a 401 clears the session and redirects to `/sign-in`.
   Any other failure comes back as an `ApiError`. **[review]**
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
   Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
@@ -259,9 +259,9 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 
 ### 6.2 Reads and repositories
 
-- **A read from the API goes through `readApi("<verb> <thing>", (api) => api.GET(…))`** from `@/shared/api/request`.
+- **A read from the API goes through `dataOrThrow("<verb> <thing>", api.GET(…))`** from `@/shared/api/request`.
   It throws `Could not <verb> <thing>: …` for the route's error boundary, and redirects a 401 to `/session/expired`, which clears the cookies a Server Component cannot.
-  A read whose absence the screen shows, such as a missing instrument or no brief yet, goes through `findApi` instead: the same, but `null` on a 404 `not_found`.
+  A read whose absence the screen shows, such as a missing instrument or no brief yet, goes through `dataOrNull` instead: the same, but `null` on a 404 `not_found`.
   Wrap a read several components need in React `cache()`, so one request makes one call (`getCurrentUser`). **[review]**
 - **Screens fetch in parallel** with `Promise.all` when reads are independent. **[review]**
 

@@ -20,7 +20,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 /** The API's answers by path; every call through the client is recorded. */
-const post = vi.fn<(path: string, init?: unknown) => Promise<ApiResult<unknown>>>();
+const post = vi.hoisted(() =>
+  vi.fn<(path: string, init?: unknown) => Promise<ApiResult<unknown>>>(),
+);
 
 vi.mock("@/shared/api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/api/client")>()),

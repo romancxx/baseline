@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { readApi } from "@/shared/api/request";
+import { api, dataOrThrow } from "@/shared/api/request";
 import { ROUTES } from "@/shared/routes";
 import { readSession } from "@/shared/session";
 import type { User } from "@/types/auth";
@@ -10,7 +10,7 @@ import type { User } from "@/types/auth";
 export const getCurrentUser = cache(async (): Promise<User | null> => {
   if (readSession(await cookies()).status === "signed-out") return null;
 
-  const user = await readApi("load the user", (api) => api.GET("/api/v1/users/me"));
+  const user = await dataOrThrow("load the user", api.GET("/api/v1/users/me"));
   return { id: user.id, email: user.email };
 });
 

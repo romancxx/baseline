@@ -2,7 +2,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeApi } from "@/shared/api/fake-api";
-import { findApi, readApi, writeApi } from "@/shared/api/request";
+import { api, dataOrNull, dataOrThrow, resultOf } from "@/shared/api/request";
 
 function cookiesOf(cookie: string) {
   return new NextRequest("http://localhost:3000/", { headers: { cookie } }).cookies;
@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 function loadUser() {
-  return readApi("load the user", (api) => api.GET("/api/v1/users/me"));
+  return dataOrThrow("load the user", api.GET("/api/v1/users/me"));
 }
 
 describe("reading from the API while rendering", () => {
@@ -86,7 +86,8 @@ describe("reading something that may not exist", () => {
   const INSTRUMENT = `GET /api/v1/instruments/${INSTRUMENT_ID}`;
 
   function findInstrument() {
-    return findApi("load the instrument", (api) =>
+    return dataOrNull(
+      "load the instrument",
       api.GET("/api/v1/instruments/{instrument_id}", {
         params: { path: { instrument_id: INSTRUMENT_ID } },
       }),
@@ -141,7 +142,7 @@ describe("calling the API from a server action", () => {
   const REGISTER = "POST /api/v1/auth/register";
 
   function register() {
-    return writeApi((api) =>
+    return resultOf(
       api.POST("/api/v1/auth/register", {
         body: { email: "alice@example.com", password: "correct-horse-battery" },
       }),

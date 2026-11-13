@@ -7,11 +7,20 @@ import type { ApiClient, ApiClientOptions, ApiError, ApiResult, ClientOutcome } 
 /** Carries the request's ID, from `proxy.ts` to the API. */
 export const REQUEST_ID_HEADER = "X-Request-ID";
 
-/** A client for one call site, over the global `fetch` as it is now. */
-export function createApiClient({ accessToken, requestId }: ApiClientOptions): ApiClient {
-  const client = createClient<paths>({ baseUrl: serverEnv.API_BASE_URL.replace(/\/$/, "") });
+/**
+ * A client sending an access token and a request ID: fixed, or resolved by `options` before each
+ * call. Calls go through the global `fetch` as it is at the time of the call.
+ */
+export function createApiClient(
+  options: ApiClientOptions | (() => Promise<ApiClientOptions>),
+): ApiClient {
+  const client = createClient<paths>({
+    baseUrl: serverEnv.API_BASE_URL.replace(/\/$/, ""),
+    fetch: (request) => globalThis.fetch(request),
+  });
   client.use({
-    onRequest({ request }) {
+    async onRequest({ request }) {
+      const { accessToken, requestId } = typeof options === "function" ? await options() : options;
       if (accessToken) request.headers.set("Authorization", `Bearer ${accessToken}`);
       if (requestId) request.headers.set(REQUEST_ID_HEADER, requestId);
       return request;

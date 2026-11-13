@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { CreateAccountSchema, SignInSchema } from "@/features/auth/schemas/credentials.schema";
-import { currentRequestId, writeApi } from "@/shared/api/request";
+import { api, currentRequestId, resultOf } from "@/shared/api/request";
 import { type FormState, formError, parseForm } from "@/shared/form-state";
 import { logger } from "@/shared/logger";
 import { ROUTES } from "@/shared/routes";
@@ -36,7 +36,7 @@ export async function createAccount(_previous: FormState, formData: FormData): P
 
   const { email, password, next } = parsed.value;
   const requestId = await currentRequestId();
-  const registered = await writeApi((api) =>
+  const registered = await resultOf(
     api.POST("/api/v1/auth/register", { body: { email, password } }),
   );
   if (!registered.ok) {
