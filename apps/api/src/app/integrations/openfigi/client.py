@@ -1,4 +1,7 @@
 import asyncio
+import math
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from http import HTTPStatus
 from typing import NamedTuple
 
@@ -15,6 +18,7 @@ logger = structlog.stdlib.get_logger(__name__)
 BASE_URL = "https://api.openfigi.com"
 MAPPING_PATH = "/v3/mapping"
 TIMEOUT_SECONDS = 10
+DEFAULT_RETRY_AFTER_SECONDS = 1
 MAX_RETRY_AFTER_SECONDS = 60
 
 
@@ -186,5 +190,17 @@ def _candidate(listing: _Listing) -> FigiCandidate | None:
 
 
 def _retry_after(response: httpx2.Response) -> float:
-    """The seconds a 429 asks to wait, from its Retry-After header."""
-    return min(float(response.headers.get("retry-after", "1")), MAX_RETRY_AFTER_SECONDS)
+    """The seconds a 429 asks to wait, from its Retry-After header: a number of seconds or an
+    HTTP date. A missing or unreadable header waits DEFAULT_RETRY_AFTER_SECONDS."""
+    value = response.headers.get("retry-after", "")
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            seconds = (parsedate_to_datetime(value) - datetime.now(UTC)).total_seconds()
+        # ValueError for a value that is not a date, TypeError for a date without a time zone.
+        except (ValueError, TypeError):
+            seconds = DEFAULT_RETRY_AFTER_SECONDS
+    if not math.isfinite(seconds):
+        seconds = DEFAULT_RETRY_AFTER_SECONDS
+    return min(max(seconds, 0), MAX_RETRY_AFTER_SECONDS)

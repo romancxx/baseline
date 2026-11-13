@@ -10,7 +10,7 @@ from app.integrations.yahoo.schemas import DailyBar, PriceHistory
 from app.modules.portfolios.models import Portfolio
 from app.modules.prices.models import FxRate
 from app.modules.prices.schemas import RateUpdateSummary
-from app.modules.prices.service import NO_RECENT_BARS, MissingRateError, convert, update_rates
+from app.modules.prices.service import NO_RECENT_BARS, get_rate, update_rates
 
 pytestmark = pytest.mark.anyio
 
@@ -68,26 +68,23 @@ async def test_update_rates_reports_a_currency_without_recent_rates(
     assert summary == RateUpdateSummary(updated=[], failed={"USD": NO_RECENT_BARS})
 
 
-async def test_convert_uses_the_latest_rate_on_or_before_the_date(
+async def test_get_rate_is_the_latest_rate_on_or_before_the_date(
     db_session: AsyncSession, make_fx_rate: FxRateFactory
 ) -> None:
     await make_fx_rate("USD", DAY - dt.timedelta(days=5), Decimal("0.9"))
     await make_fx_rate("USD", DAY - dt.timedelta(days=2), Decimal("0.8"))
     await make_fx_rate("USD", DAY + dt.timedelta(days=1), Decimal("0.7"))
 
-    assert await convert(db_session, Decimal(100), "USD", DAY) == Decimal(80)
+    assert await get_rate(db_session, "USD", DAY) == Decimal("0.8")
 
 
-async def test_convert_from_the_base_currency_returns_the_amount(
-    db_session: AsyncSession,
-) -> None:
-    assert await convert(db_session, Decimal("123.45"), "EUR", DAY) == Decimal("123.45")
+async def test_get_rate_of_the_base_currency_is_one(db_session: AsyncSession) -> None:
+    assert await get_rate(db_session, "EUR", DAY) == Decimal(1)
 
 
-async def test_convert_without_a_rate_on_or_before_the_date_raises(
+async def test_get_rate_without_a_rate_on_or_before_the_date_is_none(
     db_session: AsyncSession, make_fx_rate: FxRateFactory
 ) -> None:
     await make_fx_rate("USD", DAY + dt.timedelta(days=1), Decimal("0.9"))
 
-    with pytest.raises(MissingRateError, match="No USD to EUR rate on or before 2026-11-02."):
-        await convert(db_session, Decimal(100), "USD", DAY)
+    assert await get_rate(db_session, "USD", DAY) is None

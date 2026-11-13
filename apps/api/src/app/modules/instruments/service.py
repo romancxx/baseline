@@ -3,7 +3,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy import Select, case, func, or_, select, update
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,6 @@ from app.modules.instruments.schemas import (
     LocalSearchResult,
     YahooSearchResult,
 )
-from app.modules.positions.models import Position
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -76,11 +75,6 @@ async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Ins
     if instrument is None:
         raise NotFoundError(f"Instrument {instrument_id} not found.")
     return instrument
-
-
-def followed_instrument_ids() -> Select[uuid.UUID]:
-    """The ids of the instruments in a position, as a subquery."""
-    return select(Position.instrument_id)
 
 
 def group_by_share_class(instruments: Iterable[Instrument]) -> dict[str, list[Instrument]]:

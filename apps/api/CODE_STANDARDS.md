@@ -36,8 +36,8 @@ holds it in place:
   never lets one item stop the run. **[test]**
 - A job that works on the instruments users follow selects them with
   `Instrument.id.in_(followed_instrument_ids())`; never rewrite that union. **[review]**
-- A module imports another module's `service.py`, `schemas.py` or `dependencies.py`, never its
-  `router.py`. **[review]**
+- A module imports another module's `service.py`, `schemas.py`, `models.py` or `dependencies.py`, never its `router.py`.
+  Two modules never import each other, except `auth` and `users`: a function both need goes in the one whose concept it is (`followed_instrument_ids` in `positions`, since following is holding). **[review]**
 - Something a module needs that several implementations can provide (a news source) is a
   `typing.Protocol` in that module's `service.py`. Implementations do not inherit from it;
   one built on an integration's client goes in the module's `sources.py`

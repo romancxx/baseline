@@ -4,7 +4,7 @@ from app.integrations.google_news.client import GoogleNewsClient, drop_junk
 from app.integrations.google_news.schemas import FeedItem
 from app.modules.news.models import ArticleSource
 from app.modules.news.schemas import FetchResult, NewsQuery, RawArticle
-from app.modules.news.service import fold
+from app.modules.news.service import LOOKBACK, fold
 
 # Legal forms that end company names, matched in any case.
 LEGAL_FORMS = (
@@ -51,8 +51,8 @@ TRAILING_PUNCTUATION = " ,;:&-"
 
 # Words that keep a query to finance news, from the probes in ADR 0010.
 FINANCE_TERMS = ("shares", "stock", "earnings", "results", "revenue", "analyst", "investors")
-# Google's search operator for the last day.
-LOOKBACK = "when:1d"
+# Google's search operator for the last LOOKBACK days.
+WHEN = f"when:{LOOKBACK.days}d"
 
 # The reasons given for items whose title does not name the security, and for items
 # published before the query's `since`.
@@ -74,7 +74,7 @@ def news_name(name: str) -> str:
 def search_query(name: str) -> str:
     """The Google News query for a security: its name as an exact phrase, finance terms and
     the lookback, e.g. '"Apple" (shares OR stock OR …) when:1d'."""
-    return f'"{news_name(name)}" ({" OR ".join(FINANCE_TERMS)}) {LOOKBACK}'
+    return f'"{news_name(name)}" ({" OR ".join(FINANCE_TERMS)}) {WHEN}'
 
 
 class GoogleNewsSource:

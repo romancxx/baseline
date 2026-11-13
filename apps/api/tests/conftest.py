@@ -347,13 +347,13 @@ def make_instrument(db_session: AsyncSession) -> InstrumentFactory:
 @pytest.fixture
 async def portfolio(db_session: AsyncSession, user: User) -> Portfolio:
     """The portfolio `user` was created with."""
-    return await get_portfolio(db_session, user)
+    return await get_portfolio(db_session, user.id)
 
 
 @pytest.fixture
 async def other_portfolio(db_session: AsyncSession, other_user: User) -> Portfolio:
     """The portfolio `other_user` was created with."""
-    return await get_portfolio(db_session, other_user)
+    return await get_portfolio(db_session, other_user.id)
 
 
 class PositionFactory(Protocol):

@@ -20,7 +20,7 @@ from app.modules.positions.models import Position
 from app.modules.positions.schemas import PositionRead
 from app.modules.positions.service import all_positions
 from app.modules.prices.models import DailyPrice
-from app.modules.prices.service import MissingRateError, convert
+from app.modules.prices.service import get_rate
 
 HUNDRED = Decimal(100)
 
@@ -103,7 +103,7 @@ async def get_overview(session: AsyncSession, portfolio: Portfolio) -> Portfolio
         if position.quantity is not None and latest is not None:
             key = (position.instrument.currency, latest.date)
             if key not in rates:
-                rates[key] = await _rate(session, *key)
+                rates[key] = await get_rate(session, *key)
             rate = rates[key]
         valuations.append(Valuation(position, latest, rate))
 
@@ -143,14 +143,6 @@ async def _latest_closes(
         instrument_id: LatestClose(date=date, close=close)
         for instrument_id, date, close in await session.execute(statement)
     }
-
-
-async def _rate(session: AsyncSession, currency: str, on_date: dt.date) -> Decimal | None:
-    """Base-currency units per unit of `currency` on or before `on_date`; None when none."""
-    try:
-        return await convert(session, Decimal(1), currency, on_date)
-    except MissingRateError:
-        return None
 
 
 def _position_overview(valuation: Valuation, total: Decimal | None) -> PositionOverview:

@@ -84,6 +84,12 @@ class SecurityGroup(BaseModel):
     name: str
     instrument_ids: list[uuid.UUID]
 
+    @property
+    def label(self) -> str:
+        """The name and key, e.g. "Alphabet Inc. (BBG009S39JY5)": two share classes of one
+        company share a name, never a key."""
+        return f"{self.name} ({self.key})"
+
 
 class LocalSearchResult(InstrumentRead):
     """A stored instrument."""

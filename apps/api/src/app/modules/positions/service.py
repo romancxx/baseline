@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,11 @@ from app.modules.instruments.service import get_instrument
 from app.modules.portfolios.models import Portfolio
 from app.modules.positions.models import Position
 from app.modules.positions.schemas import PositionCreate, PositionUpdate
+
+
+def followed_instrument_ids() -> Select[uuid.UUID]:
+    """The ids of the instruments held in any portfolio, as a subquery."""
+    return select(Position.instrument_id)
 
 
 async def add_position(

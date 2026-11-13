@@ -27,23 +27,26 @@ def match(ticker: str, exch_code: str, share_class_figi: str | None) -> dict[str
 class FakeOpenFigi:
     """Answers mapping jobs from `answers`, keyed by (idValue, exchCode), and records the jobs.
 
-    `statuses` are answered first, one per request, before any 200.
+    `statuses` are answered first, one per request, before any 200, with `retry_after` as their
+    Retry-After header.
     """
 
     def __init__(
         self,
         answers: dict[tuple[str, str | None], list[dict[str, object]]],
         statuses: list[int] | None = None,
+        retry_after: str = "0",
     ) -> None:
         self.answers = answers
         self.statuses = statuses or []
+        self.retry_after = retry_after
         self.jobs: list[dict[str, str]] = []
 
     def handle(self, request: httpx2.Request) -> httpx2.Response:
         jobs = json.loads(request.content)
         self.jobs += jobs
         if self.statuses:
-            return httpx2.Response(self.statuses.pop(0), headers={"retry-after": "0"})
+            return httpx2.Response(self.statuses.pop(0), headers={"retry-after": self.retry_after})
         return httpx2.Response(200, json=[self._answer(job) for job in jobs])
 
     def _answer(self, job: dict[str, str]) -> dict[str, object]:
@@ -120,6 +123,20 @@ async def test_symbols_outside_the_exchange_map_are_not_looked_up(
 
 async def test_a_rate_limited_request_is_retried_once(make_client: ClientFactory) -> None:
     fake = FakeOpenFigi({("MC", "FP"): [match("MC", "FP", LVMH)]}, statuses=[429])
+
+    figi = await make_client(fake.handle).get_share_class_figi("MC.PA")
+
+    assert figi == LVMH
+    assert fake.jobs == [ticker_job("MC", "FP")] * 2
+
+
+async def test_a_retry_after_given_as_a_date_is_honoured(make_client: ClientFactory) -> None:
+    # A date already past: the retry goes at once.
+    fake = FakeOpenFigi(
+        {("MC", "FP"): [match("MC", "FP", LVMH)]},
+        statuses=[429],
+        retry_after="Wed, 21 Oct 2015 07:28:00 GMT",
+    )
 
     figi = await make_client(fake.handle).get_share_class_figi("MC.PA")
 

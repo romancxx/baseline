@@ -63,7 +63,7 @@ The web app's Home and Holdings show values and gains; the API computes them so 
   A position without an average price is valued and has no gain.
 - **Totals** cover valued positions only: `value_base`, `unrealised_gain_base` and its percentage against the cost, the counts `positions` and `valued_positions`, and `prices_as_of`, the latest close date among them.
   A total no position contributes to is `null`, never zero, so an empty portfolio has no totals.
-- **One rate per position converts its amounts into the base currency**: the rate on or before its latest close date, read through `convert` once per currency and date, then multiplied into the value, the gain and the cost.
+- **One rate per position converts its amounts into the base currency**: the rate on or before its latest close date, read through `get_rate` once per currency and date, then multiplied into the value, the gain and the cost.
   The cost is converted at that rate too, so in the base currency the gain shows the price's move, not the currency's since the purchase.
 - **Computed with unrounded `Decimal`s, rounded when serialized**: the `Money` and `Percent` aliases round to 2 places, halves up, and never send `-0.00`.
   Percentages are in percent.

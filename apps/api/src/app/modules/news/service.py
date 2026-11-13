@@ -16,17 +16,14 @@ from app.core.exceptions import ProviderUnavailableError
 from app.core.pagination import KeysetPage, PageRequest, paginate
 from app.modules.instruments.models import Instrument, InstrumentType
 from app.modules.instruments.schemas import SecurityGroup
-from app.modules.instruments.service import (
-    followed_instrument_ids,
-    get_instrument,
-    group_by_share_class,
-)
+from app.modules.instruments.service import get_instrument, group_by_share_class
 from app.modules.news.models import Article, ArticleInstrument, ArticleSource
 from app.modules.news.schemas import FetchResult, NewsIngestSummary, NewsQuery, RawArticle
+from app.modules.positions.service import followed_instrument_ids
 
 logger = structlog.stdlib.get_logger(__name__)
 
-# How far back a run asks for articles.
+# How far back a run asks for articles, in whole days: Google's `when:` operator counts days.
 LOOKBACK = dt.timedelta(days=1)
 # An article whose title_key matches one published this close to it is the same article.
 DUPLICATE_WINDOW = dt.timedelta(days=3)
@@ -65,23 +62,24 @@ async def ingest_news(session: AsyncSession, source: NewsSource) -> NewsIngestSu
     dropped: Counter[str] = Counter()
     failed: dict[str, str] = {}
     for group in groups:
-        name, stock_ids = group.name, group.instrument_ids
         try:
-            result = await source.fetch(NewsQuery(name=name, since=now - LOOKBACK))
+            result = await source.fetch(NewsQuery(name=group.name, since=now - LOOKBACK))
         except ProviderUnavailableError as exc:
-            failed[name] = exc.message
+            failed[group.label] = exc.message
             continue
         fetched += len(result.articles)
         dropped.update(result.dropped)
 
         # One transaction per group: its articles and links are stored together or not at all.
         try:
-            added, links = await _store(session, source.source, result.articles, stock_ids)
+            added, links = await _store(
+                session, source.source, result.articles, group.instrument_ids
+            )
             await session.commit()
         except DBAPIError as exc:
             await session.rollback()
             logger.warning("news.store_failed", error=repr(exc.orig))
-            failed[name] = NOT_STORED
+            failed[group.label] = NOT_STORED
             continue
         new += added
         linked += links

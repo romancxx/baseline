@@ -215,21 +215,36 @@ async def test_ingest_news_run_again_changes_nothing(
 async def test_ingest_news_reports_a_failing_query_and_stores_the_others(
     db_session: AsyncSession, news: FakeNewsSource, follow: Follow
 ) -> None:
-    await follow("AAPL", "Apple Inc.")
+    await follow("AAPL", "Apple Inc.", share_class_figi="BBG001S5N8V8")
     await follow("MSFT", "Microsoft Corporation")
     news.unavailable = {"Apple Inc."}
     news.articles["Microsoft Corporation"] = [article("msft", "Microsoft shares rise")]
 
     summary = await ingest_news(db_session, news)
 
-    assert summary.failed == {"Apple Inc.": UNAVAILABLE}
+    assert summary.failed == {"Apple Inc. (BBG001S5N8V8)": UNAVAILABLE}
     assert await links(db_session) == {("msft", "MSFT")}
+
+
+async def test_ingest_news_reports_each_failing_share_class_of_one_company(
+    db_session: AsyncSession, news: FakeNewsSource, follow: Follow
+) -> None:
+    await follow("GOOGL", "Alphabet Inc.", share_class_figi="BBG009S39JY5")
+    await follow("GOOG", "Alphabet Inc.", share_class_figi="BBG009S3NB21")
+    news.unavailable = {"Alphabet Inc."}
+
+    summary = await ingest_news(db_session, news)
+
+    assert summary.failed == {
+        "Alphabet Inc. (BBG009S39JY5)": UNAVAILABLE,
+        "Alphabet Inc. (BBG009S3NB21)": UNAVAILABLE,
+    }
 
 
 async def test_ingest_news_reports_a_group_whose_articles_cannot_be_stored(
     db_session: AsyncSession, news: FakeNewsSource, follow: Follow
 ) -> None:
-    await follow("AAPL", "Apple Inc.")
+    await follow("AAPL", "Apple Inc.", share_class_figi="BBG001S5N8V8")
     await follow("MSFT", "Microsoft Corporation")
     # PostgreSQL text cannot hold a NUL character.
     news.articles["Apple Inc."] = [article("ok", "Apple shares rise"), article("nul", "\x00")]
@@ -237,7 +252,7 @@ async def test_ingest_news_reports_a_group_whose_articles_cannot_be_stored(
 
     summary = await ingest_news(db_session, news)
 
-    assert summary.failed == {"Apple Inc.": NOT_STORED}
+    assert summary.failed == {"Apple Inc. (BBG001S5N8V8)": NOT_STORED}
     assert await links(db_session) == {("msft", "MSFT")}
     assert (summary.new, summary.linked) == (1, 1)
 

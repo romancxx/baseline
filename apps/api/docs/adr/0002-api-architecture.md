@@ -26,8 +26,9 @@ system to enforce boundaries the way NestJS modules do.
   that configures logging, opens a session from `session_factory`, builds the clients it
   needs, calls a service function and disposes the engine. It is wiring only, like a router;
   the logic lives in the service, where tests call it with the test session and fakes.
-- **One-way imports**: `main` and `jobs` → `modules` → `integrations` → `core`. Modules may
-  use each other's service, schemas and dependencies, never routers. `core/` importing
+- **One-way imports**: `main` and `jobs` → `modules` → `integrations` → `core`.
+  Modules may use each other's service, schemas, models and dependencies, never routers, and two modules never import each other, except `auth` and `users` (below).
+  `core/` importing
   `modules/`, `integrations/` or `jobs/`, and `integrations/` importing `modules/` or `jobs/`,
   are lint errors: ruff's
   `banned-api` list is per config file, so each of those two directories has a `ruff.toml`

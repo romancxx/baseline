@@ -90,7 +90,7 @@ class BriefRunSummary(BaseModel):
     no_news: int = 0
     # Briefs that needed the corrective retry, whether it passed or not.
     retried: int = 0
-    # Why no brief was stored, by security name.
+    # Why no brief was stored, by security group label: name and key.
     failed: dict[str, str] = {}
     # Summed over every answer the model gave that reported them.
     input_tokens: int = 0

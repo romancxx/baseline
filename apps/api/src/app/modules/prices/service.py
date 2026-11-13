@@ -11,11 +11,12 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.exceptions import NotFoundError, ProviderUnavailableError
+from app.core.exceptions import ProviderUnavailableError
 from app.integrations.yahoo.client import YahooClient, fx_symbol
 from app.integrations.yahoo.schemas import DailyBar
 from app.modules.instruments.models import Instrument
-from app.modules.instruments.service import followed_instrument_ids, get_instrument
+from app.modules.instruments.service import get_instrument
+from app.modules.positions.service import followed_instrument_ids
 from app.modules.prices.models import DailyPrice, FxRate
 from app.modules.prices.schemas import PriceUpdateSummary, RateUpdateSummary
 
@@ -28,10 +29,6 @@ PRICE_COLUMNS = ["open", "high", "low", "close", "adj_close", "volume"]
 RECENT_DAYS = 5
 NO_RECENT_BARS = f"Yahoo Finance has no bar for the last {RECENT_DAYS} days."
 NOT_STORED = "Its prices could not be stored."
-
-
-class MissingRateError(NotFoundError):
-    code = "missing_rate"
 
 
 async def backfill(session: AsyncSession, yahoo: YahooClient, instrument_id: uuid.UUID) -> int:
@@ -142,26 +139,18 @@ async def update_rates(session: AsyncSession, yahoo: YahooClient) -> RateUpdateS
     return summary
 
 
-async def convert(
-    session: AsyncSession, amount: Decimal, currency: str, on_date: dt.date
-) -> Decimal:
-    """`amount` of `currency` in the base currency, at the latest rate on or before `on_date`.
+async def get_rate(session: AsyncSession, currency: str, on_date: dt.date) -> Decimal | None:
+    """Base-currency units per 1 `currency`, at the latest rate on or before `on_date`: 1 for the
+    base currency itself, None when no rate of `currency` is stored on or before that date."""
+    if currency == get_settings().base_currency:
+        return Decimal(1)
 
-    Raises MissingRateError when no rate of `currency` is stored on or before that date.
-    """
-    base = get_settings().base_currency
-    if currency == base:
-        return amount
-
-    rate = await session.scalar(
+    return await session.scalar(
         select(FxRate.rate)
         .where(FxRate.currency == currency, FxRate.date <= on_date)
         .order_by(FxRate.date.desc())
         .limit(1)
     )
-    if rate is None:
-        raise MissingRateError(f"No {currency} to {base} rate on or before {on_date}.")
-    return amount * rate
 
 
 async def _held_currencies(session: AsyncSession) -> Sequence[str]:

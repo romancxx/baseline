@@ -216,7 +216,7 @@ async def generate_briefs(session: AsyncSession, client: LLMClient) -> BriefRunS
         try:
             draft, attempts = await _write(client, group.name, headlines)
         except ProviderUnavailableError as exc:
-            summary.failed[group.name] = exc.message
+            summary.failed[group.label] = exc.message
             continue
         if attempts.retried:
             summary.retried += 1
@@ -224,7 +224,7 @@ async def generate_briefs(session: AsyncSession, client: LLMClient) -> BriefRunS
         summary.output_tokens += attempts.output_tokens or 0
         if draft is None:
             logger.warning("briefs.rejected", security=group.name, reason=attempts.reason)
-            summary.failed[group.name] = f"Rejected twice: {attempts.reason}"
+            summary.failed[group.label] = f"Rejected twice: {attempts.reason}"
             continue
         if not draft.text.strip():
             summary.no_news += 1
@@ -238,7 +238,7 @@ async def generate_briefs(session: AsyncSession, client: LLMClient) -> BriefRunS
         except DBAPIError as exc:
             await session.rollback()
             logger.warning("briefs.store_failed", error=repr(exc.orig))
-            summary.failed[group.name] = NOT_STORED
+            summary.failed[group.label] = NOT_STORED
             continue
         summary.generated += 1
 

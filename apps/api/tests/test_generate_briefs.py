@@ -196,8 +196,9 @@ async def test_generate_briefs_retries_an_invented_id_then_skips_the_group(
     assert f"Your previous brief was rejected:\n{BRIEF}" in retry
     assert "not in the list: [7]" in retry
     assert await briefs(db_session) == []
-    assert summary.failed[APPLE].startswith("Rejected twice: It cites numbers")
-    assert "[9]" in summary.failed[APPLE]
+    reason = summary.failed[f"{APPLE} ({apple.id})"]
+    assert reason.startswith("Rejected twice: It cites numbers")
+    assert "[9]" in reason
     assert (summary.retried, summary.input_tokens, summary.output_tokens) == (1, 2000, 200)
     assert [log["security"] for log in logs if log["event"] == "briefs.rejected"] == [APPLE]
 
@@ -351,13 +352,14 @@ async def test_generate_briefs_reports_an_unavailable_api_and_goes_on(
     follow: Follow,
     make_article: ArticleFactory,
 ) -> None:
-    await make_article(await follow("AAPL", APPLE))
+    apple = await follow("AAPL", APPLE)
+    await make_article(apple)
     await make_article(await follow("MC.PA", LVMH), title="LVMH sales slow")
     anthropic.answers = [ProviderUnavailableError("The Anthropic API is unavailable."), draft()]
 
     summary = await generate_briefs(db_session, anthropic)
 
-    assert summary.failed == {APPLE: "The Anthropic API is unavailable."}
+    assert summary.failed == {f"{APPLE} ({apple.id})": "The Anthropic API is unavailable."}
     assert summary.generated == 1
 
 

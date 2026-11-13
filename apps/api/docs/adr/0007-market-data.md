@@ -86,9 +86,9 @@ The web app shows totals in one currency while holdings trade in several.
   It reports the currencies `updated` and `failed`, logged as `rates.update_finished`, and one currency failing does not stop the others.
   It is its own function, with its own summary, so instruments and currencies are never reported in the same lists.
   The `update_prices` command runs it after `update_prices()`.
-- **`convert(amount, currency, on_date)`** returns the amount in the base currency at the latest rate on or before `on_date`, so a weekend or holiday uses the last trading day's.
-  The base currency converts to itself without a rate.
-  No rate on or before the date raises `MissingRateError` (a `NotFoundError`, code `missing_rate`): a missing rate is reported, never guessed.
+- **`get_rate(currency, on_date)`** returns the latest rate on or before `on_date`, so a weekend or holiday uses the last trading day's.
+  The base currency's rate is 1, without a lookup.
+  No rate on or before the date returns `None`: a missing rate is reported by the caller, never guessed.
 
 ## Consequences
 

@@ -53,5 +53,5 @@ class NewsIngestSummary(BaseModel):
     linked: int
     # Articles deleted for being older than the retention period.
     deleted: int
-    # Why a query's articles were not stored, by the name it searched.
+    # Why a group's articles were not stored, by its label: name and key.
     failed: dict[str, str]
