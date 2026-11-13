@@ -71,7 +71,8 @@ The rules that keep this shape intact — dependency rules, the client/server sp
 ## Shell and look
 
 Signed-in pages sit under a top bar ([ADR 0002](docs/adr/0002-visual-foundation-and-shell.md)).
-It holds the logo, the two destinations, Home (`/`) and Holdings (`/holdings`), a search button that ⌘K or Ctrl+K also opens, and the account menu, which shows the user's email and leads to "Import a CSV" (`/holdings/import`) and "Sign out".
+It holds the logo, the two destinations, Home (`/`) and Holdings (`/holdings`), a search button that ⌘K or Ctrl+K also opens, the day of the closes the figures use ("Prices · close of 5 Nov", absent until a holding is priced), and the account menu, which shows the user's email and leads to "Import a CSV" (`/holdings/import`) and "Sign out".
+When a page cannot reach the API, it shows "Couldn't reach the server" with "Try again", inside the bar; when the bar itself cannot be filled, without it.
 `/portfolio`, Holdings' old path, redirects there permanently.
 The app is desktop only.
 
@@ -177,16 +178,17 @@ The preview is the API's dry run: one row per line of the file, with its status 
 Nothing is saved until "Import N rows", which sends the same file again for real and opens Holdings with a notice of what was imported ("9 imported, 2 updated, 1 not found").
 A file the API cannot read (not UTF-8, unknown or missing columns, empty) or too large stays on the upload with the reason.
 
-## Home feed
+## Home
 
-**Being rebuilt:** `/` shows only its heading until it reads briefs and news from the API.
-Its components stay for the rebuild.
-
-**Every card says where each part came from**, through its provenance line, and a global disclaimer states that tone is a machine reading at a point in time, not a prediction and not advice.
-
-Cards are polymorphic: `FeedItemSchema` is a discriminated union on `kind` and `FeedCard`
-switches on it, so theme cards become a new union member and a renderer rather than a change
-to the feed.
+`/` opens on three tiles: the total value in the base currency (EUR) with the number of holdings, the unrealised gain as an amount and a percentage, and how many securities have a brief with when the newest was generated.
+When a price or a rate is missing, the gain tile says how many holdings are priced ("9 of 12 priced") and a notice says the totals cover only those.
+A line under the tiles says briefs describe news as reported and are not investment advice.
+Below, the latest brief of each security held, newest first, each named after its security and linking to its page; listings of one security share one brief.
+Then "No brief yet" names the securities still waiting for one and counts the ETFs held, whose news isn't collected.
+Beside the briefs, the five largest priced holdings with their value and weight, and "See all" for Holdings.
+With nothing held, Home offers to search for a security or import a CSV.
+While it loads, placeholders hold the place of the tiles, a brief and the holdings.
+Every figure and the order of every list are the API's, from `GET /portfolio/overview` and `GET /portfolio/briefs`.
 
 ## Decisions and shortcuts
 

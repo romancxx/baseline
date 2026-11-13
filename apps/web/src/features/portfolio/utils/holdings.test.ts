@@ -34,6 +34,7 @@ const OVERVIEW: PortfolioOverview = {
     value: "2344.4",
     unrealisedGain: "-104.8",
     unrealisedGainPct: "-4.28",
+    pricesAsOf: "2026-11-05",
     valuedCount: 1,
   },
 };

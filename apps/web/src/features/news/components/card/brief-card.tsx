@@ -1,20 +1,26 @@
 import { ArrowUpRight } from "lucide-react";
+import { SecurityIdentity } from "@/features/news/components/display/security-identity";
 import { ToneChip } from "@/features/news/components/display/tone-chip";
 import { Icon } from "@/shared/ui/display/icon";
-import type { Brief } from "@/types/news";
+import type { Brief, SecurityBrief } from "@/types/news";
 
 export type BriefCardProps = {
   readonly brief: Brief;
+  readonly security?: SecurityBrief | undefined;
 };
 
-export function BriefCard({ brief }: BriefCardProps) {
+export function BriefCard({ brief, security }: BriefCardProps) {
   return (
     <article
-      aria-label="Latest brief"
+      aria-label={security?.name ?? "Latest brief"}
       className="flex flex-col gap-3 rounded-card border border-hairline bg-surface p-card"
     >
       <header className="flex items-center gap-3">
-        <h2 className="flex-1 text-overline text-tertiary uppercase">Latest brief</h2>
+        {security === undefined ? (
+          <h2 className="flex-1 text-overline text-tertiary uppercase">Latest brief</h2>
+        ) : (
+          <SecurityIdentity security={security} />
+        )}
         <ToneChip tone={brief.tone} />
       </header>
       <p className="max-w-prose font-serif text-brief text-primary">{brief.text}</p>
@@ -39,7 +45,9 @@ export function BriefCard({ brief }: BriefCardProps) {
       <p className="border-hairline border-t pt-2 font-mono text-meta text-tertiary uppercase">
         {brief.provenance}
       </p>
-      <p className="text-caption text-tertiary">{brief.disclaimer}</p>
+      {security === undefined ? (
+        <p className="text-caption text-tertiary">{brief.disclaimer}</p>
+      ) : null}
     </article>
   );
 }

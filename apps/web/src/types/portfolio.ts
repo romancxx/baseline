@@ -31,6 +31,8 @@ export type PortfolioTotals = {
   readonly unrealisedGain: DecimalString | null;
   readonly unrealisedGainPct: DecimalString | null;
   readonly valuedCount: number;
+  /** `YYYY-MM-DD`, the latest close among the valued holdings; `null` when none is valued. */
+  readonly pricesAsOf: string | null;
 };
 
 export type HoldingMode = "reading" | "editing" | "removing";

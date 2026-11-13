@@ -32,6 +32,7 @@ export const getPortfolioOverview = cache(async (): Promise<PortfolioOverview> =
       unrealisedGain: totals.unrealised_gain_base,
       unrealisedGainPct: totals.unrealised_gain_base_pct,
       valuedCount: totals.valued_positions,
+      pricesAsOf: totals.prices_as_of,
     },
   };
 });

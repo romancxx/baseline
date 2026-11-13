@@ -1,4 +1,5 @@
 import type { components } from "@/shared/api/api.types";
+import type { Instrument } from "@/types/instruments";
 
 export type Article = {
   readonly id: string;
@@ -17,6 +18,29 @@ export type Brief = {
   /** The API's own line: "From 7 articles, 28-30 Oct, generated 2026-10-30 06:00 UTC". */
   readonly provenance: string;
   readonly disclaimer: string;
+  /** ISO timestamp, UTC. */
+  readonly generatedAt: string;
+};
+
+export type SecurityBrief = {
+  /** The share class FIGI, or the listing's id when it has none. */
+  readonly key: string;
+  readonly name: string;
+  /** The held listings of the security, oldest first; the first is the one shown and linked. */
+  readonly listings: readonly [Instrument, ...Instrument[]];
+  readonly newsCollected: boolean;
+  readonly brief: Brief | null;
+};
+
+export type BriefedSecurity = SecurityBrief & { readonly brief: Brief };
+
+/** The portfolio's briefs as Home shows them, each group in the API's order. */
+export type BriefGroups = {
+  readonly briefed: readonly BriefedSecurity[];
+  /** Securities whose news is collected, without a brief yet. */
+  readonly waiting: readonly SecurityBrief[];
+  /** ETFs held, whose news is not collected. */
+  readonly etfCount: number;
 };
 
 export type NewsPage = {

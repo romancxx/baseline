@@ -1,4 +1,4 @@
-import { formatMoney } from "@/shared/format";
+import { formatDate, formatMoney, formatPercent } from "@/shared/format";
 import type { Instrument } from "@/types/instruments";
 import type {
   Holding,
@@ -37,6 +37,27 @@ export function pricedCount({ holdings, totals }: PortfolioOverview): PricedCoun
     priced: totals.valuedCount,
     of: holdings.filter(({ quantity }) => quantity !== null).length,
   };
+}
+
+const TOP_HOLDINGS = 5;
+
+export function topHoldings(holdings: readonly Holding[]): readonly Holding[] {
+  return holdings.filter(({ unvaluedReason }) => unvaluedReason === null).slice(0, TOP_HOLDINGS);
+}
+
+export function weightLine(holding: Holding, baseCurrency: string): string {
+  const weight = `${formatPercent(holding.weight)} of portfolio`;
+  return showsBaseValue(holding, baseCurrency)
+    ? `${formatMoney(holding.valueBase, baseCurrency)} · ${weight}`
+    : weight;
+}
+
+export function seeAllLabel(count: number): string {
+  return `See all ${count}`;
+}
+
+export function pricesAsOfLabel(date: string): string {
+  return `Prices · close of ${formatDate(date, "day")}`;
 }
 
 export function findHolding(overview: PortfolioOverview, instrumentId: string): Holding | null {

@@ -43,6 +43,9 @@ Exposing it in the document, for instance as the file field's `maxLength`, would
 
 ## ui
 
+**The server-down state loses the top bar.** When the API cannot be reached, the `(app)` layout's read of the user fails before any page renders, so `app/error.tsx` shows "Couldn't reach the server" without the shell ([ADR 0005](adr/0005-home.md)); screen 03 keeps the bar.
+Keeping it needs the account menu and the as-of stamp to fail on their own, for instance each under its own error boundary, without the layout throwing; worth it if outages become frequent enough for the bare page to confuse.
+
 **The app is desktop only.** The top bar holds the logo, two links, a search button up to 460 px wide and the account menu in one row, which needs roughly 900 px.
 A narrow layout is needed before the app is used on a phone.
 

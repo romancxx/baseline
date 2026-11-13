@@ -18,6 +18,17 @@ export function toNewsPage(page: components["schemas"]["Page_ArticleRead_"]): Ne
   return { articles: page.items.map(toArticle), nextCursor: page.next_cursor };
 }
 
+export function toBrief(read: components["schemas"]["BriefRead"]): Brief {
+  return {
+    text: read.text,
+    tone: read.tone,
+    articles: read.articles.map(toArticle),
+    provenance: read.provenance,
+    disclaimer: read.disclaimer,
+    generatedAt: read.generated_at,
+  };
+}
+
 /** `null` when no brief has been written for the listing's security yet. */
 export async function getLatestBrief(instrumentId: string): Promise<Brief | null> {
   const brief = await dataOrNull(
@@ -26,15 +37,7 @@ export async function getLatestBrief(instrumentId: string): Promise<Brief | null
       params: { path: { instrument_id: instrumentId } },
     }),
   );
-  if (brief === null) return null;
-
-  return {
-    text: brief.text,
-    tone: brief.tone,
-    articles: brief.articles.map(toArticle),
-    provenance: brief.provenance,
-    disclaimer: brief.disclaimer,
-  };
+  return brief === null ? null : toBrief(brief);
 }
 
 export async function listNews(instrumentId: string): Promise<NewsPage> {

@@ -1,6 +1,6 @@
 # 3. Holdings, search and the instrument page
 
-- **Status:** accepted
+- **Status:** accepted; the removal of the prices as-of stamp is superseded by [ADR 0005](0005-home.md)
 - **Date:** 2026-11-13
 - **Phase:** 3 — Holdings, search and the instrument page
 

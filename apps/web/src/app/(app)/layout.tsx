@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { AccountMenu } from "@/features/auth";
 import { requireUser, signOut } from "@/features/auth/server";
 import { InstrumentSearch } from "@/features/instruments";
 import { resolveInstrument } from "@/features/instruments/server";
+import { PricesAsOf } from "@/features/portfolio/server";
 import { ROUTES } from "@/shared/routes";
 import { AppShell } from "@/shared/ui/layout/app-shell";
 import { TopBar } from "@/shared/ui/layout/top-bar";
@@ -21,6 +23,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </>
           }
           search={<InstrumentSearch resolveInstrument={resolveInstrument} />}
+          pricesAsOf={
+            <Suspense fallback={null}>
+              <PricesAsOf />
+            </Suspense>
+          }
           account={<AccountMenu email={user.email} signOut={signOut} />}
         />
       }
