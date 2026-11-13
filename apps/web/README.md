@@ -135,7 +135,16 @@ CI fails when either file drifts from the code that produces it.
 
 ## Holdings
 
-**Being rebuilt:** `/holdings` and `/holdings/import` show only their heading until they read and import positions through the API.
+`/holdings` lists every holding in one table: the security, its exchange and type, the quantity and average price, the latest close, the value, the unrealised gain and the weight.
+Rows come largest value first, then the holdings that could not be valued.
+A value in another currency than the portfolio's base currency (EUR) shows its EUR amount underneath.
+A holding without a quantity shows its latest close and "—" elsewhere; a missing price or exchange rate shows "—" too, never zero.
+When a price or a rate is missing, a notice says how many holdings are priced, since the totals cover only those.
+Quantity and average price are edited in the row; clearing both keeps the security but drops the position.
+Removing a holding asks first.
+Every figure is the API's, from `GET /portfolio/overview`; the web app does no arithmetic on them.
+
+**Being rebuilt:** `/holdings/import` shows only its heading until it imports positions through the API.
 
 ## Home feed
 

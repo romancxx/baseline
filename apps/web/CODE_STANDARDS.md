@@ -45,6 +45,7 @@ thing. Do not invent a new name for something one of these already covers.
 | `actions/` | Server actions (`"use server"`) | server | `auth/actions/auth-actions.ts` |
 | `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
 | `schemas/` | Zod contracts and the types derived from them | anywhere | `auth/schemas/credentials.schema.ts` |
+| `utils/` | Pure functions over the feature's domain types: text to show, facts derived from a read model | anywhere | `portfolio/utils/holdings.ts` |
 | `fixtures/` | Scaffolding data — delete when real data lands | anywhere | none at present |
 | `index.ts` | Public API, **client-safe** | anywhere | |
 | `server.ts` | Public API, **server-only** | server | |
@@ -294,6 +295,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 
 - **Server Components by default.** Add `"use client"` only to the leaf that needs state, effects, `useActionState` or `useFormStatus`.
   A component composing client components stays a Server Component (`sign-in-screen.tsx`, around `SignInForm`). **[review]**
+- **Components are markup.** Text built from data, and facts derived from it, come from a function in the feature's `utils/` (`holdingsSummary`, `pricedCount`); a component calls it, or calls a `@/shared/format` formatter directly. **[review]**
 - **Forms are progressive**: `<form action={formAction}>` with `useActionState(action, IDLE)`, submitted by `SubmitButton` (which handles the pending label via `useFormStatus`).
   Hidden inputs carry ids. **[review]**
 - **One form, one action.** A screen offering two submissions renders two forms, each with its own `useActionState` (`SignInForm` and `CreateAccountForm`), so a form posted without JavaScript posts one action. **[review]**

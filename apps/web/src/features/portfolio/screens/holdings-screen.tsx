@@ -1,10 +1,27 @@
-export function HoldingsScreen() {
+import { editPosition, removePosition } from "@/features/portfolio/actions/position-actions";
+import { MissingPricesNotice } from "@/features/portfolio/components/display/missing-prices-notice";
+import { HoldingsTable } from "@/features/portfolio/components/list/holdings-table";
+import { HoldingsHeader } from "@/features/portfolio/components/section/holdings-header";
+import { getPortfolioOverview } from "@/features/portfolio/data/portfolio-overview";
+import { holdingsSummary, pricedCount } from "@/features/portfolio/utils/holdings";
+
+export async function HoldingsScreen() {
+  const overview = await getPortfolioOverview();
+  const { holdings, totals } = overview;
+  const priced = pricedCount(overview);
+
   return (
     <div className="flex flex-col gap-section px-gutter py-page">
-      <header>
-        <h1 className="text-title">Holdings</h1>
-        <p className="mt-1 text-detail text-secondary">Being rebuilt</p>
-      </header>
+      <HoldingsHeader
+        summary={holdings.length === 0 ? null : holdingsSummary(holdings.length, totals)}
+      />
+      {priced === null ? null : <MissingPricesNotice count={priced} />}
+      <HoldingsTable
+        holdings={holdings}
+        baseCurrency={totals.baseCurrency}
+        editPosition={editPosition}
+        removePosition={removePosition}
+      />
     </div>
   );
 }

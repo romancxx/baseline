@@ -8,6 +8,10 @@ export const BUTTON_VARIANTS = {
   /** White: the one main action on a screen */
   primary: "border-transparent bg-inverse text-inverse hover:brightness-110",
   secondary: "border-hairline-strong bg-surface-raised text-primary hover:bg-surface-high",
+  /** Backing out: Cancel, Keep */
+  ghost: "border-hairline-strong bg-transparent text-secondary hover:bg-surface hover:text-primary",
+  /** A destructive action, always behind a confirmation */
+  danger: "border-danger-muted bg-transparent text-danger hover:bg-danger-tint",
 } as const;
 
 export const BUTTON_SIZES = {

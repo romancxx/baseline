@@ -5,19 +5,21 @@ import { FIELD_CONTROL } from "@/shared/ui/field-styles";
 
 export type TextFieldProps = Omit<ComponentPropsWithoutRef<"input">, "id" | "className"> & {
   readonly label: string;
+  /** Keeps the label for screen readers only, where the column or card already names the field */
+  readonly hideLabel?: boolean;
   readonly hint?: string;
   readonly error?: string;
   /** A control inside the field's right edge, such as a show-password button */
   readonly trailing?: ReactNode;
 };
 
-export function TextField({ label, hint, error, trailing, ...input }: TextFieldProps) {
+export function TextField({ label, hideLabel, hint, error, trailing, ...input }: TextFieldProps) {
   const id = useId();
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-label text-secondary">
+      <label htmlFor={id} className={cn("text-label text-secondary", hideLabel && "sr-only")}>
         {label}
       </label>
       <div className="relative flex">
