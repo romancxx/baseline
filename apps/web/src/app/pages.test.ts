@@ -7,10 +7,10 @@ const APP = import.meta.dirname;
 
 /**
  * The whole of a page file: one screen imported from a feature's `server.ts`, and a default
- * export that returns it, passing `searchParams` through when the route has them.
+ * export that returns it, passing `params` and `searchParams` through when the route has them.
  */
 const PAGE_SHAPE =
-  /^import \{ (\w+Screen) \} from "@\/features\/[a-z-]+\/server";\n\nexport default function \w+Page\((?:\{ searchParams \}: PageProps<"[^"]+">)?\) \{\n {2}return <\1(?: searchParams=\{searchParams\})? \/>;\n\}\n$/;
+  /^import \{ (\w+Screen) \} from "@\/features\/[a-z-]+\/server";\n\nexport default function \w+Page\((?:\{ (?:params, searchParams|params|searchParams) \}: PageProps<"[^"]+">)?\) \{\n {2}return <\1(?: params=\{params\})?(?: searchParams=\{searchParams\})? \/>;\n\}\n$/;
 
 async function pageFiles(): Promise<string[]> {
   const files = await readdir(APP, { recursive: true });

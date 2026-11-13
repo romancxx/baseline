@@ -4,6 +4,7 @@ export const ROUTES = {
   home: "/",
   holdings: "/holdings",
   holdingsImport: "/holdings/import",
+  search: "/search",
   sessionExpired: "/session/expired",
   signIn: "/sign-in",
 } as const;
@@ -15,6 +16,10 @@ export const PUBLIC_ROUTES: readonly Route[] = [ROUTES.signIn, ROUTES.sessionExp
 export const MOVED_ROUTES: Readonly<Record<string, Route>> = {
   "/portfolio": ROUTES.holdings,
 };
+
+export function instrumentRoute(instrumentId: string) {
+  return `/instruments/${instrumentId}` as const;
+}
 
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));

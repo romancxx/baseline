@@ -11,6 +11,7 @@ export type FakeAnswer = {
 export type RecordedRequest = {
   readonly method: string;
   readonly path: string;
+  readonly query: URLSearchParams;
   readonly headers: Headers;
   readonly body: string;
 };

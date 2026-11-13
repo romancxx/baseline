@@ -1,44 +1,41 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { SearchDialog } from "@/features/instruments/components/navigation/search-dialog";
+import { useDialogTrigger } from "@/features/instruments/hooks/use-dialog-trigger";
 import { Icon } from "@/shared/ui/display/icon";
+import type { ResolveInstrument } from "@/types/instruments";
+
+export type InstrumentSearchProps = {
+  readonly resolveInstrument: ResolveInstrument;
+};
 
 const SHORTCUT_KEY = "k";
 
-/** The top bar's search button, opening the search modal on click, ⌘K or Ctrl+K. */
-export function InstrumentSearch() {
-  const [open, setOpen] = useState(false);
-  const button = useRef<HTMLButtonElement>(null);
-  const wasOpen = useRef(false);
-
-  const close = useCallback(() => setOpen(false), []);
+/** The top bar's search button; ⌘K or Ctrl+K also toggles the modal. */
+export function InstrumentSearch({ resolveInstrument }: InstrumentSearchProps) {
+  const { open, trigger, show, close, toggle } = useDialogTrigger();
 
   useEffect(() => {
     function toggleOnShortcut(event: KeyboardEvent) {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== SHORTCUT_KEY) return;
       event.preventDefault();
-      setOpen((isOpen) => !isOpen);
+      toggle();
     }
 
     document.addEventListener("keydown", toggleOnShortcut);
     return () => document.removeEventListener("keydown", toggleOnShortcut);
-  }, []);
-
-  useEffect(() => {
-    if (wasOpen.current && !open) button.current?.focus();
-    wasOpen.current = open;
-  }, [open]);
+  }, [toggle]);
 
   return (
     <>
       <button
-        ref={button}
+        ref={trigger}
         type="button"
         aria-label="Search a stock or ETF"
         aria-keyshortcuts="Meta+K Control+K"
-        onClick={() => setOpen(true)}
+        onClick={show}
         className="ml-3.5 flex max-w-search flex-1 items-center gap-2 rounded-control border border-hairline bg-surface px-3 py-2 text-left text-detail text-tertiary hover:border-hairline-strong"
       >
         <Icon icon={Search} />
@@ -47,7 +44,7 @@ export function InstrumentSearch() {
           ⌘K
         </kbd>
       </button>
-      {open ? <SearchDialog onClose={close} /> : null}
+      {open ? <SearchDialog onClose={close} resolveInstrument={resolveInstrument} /> : null}
     </>
   );
 }

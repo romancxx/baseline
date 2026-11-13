@@ -2,7 +2,6 @@ import type { components } from "@/shared/api/api.types";
 
 export type InstrumentType = components["schemas"]["InstrumentType"];
 
-/** A listing: one exchange's quote of a security, from the API's `InstrumentRead`. */
 export type Instrument = {
   readonly id: string;
   readonly type: InstrumentType;
@@ -14,3 +13,22 @@ export type Instrument = {
   readonly currency: string;
   readonly isin: string | null;
 };
+
+export type ProviderCandidate = {
+  readonly name: string;
+  readonly symbol: string;
+  readonly exchangeCode: string;
+  readonly type: InstrumentType;
+};
+
+export type InstrumentSearch = {
+  readonly catalogue: readonly Instrument[];
+  readonly provider: readonly ProviderCandidate[];
+  readonly providerUnavailable: boolean;
+};
+
+export type ResolveResult =
+  | { readonly ok: true; readonly instrumentId: string }
+  | { readonly ok: false; readonly message: string };
+
+export type ResolveInstrument = (symbol: string) => Promise<ResolveResult>;

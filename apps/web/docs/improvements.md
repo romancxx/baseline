@@ -30,5 +30,3 @@ A narrow layout is needed before the app is used on a phone.
 **The Review-era feed names no model.** `TonalityBadge` credited the model and its confidence in its hover text; `ToneChip`, which replaced it, shows only the tone.
 Briefs carry their provenance (article count, window, generation time) in the line under them, built with Home.
 The article cards left from Review show none until they are rebuilt or removed.
-
-**Search opens an empty frame.** ⌘K and the bar's button open the search modal, whose input finds nothing yet; the search spec adds the results.

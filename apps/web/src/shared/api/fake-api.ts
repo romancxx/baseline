@@ -14,6 +14,7 @@ export function fakeApi(routes: FakeRoutes) {
     const recorded: RecordedRequest = {
       method: request.method,
       path: url.pathname,
+      query: url.searchParams,
       headers: request.headers,
       body: await request.text(),
     };

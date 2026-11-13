@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InstrumentSearch } from "@/features/instruments/components/navigation/instrument-search";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 function renderSearch() {
-  render(<InstrumentSearch />);
+  render(<InstrumentSearch resolveInstrument={vi.fn()} />);
   return {
     user: userEvent.setup(),
     button: screen.getByRole("button", { name: /Search a stock or ETF/ }),
@@ -28,7 +30,7 @@ describe("InstrumentSearch", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Search" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(screen.getByRole("searchbox", { name: "Search a stock or ETF" })).toHaveFocus();
+    expect(screen.getByRole("combobox", { name: "Search a stock or ETF" })).toHaveFocus();
   });
 
   it("opens when its button is clicked", async () => {

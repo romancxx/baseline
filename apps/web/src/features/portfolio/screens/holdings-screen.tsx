@@ -1,3 +1,4 @@
+import { resolveInstrument } from "@/features/instruments/server";
 import { editPosition, removePosition } from "@/features/portfolio/actions/position-actions";
 import { MissingPricesNotice } from "@/features/portfolio/components/display/missing-prices-notice";
 import { HoldingsTable } from "@/features/portfolio/components/list/holdings-table";
@@ -14,6 +15,7 @@ export async function HoldingsScreen() {
     <div className="flex flex-col gap-section px-gutter py-page">
       <HoldingsHeader
         summary={holdings.length === 0 ? null : holdingsSummary(holdings.length, totals)}
+        resolveInstrument={resolveInstrument}
       />
       {priced === null ? null : <MissingPricesNotice count={priced} />}
       <HoldingsTable
@@ -21,6 +23,7 @@ export async function HoldingsScreen() {
         baseCurrency={totals.baseCurrency}
         editPosition={editPosition}
         removePosition={removePosition}
+        resolveInstrument={resolveInstrument}
       />
     </div>
   );

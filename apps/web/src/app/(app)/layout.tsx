@@ -1,6 +1,7 @@
 import { AccountMenu } from "@/features/auth";
 import { requireUser, signOut } from "@/features/auth/server";
 import { InstrumentSearch } from "@/features/instruments";
+import { resolveInstrument } from "@/features/instruments/server";
 import { ROUTES } from "@/shared/routes";
 import { AppShell } from "@/shared/ui/layout/app-shell";
 import { TopBar } from "@/shared/ui/layout/top-bar";
@@ -19,7 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               <NavLink label="Holdings" href={ROUTES.holdings} />
             </>
           }
-          search={<InstrumentSearch />}
+          search={<InstrumentSearch resolveInstrument={resolveInstrument} />}
           account={<AccountMenu email={user.email} signOut={signOut} />}
         />
       }

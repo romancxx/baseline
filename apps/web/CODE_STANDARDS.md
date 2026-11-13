@@ -46,6 +46,7 @@ thing. Do not invent a new name for something one of these already covers.
 | `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
 | `schemas/` | Zod contracts and the types derived from them | anywhere | `auth/schemas/credentials.schema.ts` |
 | `utils/` | Pure functions over the feature's domain types: text to show, facts derived from a read model | anywhere | `portfolio/utils/holdings.ts` |
+| `hooks/` | React hooks holding a client component's state and effects | client | `instruments/hooks/use-security-search.ts` |
 | `fixtures/` | Scaffolding data — delete when real data lands | anywhere | none at present |
 | `index.ts` | Public API, **client-safe** | anywhere | |
 | `server.ts` | Public API, **server-only** | server | |
@@ -256,7 +257,10 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   Any other failure comes back as an `ApiError`. **[review]**
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
   Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
-- Mutations `revalidatePath`; there is no client-side data fetching and no optimistic UI. **[review]**
+- Mutations `revalidatePath`; there is no optimistic UI. **[review]**
+- **Data reaches the browser through server rendering.**
+  The exception is search: `useSecuritySearch` fetches the `/search` route handler while the user types, so a newer query can cancel the one in flight, which a server action cannot.
+  The answer is parsed with `SecuritySearchSchema`, since it crosses the network. **[review]**
 
 ### 6.2 Reads and repositories
 
@@ -302,11 +306,10 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **A form's error renders through `FormError`** under its fields; a message about the screen, such as a failed load or partial data, is a `Notice`. **[review]**
 - **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `Button`, `ButtonLink`, `SubmitButton`) rather than styling raw inputs.
   They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a new primitive must do the same. **[review]**
-- **A page only returns its screen.** `src/app/**/page.tsx` imports one `*Screen` from a
-  feature's `server.ts` and returns it, passing `searchParams` through when the route has
-  them (typed with Next's generated `PageProps<"/route">`). Data loading and markup live in
-  the screen, under the feature's `screens/`. `src/app/pages.test.ts` checks every page file.
-  **[test]**
+- **A page only returns its screen.** `src/app/**/page.tsx` imports one `*Screen` from a feature's `server.ts` and returns it, passing `params` and `searchParams` through when the route has them (typed with Next's generated `PageProps<"/route">`).
+  Data loading and markup live in the screen, under the feature's `screens/`.
+  `src/app/pages.test.ts` checks every page file. **[test]**
+- **A route handler is a page that answers data**: it calls one function from a feature's `server.ts` and returns what it gives (`(app)/search/route.ts`), and its path is in `ROUTES`. **[review]**
 - **Screens render inside the app shell.**
   `(app)/layout.tsx` composes `AppShell` and `TopBar`, filled with the `NavLink`s, the search and the account menu; a screen's root is a `<div>`, because the shell owns `<main>`.
   The bar holds Home and Holdings only: a screen reached from a holding, a brief or search, like an instrument page, gets no `NavLink`, and nothing renders disabled. **[review]**
