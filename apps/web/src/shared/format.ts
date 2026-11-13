@@ -33,6 +33,28 @@ const PERCENT = {
   }),
 } as const;
 
+const DATES = {
+  day: new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", timeZone: "UTC" }),
+  dayYear: new Intl.DateTimeFormat(LOCALE, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }),
+  monthYear: new Intl.DateTimeFormat(LOCALE, {
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  }),
+} as const;
+
+const TIME = new Intl.DateTimeFormat(LOCALE, {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "UTC",
+});
+
 function moneyFormat(currency: string, signed: boolean): Intl.NumberFormat {
   return new Intl.NumberFormat(LOCALE, {
     style: "currency",
@@ -67,6 +89,16 @@ export function formatMoney(
 /** A quantity exactly as recorded, grouped and without trailing zeros: "1,250", "3.5". */
 export function formatQuantity(value: DecimalString | null): string {
   return value === null ? MISSING : format(QUANTITY, value);
+}
+
+/** A `YYYY-MM-DD` day or an ISO timestamp, read in UTC: "5 Nov", "5 Nov 2026", "Nov 26". */
+export function formatDate(value: string, style: keyof typeof DATES): string {
+  return DATES[style].format(new Date(value));
+}
+
+/** An ISO timestamp's UTC time: "14:05". */
+export function formatTime(value: string): string {
+  return TIME.format(new Date(value));
 }
 
 /** Percentage points with one or two decimals: "14.5%", "+0.65%". */

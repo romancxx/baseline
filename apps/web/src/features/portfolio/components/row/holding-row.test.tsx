@@ -152,6 +152,7 @@ describe("editing a holding in place", () => {
     const sent = editPosition.mock.calls[0]?.[1];
     expect(Object.fromEntries(sent ?? [])).toEqual({
       positionId: LVMH.id,
+      instrumentId: LVMH.instrument.id,
       quantity: "5",
       averagePrice: "612.3",
     });
@@ -211,6 +212,7 @@ describe("removing a holding", () => {
     await waitFor(() => expect(removePosition).toHaveBeenCalledOnce());
     expect(Object.fromEntries(removePosition.mock.calls[0]?.[1] ?? [])).toEqual({
       positionId: LVMH.id,
+      instrumentId: LVMH.instrument.id,
     });
   });
 

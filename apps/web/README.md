@@ -44,9 +44,9 @@ src/
   app/                    routes only — each page returns one feature screen
   features/
     auth/                 sign-in, session, requireUser()
-    instruments/          the instrument contract and its avatar
-    portfolio/            positions
-    news/                 the digest feed
+    instruments/          listings: search, the instrument header and price chart
+    portfolio/            holdings: the overview, Holdings, the position card and its actions
+    news/                 briefs and news, and the instrument screen that composes the others
       screens/            one screen per route: loads data, renders components (server)
       components/         React components, in role folders (layout/, form/, list/, …)
       actions/            server actions
@@ -144,6 +144,17 @@ A provider candidate is stored in the catalogue first; if that fails, the modal 
 Nothing is added to the portfolio from search: adding happens on the instrument page.
 
 The browser asks `/search`, a route handler on Next, which calls the API's search and the portfolio overview from the server.
+
+## Instrument page
+
+`/instruments/<id>` is a listing's page, opened from search or from a name in Holdings.
+The header shows the name, the symbol, exchange, type and currency, and, when the listing is held, its latest close and the day of that close; otherwise it says prices appear once you hold it.
+A held listing with prices shows its closing-price chart, with 1M, 6M, 1Y and 5Y ranges in the address (`?range=6M`, 1Y by default) and the date and close on hover.
+The position card beside it is the only place a holding is created: not held, it offers "Add to holdings" with an optional quantity and average price; held, it shows the position, and edits or removes it after a confirmation.
+Below come the latest brief, with its tone, its sources, how it was produced and its disclaimer, and the news, newest first, with "Load more" for older articles.
+An ETF has no news; a listing with no brief yet says why.
+A malformed or unknown id shows "No such security" with a way back to Home.
+The chart, the brief and the news load after the header and the position card, each behind its own placeholder.
 
 ## Holdings
 

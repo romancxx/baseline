@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { components } from "@/shared/api/api.types";
 import { api, dataOrNull, dataOrThrow } from "@/shared/api/request";
-import type { Instrument, InstrumentSearch } from "@/types/instruments";
+import type { DailyClose, DateRange, Instrument, InstrumentSearch } from "@/types/instruments";
 
 const InstrumentIdSchema = z.uuid();
 
@@ -25,6 +25,20 @@ export async function getInstrument(id: string): Promise<Instrument | null> {
     api.GET("/api/v1/instruments/{instrument_id}", { params: { path: { instrument_id: id } } }),
   );
   return read === null ? null : toInstrument(read);
+}
+
+/** Oldest first. */
+export async function listCloses(
+  instrumentId: string,
+  { from, to }: DateRange,
+): Promise<readonly DailyClose[]> {
+  const { items } = await dataOrThrow(
+    "load the prices",
+    api.GET("/api/v1/instruments/{instrument_id}/prices", {
+      params: { path: { instrument_id: instrumentId }, query: { from, to } },
+    }),
+  );
+  return items.map(({ date, close }) => ({ date, close }));
 }
 
 export async function searchInstruments(query: string): Promise<InstrumentSearch> {

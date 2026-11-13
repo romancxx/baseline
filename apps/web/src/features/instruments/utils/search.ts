@@ -3,6 +3,7 @@ import type {
   SecuritySearch,
 } from "@/features/instruments/schemas/security-search.schema";
 import { formatQuantity } from "@/shared/format";
+import type { Instrument } from "@/types/instruments";
 
 /** The API's bounds on a search query, in characters, once trimmed. */
 export const SEARCH_QUERY_LENGTH = { min: 2, max: 100 } as const;
@@ -40,6 +41,12 @@ export function resultDetails(result: SearchResult): string {
   const parts = [result.symbol, result.exchangeCode, INSTRUMENT_TYPE_LABELS[result.type]];
   if (result.source === "catalogue") parts.push(result.currency);
   return parts.join(" · ");
+}
+
+/** "MC.PA · PAR · Stock · EUR" */
+export function instrumentDetails(instrument: Instrument): string {
+  const { symbol, exchangeCode, type, currency } = instrument;
+  return [symbol, exchangeCode, INSTRUMENT_TYPE_LABELS[type], currency].join(" · ");
 }
 
 /** "In your holdings · 4", "In your holdings" without a quantity, `null` when not held. */

@@ -1,3 +1,4 @@
+import type { PriceRange } from "@/types/instruments";
 import type { Route } from "@/types/routes";
 
 export const ROUTES = {
@@ -19,6 +20,10 @@ export const MOVED_ROUTES: Readonly<Record<string, Route>> = {
 
 export function instrumentRoute(instrumentId: string) {
   return `/instruments/${instrumentId}` as const;
+}
+
+export function priceRangeRoute(instrumentId: string, range: PriceRange) {
+  return `/instruments/${instrumentId}?range=${range}` as const;
 }
 
 export function isPublicRoute(pathname: string): boolean {

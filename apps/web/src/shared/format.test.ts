@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney, formatPercent, formatQuantity } from "@/shared/format";
+import {
+  formatDate,
+  formatMoney,
+  formatPercent,
+  formatQuantity,
+  formatTime,
+} from "@/shared/format";
 
 const MINUS = "−";
 
@@ -76,5 +82,25 @@ describe("formatPercent", () => {
 
   it("shows a missing percentage as a dash", () => {
     expect(formatPercent(null)).toBe("—");
+  });
+});
+
+describe("formatDate", () => {
+  it.each([
+    ["day", "5 Nov"],
+    ["dayYear", "5 Nov 2026"],
+    ["monthYear", "Nov 26"],
+  ] as const)("writes a day in the %s style as %s", (style, expected) => {
+    expect(formatDate("2026-11-05", style)).toBe(expected);
+  });
+
+  it("reads a timestamp in UTC, rather than in the machine's time zone", () => {
+    expect(formatDate("2026-11-05T23:30:00Z", "day")).toBe("5 Nov");
+  });
+});
+
+describe("formatTime", () => {
+  it("writes the UTC hour and minute on a 24-hour clock", () => {
+    expect(formatTime("2026-10-30T14:05:00Z")).toBe("14:05");
   });
 });

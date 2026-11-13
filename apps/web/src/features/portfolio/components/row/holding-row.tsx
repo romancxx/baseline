@@ -10,7 +10,7 @@ import { formatMoney, formatQuantity } from "@/shared/format";
 import { cn } from "@/shared/ui/cn";
 import { Button } from "@/shared/ui/form/button";
 import type { FormAction } from "@/types/form-state";
-import type { Holding, HoldingRowMode } from "@/types/portfolio";
+import type { Holding, HoldingMode } from "@/types/portfolio";
 
 export type HoldingRowProps = {
   readonly holding: Holding;
@@ -25,7 +25,7 @@ export function HoldingRow({
   editPosition,
   removePosition,
 }: HoldingRowProps) {
-  const [mode, setMode] = useState<HoldingRowMode>("reading");
+  const [mode, setMode] = useState<HoldingMode>("reading");
   const read = useCallback(() => setMode("reading"), []);
   const { instrument, quantity, averagePrice } = holding;
 

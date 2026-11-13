@@ -22,6 +22,14 @@ Two instances refreshing the same token at once would look like reuse to the API
 The fix is a grace period in the API during which a just-rotated refresh token is still accepted (see the API's improvements list).
 Worth doing when the web app runs as more than one instance.
 
+## instruments
+
+**Exchanges show their code.** Holdings, search and the instrument header show the API's exchange code ("PAR") where the design writes the exchange's name ("Paris").
+The API has no names for its codes; a table of names, in the API or here, would make listings of one security easier to tell apart.
+
+**No buttons in the instrument header.** The design puts "Add to holdings" or "Edit position" beside the header, duplicating the position card next to it.
+Worth adding if the card ends up below the fold on a smaller screen.
+
 ## ui
 
 **The app is desktop only.** The top bar holds the logo, two links, a search button up to 460 px wide and the account menu in one row, which needs roughly 900 px.

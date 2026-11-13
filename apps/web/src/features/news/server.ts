@@ -1,3 +1,4 @@
+export { InstrumentNotFound } from "@/features/news/components/section/instrument-not-found";
 export { HomeScreen } from "@/features/news/screens/home-screen";
 export {
   InstrumentScreen,

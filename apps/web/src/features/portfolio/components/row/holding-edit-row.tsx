@@ -66,6 +66,7 @@ export function HoldingEditRow({
         <td className={CELL}>
           <form id={formId} action={formAction} className="flex justify-end gap-1">
             <input type="hidden" name="positionId" value={holding.id} />
+            <input type="hidden" name="instrumentId" value={instrument.id} />
             <SubmitButton label="Save" pendingLabel="Saving…" size="sm" />
             <Button variant="ghost" size="sm" onClick={onClose}>
               Cancel

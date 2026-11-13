@@ -99,8 +99,8 @@ surviving review.
    piece up. **[lint]**
 3. **Features never import from `app`.** Routes compose features, not the reverse. **[lint]**
 4. **Cross-feature dependencies form a DAG.**
-   Today both point at the foundation feature `instruments`: `portfolio → instruments`, `news → instruments`.
-   One edge between two leaf features is agreed for when the Review screen reads the user's holdings: `news → portfolio`.
+   Both leaf features point at the foundation feature `instruments`: `portfolio → instruments`, `news → instruments`.
+   One edge joins two leaf features, `news → portfolio`: the instrument screen, in `news`, composes the header and chart from `instruments` and the position card from `portfolio`, and Review will read the user's holdings the same way.
    A new edge pointing the other way, or between two other leaf features, is a design question to raise before writing it. **[review]**
 5. **`types` sits at the bottom beside `shared`.** It may not import from `features` or `app`; it may import types from `shared` (a schema's `z.infer`, the generated API types). **[lint]**
 
@@ -258,9 +258,9 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
   Any other failure gets a generic message and a `warn` log with the request ID. **[review]**
 - Mutations `revalidatePath`; there is no optimistic UI. **[review]**
-- **Data reaches the browser through server rendering.**
-  The exception is search: `useSecuritySearch` fetches the `/search` route handler while the user types, so a newer query can cancel the one in flight, which a server action cannot.
-  The answer is parsed with `SecuritySearchSchema`, since it crosses the network. **[review]**
+- **Data reaches the browser through server rendering**, with two exceptions ([ADR 0003](docs/adr/0003-holdings-search-and-instrument-page.md)).
+  Search: `useSecuritySearch` fetches the `/search` route handler while the user types, so a newer query can cancel the one in flight, which a server action cannot; the answer is parsed with `SecuritySearchSchema`, since it crosses the network.
+  "Load more": `loadMoreNews` is a server action returning the next page, which `InstrumentNewsList` appends to the first, rendered on the server. **[review]**
 
 ### 6.2 Reads and repositories
 
@@ -317,7 +317,9 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   An icon never carries meaning alone; text beside it does.
   The one exception is `ToneChip`'s glyphs, inline SVGs drawn for the four tones, which have no lucide equivalent. **[review]**
 - **Figures go through `@/shared/format`** (`formatMoney`, `formatQuantity`, `formatPercent`) or `PriceChange`, from the API's decimal strings.
-  The web app never turns a figure into a JavaScript number or does arithmetic on one. **[review]**
+  The web app never turns a figure into a JavaScript number or does arithmetic on one.
+  The one exception is the price chart, which turns a close into a number for its y coordinate only (`chartPoints`); its axis and tooltip format the decimal string. **[review]**
+- **Dates go through `formatDate` and `formatTime`** from `@/shared/format`, read in UTC like every other formatter. **[review]**
 - **Every list has an explicit empty state**, never a blank card. **[review]**
 - **Hooks follow the rules**; exhaustive dependencies are an error, and callbacks passed to
   children are stabilised with `useCallback`. **[lint]**

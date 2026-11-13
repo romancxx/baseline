@@ -1,6 +1,6 @@
 # 2. Visual foundation and shell
 
-- **Status:** accepted
+- **Status:** accepted; the prices as-of stamp is superseded by [ADR 0003](0003-holdings-search-and-instrument-page.md)
 - **Date:** 2026-11-09
 - **Phase:** 2 — Visual foundation and shell
 

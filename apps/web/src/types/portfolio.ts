@@ -33,7 +33,10 @@ export type PortfolioTotals = {
   readonly valuedCount: number;
 };
 
-export type HoldingRowMode = "reading" | "editing" | "removing";
+export type HoldingMode = "reading" | "editing" | "removing";
+
+/** `just-added`: held, but no close has been fetched yet. */
+export type HoldingStatus = "not-held" | "just-added" | "no-position" | "held";
 
 export type PricedCount = {
   readonly priced: number;

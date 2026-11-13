@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { InstrumentAvatar, InstrumentTypeTag } from "@/features/instruments";
 import { CELL } from "@/features/portfolio/components/list/holdings-columns";
+import { instrumentRoute } from "@/shared/routes";
 import type { Instrument } from "@/types/instruments";
 
 export type HoldingSecurityCellsProps = {
@@ -13,7 +15,12 @@ export function HoldingSecurityCells({ instrument }: HoldingSecurityCellsProps) 
         <div className="flex min-w-0 items-center gap-2.5">
           <InstrumentAvatar instrument={instrument} />
           <div className="flex min-w-0 flex-col">
-            <span className="truncate font-semibold text-body text-primary">{instrument.name}</span>
+            <Link
+              href={instrumentRoute(instrument.id)}
+              className="truncate font-semibold text-body text-primary hover:underline"
+            >
+              {instrument.name}
+            </Link>
             <span className="font-mono text-caption text-tertiary">{instrument.symbol}</span>
           </div>
         </div>

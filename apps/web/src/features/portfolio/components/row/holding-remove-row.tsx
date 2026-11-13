@@ -37,6 +37,7 @@ export function HoldingRemoveRow({ holding, removePosition, onKeep }: HoldingRem
           </div>
           <form action={formAction} className="flex shrink-0 gap-2">
             <input type="hidden" name="positionId" value={holding.id} />
+            <input type="hidden" name="instrumentId" value={holding.instrument.id} />
             <SubmitButton label="Remove" pendingLabel="Removing…" variant="danger" size="sm" />
             <Button variant="ghost" size="sm" onClick={onKeep}>
               Keep

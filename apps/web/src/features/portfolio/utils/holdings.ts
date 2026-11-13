@@ -1,5 +1,11 @@
 import { formatMoney } from "@/shared/format";
-import type { Holding, PortfolioOverview, PortfolioTotals, PricedCount } from "@/types/portfolio";
+import type {
+  Holding,
+  HoldingStatus,
+  PortfolioOverview,
+  PortfolioTotals,
+  PricedCount,
+} from "@/types/portfolio";
 
 /** "12 securities · €48,210.35 total · values converted to EUR where they differ" */
 export function holdingsSummary(count: number, { value, baseCurrency }: PortfolioTotals): string {
@@ -20,6 +26,17 @@ export function pricedCount({ holdings, totals }: PortfolioOverview): PricedCoun
     priced: totals.valuedCount,
     of: holdings.filter(({ quantity }) => quantity !== null).length,
   };
+}
+
+export function findHolding(overview: PortfolioOverview, instrumentId: string): Holding | null {
+  return overview.holdings.find(({ instrument }) => instrument.id === instrumentId) ?? null;
+}
+
+export function holdingStatus(holding: Holding | null): HoldingStatus {
+  if (holding === null) return "not-held";
+  if (holding.unvaluedReason === "no_price") return "just-added";
+  if (holding.unvaluedReason === "no_quantity") return "no-position";
+  return "held";
 }
 
 /** Whether the value in the base currency goes under the value in the listing's own. */
