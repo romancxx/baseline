@@ -1,5 +1,6 @@
 import { BriefCard } from "@/features/news/components/card/brief-card";
 import { getLatestBrief } from "@/features/news/data/instrument-news";
+import { noBriefMessage } from "@/features/news/utils/instrument-news";
 import { Card } from "@/shared/ui/layout/card";
 import type { Instrument } from "@/types/instruments";
 
@@ -14,11 +15,7 @@ export async function LatestBriefSection({ instrument, held }: LatestBriefSectio
 
   return (
     <Card title="No brief yet">
-      <p className="text-detail text-secondary">
-        {held
-          ? `Nothing has been reported on ${instrument.name} in the window covered by the last update. The next brief arrives after the next one.`
-          : `Briefs and prices are only collected for securities you hold. Add ${instrument.name} and the first of each arrives after the next update.`}
-      </p>
+      <p className="text-detail text-secondary">{noBriefMessage(instrument.name, held)}</p>
     </Card>
   );
 }

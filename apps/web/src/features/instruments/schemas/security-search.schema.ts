@@ -23,6 +23,11 @@ export const ProviderResultSchema = z.object({
   type: InstrumentTypeSchema,
 });
 
+export const SearchResultSchema = z.discriminatedUnion("source", [
+  CatalogueResultSchema,
+  ProviderResultSchema,
+]);
+
 export const SecuritySearchSchema = z.object({
   catalogue: z.array(CatalogueResultSchema),
   provider: z.array(ProviderResultSchema),
@@ -31,5 +36,5 @@ export const SecuritySearchSchema = z.object({
 
 export type CatalogueResult = z.infer<typeof CatalogueResultSchema>;
 export type ProviderResult = z.infer<typeof ProviderResultSchema>;
-export type SearchResult = CatalogueResult | ProviderResult;
+export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type SecuritySearch = z.infer<typeof SecuritySearchSchema>;

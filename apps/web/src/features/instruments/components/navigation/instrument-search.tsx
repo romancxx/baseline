@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { useEffect } from "react";
 import { SearchDialog } from "@/features/instruments/components/navigation/search-dialog";
 import { useDialogTrigger } from "@/features/instruments/hooks/use-dialog-trigger";
+import { isInsideDialog } from "@/features/instruments/utils/search";
 import { Icon } from "@/shared/ui/display/icon";
 import type { ResolveInstrument } from "@/types/instruments";
 
@@ -20,13 +21,14 @@ export function InstrumentSearch({ resolveInstrument }: InstrumentSearchProps) {
   useEffect(() => {
     function toggleOnShortcut(event: KeyboardEvent) {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== SHORTCUT_KEY) return;
+      if (!open && isInsideDialog(event.target)) return;
       event.preventDefault();
       toggle();
     }
 
     document.addEventListener("keydown", toggleOnShortcut);
     return () => document.removeEventListener("keydown", toggleOnShortcut);
-  }, [toggle]);
+  }, [open, toggle]);
 
   return (
     <>

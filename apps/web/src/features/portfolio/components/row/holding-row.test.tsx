@@ -112,6 +112,12 @@ describe("HoldingRow", () => {
     expect(cells()[5]).toBe("$1,200.00€1,105.60");
   });
 
+  it("shows a dash for the base-currency value when the exchange rate is missing, rather than nothing", () => {
+    renderRow({ ...NVIDIA, valueBase: null, weight: null, unvaluedReason: "no_rate" });
+
+    expect(cells()[5]).toBe("$1,200.00—");
+  });
+
   it("shows the latest close of a holding without a quantity, and a dash rather than zero elsewhere", () => {
     renderRow(FOLLOWED);
 

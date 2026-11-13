@@ -16,6 +16,11 @@ export function searchQuery(input: string): string | null {
   return query.length < SEARCH_QUERY_LENGTH.min ? null : query.slice(0, SEARCH_QUERY_LENGTH.max);
 }
 
+/** Whether a key press comes from inside an open dialog, such as the one "Add a security" opens. */
+export function isInsideDialog(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("[role='dialog']") !== null;
+}
+
 /** Every result in the order the modal lists them, catalogue first; ↑↓ move through all of them. */
 export function searchOptions({ catalogue, provider }: SecuritySearch): readonly SearchResult[] {
   return [...catalogue, ...provider];

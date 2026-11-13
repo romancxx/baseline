@@ -42,7 +42,7 @@ export async function InstrumentScreen({ params, searchParams }: InstrumentScree
             <Suspense
               fallback={
                 <Card title="Closing price">
-                  <Skeleton className="h-56 w-full" />
+                  <Skeleton className="h-chart w-full" />
                 </Card>
               }
             >
@@ -52,7 +52,7 @@ export async function InstrumentScreen({ params, searchParams }: InstrumentScree
           <Suspense
             fallback={
               <Card title="Latest brief">
-                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-placeholder w-full" />
               </Card>
             }
           >
@@ -64,7 +64,7 @@ export async function InstrumentScreen({ params, searchParams }: InstrumentScree
             <Suspense
               fallback={
                 <Card title="News">
-                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-placeholder w-full" />
                 </Card>
               }
             >

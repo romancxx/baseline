@@ -38,7 +38,7 @@ export function PriceChart({ closes, currency }: PriceChartProps) {
   const fillId = useId();
 
   return (
-    <div className="h-56 font-mono text-meta">
+    <div className="h-chart font-mono text-meta">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartPoints(closes)} margin={MARGIN_PX}>
           <defs>

@@ -137,6 +137,7 @@ describe("held", () => {
       unvaluedReason: "no_quantity",
     });
 
+    expect(screen.getByRole("region", { name: "Your holding" })).toBeInTheDocument();
     expect(screen.getByText(/No quantity or average price yet/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });

@@ -152,6 +152,10 @@
   --spacing-avatar-sm: 1.625rem;
   --spacing-avatar: 2rem;
   --spacing-avatar-lg: 2.75rem;
+  /* Heights of content areas: the price chart, the search results before they scroll, a card's loading placeholder */
+  --spacing-chart: 14rem;
+  --spacing-results: 24rem;
+  --spacing-placeholder: 6rem;
 
   /* Widths, for `w-*`, `max-w-*` and `min-w-*`; never a `--spacing-*` name, which those read first */
   --container-rail: 18rem;

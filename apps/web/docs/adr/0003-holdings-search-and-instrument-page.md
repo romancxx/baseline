@@ -33,6 +33,8 @@ The design ([screens 04, 05, 06, 09 and 10](../design/screens.html)) puts the in
 - **The position card is the only place a holding is created.**
   It, the Holdings row and the search modal take their actions as props from their screen, so their tests pass stubs.
   Every position action refreshes Holdings and the listing's page.
+- **A Holdings row's actions are text buttons, "Edit" and "Remove", always visible**, where the design draws icons revealed on hover: an icon never carries meaning alone (CODE_STANDARDS §7).
+  Each is named after its security ("Edit LVMH") for screen readers.
 - **The prices as-of stamp is removed** from the top bar and shown nowhere, superseding that line of [ADR 0002](0002-visual-foundation-and-shell.md).
 
 ## Consequences

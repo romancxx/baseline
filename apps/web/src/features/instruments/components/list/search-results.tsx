@@ -30,7 +30,7 @@ export function SearchResults({
   const providerLabel = useId();
 
   return (
-    <div className="max-h-96 overflow-y-auto border-hairline border-t">
+    <div className="max-h-results overflow-y-auto border-hairline border-t">
       {catalogue.length === 0 && provider.length === 0 ? (
         <p className="px-4 py-4 text-detail text-secondary">No security matches “{query}”.</p>
       ) : (

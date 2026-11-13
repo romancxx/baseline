@@ -1,4 +1,5 @@
 import { formatMoney } from "@/shared/format";
+import type { Instrument } from "@/types/instruments";
 import type {
   Holding,
   HoldingStatus,
@@ -6,6 +7,16 @@ import type {
   PortfolioTotals,
   PricedCount,
 } from "@/types/portfolio";
+
+/** A holding without a quantity has no position, so its card is not titled after one. */
+export function positionCardTitle(status: HoldingStatus): string {
+  return status === "no-position" ? "Your holding" : "Your position";
+}
+
+/** "Edit LVMH": the button's name, since every row has an Edit and a Remove. */
+export function rowActionLabel(action: "Edit" | "Remove", { name }: Instrument): string {
+  return `${action} ${name}`;
+}
 
 /** "12 securities · €48,210.35 total · values converted to EUR where they differ" */
 export function holdingsSummary(count: number, { value, baseCurrency }: PortfolioTotals): string {
@@ -39,7 +50,10 @@ export function holdingStatus(holding: Holding | null): HoldingStatus {
   return "held";
 }
 
-/** Whether the value in the base currency goes under the value in the listing's own. */
+/**
+ * Whether the value in the base currency goes under the value in the listing's own: whenever the
+ * listing is valued in another currency, as "—" when the exchange rate is missing.
+ */
 export function showsBaseValue(holding: Holding, baseCurrency: string): boolean {
-  return holding.instrument.currency !== baseCurrency && holding.valueBase !== null;
+  return holding.instrument.currency !== baseCurrency && holding.value !== null;
 }

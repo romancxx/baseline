@@ -6,6 +6,7 @@ import { HoldingEditRow } from "@/features/portfolio/components/row/holding-edit
 import { HoldingFigureCells } from "@/features/portfolio/components/row/holding-figure-cells";
 import { HoldingRemoveRow } from "@/features/portfolio/components/row/holding-remove-row";
 import { HoldingSecurityCells } from "@/features/portfolio/components/row/holding-security-cells";
+import { rowActionLabel } from "@/features/portfolio/utils/holdings";
 import { formatMoney, formatQuantity } from "@/shared/format";
 import { cn } from "@/shared/ui/cn";
 import { Button } from "@/shared/ui/form/button";
@@ -58,7 +59,7 @@ export function HoldingRow({
           <Button
             variant="ghost"
             size="sm"
-            aria-label={`Edit ${instrument.name}`}
+            aria-label={rowActionLabel("Edit", instrument)}
             onClick={() => setMode("editing")}
           >
             Edit
@@ -66,7 +67,7 @@ export function HoldingRow({
           <Button
             variant="ghost"
             size="sm"
-            aria-label={`Remove ${instrument.name}`}
+            aria-label={rowActionLabel("Remove", instrument)}
             onClick={() => setMode("removing")}
           >
             Remove

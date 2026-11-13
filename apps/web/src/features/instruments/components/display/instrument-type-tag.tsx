@@ -7,7 +7,7 @@ export type InstrumentTypeTagProps = {
 
 export function InstrumentTypeTag({ type }: InstrumentTypeTagProps) {
   return (
-    <span className="rounded-tag border border-hairline-strong bg-surface-raised px-1.5 font-mono text-meta text-tertiary uppercase">
+    <span className="rounded-tag border border-hairline-strong bg-surface-raised px-tag-x py-tag-y font-mono text-meta text-tertiary uppercase">
       {INSTRUMENT_TYPE_LABELS[type]}
     </span>
   );

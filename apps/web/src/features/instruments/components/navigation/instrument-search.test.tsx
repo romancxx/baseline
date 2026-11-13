@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { AddSecurityButton } from "@/features/instruments/components/navigation/add-security-button";
 import { InstrumentSearch } from "@/features/instruments/components/navigation/instrument-search";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -58,5 +59,20 @@ describe("InstrumentSearch", () => {
     await user.keyboard("{Meta>}k{/Meta}");
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("leaves ⌘K alone while another search dialog is open, rather than stacking a second", async () => {
+    render(
+      <>
+        <InstrumentSearch resolveInstrument={vi.fn()} />
+        <AddSecurityButton label="Add a security" resolveInstrument={vi.fn()} />
+      </>,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Add a security" }));
+    await user.keyboard("{Meta>}k{/Meta}");
+
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 });

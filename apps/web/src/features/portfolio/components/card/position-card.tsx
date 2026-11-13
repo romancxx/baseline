@@ -5,7 +5,7 @@ import { PositionFigures } from "@/features/portfolio/components/display/positio
 import { PositionAddForm } from "@/features/portfolio/components/form/position-add-form";
 import { PositionEditForm } from "@/features/portfolio/components/form/position-edit-form";
 import { PositionRemoveForm } from "@/features/portfolio/components/form/position-remove-form";
-import { holdingStatus } from "@/features/portfolio/utils/holdings";
+import { holdingStatus, positionCardTitle } from "@/features/portfolio/utils/holdings";
 import { Button } from "@/shared/ui/form/button";
 import { Card } from "@/shared/ui/layout/card";
 import type { FormAction } from "@/types/form-state";
@@ -42,7 +42,7 @@ export function PositionCard({
   }
 
   return (
-    <Card title="Your position">
+    <Card title={positionCardTitle(status)}>
       {mode === "editing" ? (
         <PositionEditForm holding={holding} editPosition={editPosition} onClose={read} />
       ) : mode === "removing" ? (

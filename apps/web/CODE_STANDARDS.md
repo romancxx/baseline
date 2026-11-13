@@ -40,7 +40,7 @@ thing. Do not invent a new name for something one of these already covers.
 
 | Directory | Holds | Runs on | Example |
 | --- | --- | --- | --- |
-| `screens/` | One async Server Component per route: loads its data, renders the feature's components | server | `auth/screens/sign-in-screen.tsx` |
+| `screens/` | One async Server Component per route: loads its data, renders the feature's components; a region that streams under `Suspense` is an async component loading its own | server | `auth/screens/sign-in-screen.tsx`, `news/screens/instrument-screen.tsx` |
 | `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `news/components/card/article-feed-card.tsx` |
 | `actions/` | Server actions (`"use server"`) | server | `auth/actions/auth-actions.ts` |
 | `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
@@ -123,7 +123,7 @@ Each feature has two entry points:
   It exports components, schemas and types.
   It must never transitively import `server-env`, `@/shared/api/*`, `@/shared/session`, or anything under `data/`.
 - **`server.ts` is server-only.**
-  It exports `data/` functions and the server actions that routes call directly (e.g. `signOut`).
+  It exports `data/` functions, the server actions that routes and screens pass on (e.g. `signOut`), and async components that load their own data for another feature's screen (`PriceChartCard`).
 
 Anything not re-exported from one of the two is internal to the feature.
 Export the type alongside the value (`export { InstrumentAvatar, type InstrumentAvatarProps }`) so consumers never need to reach for a schema file.
@@ -180,8 +180,7 @@ Both reach `server-env`, so a client import fails loudly. **[review]**
 - **Filenames are kebab-case** (`sign-in-form.tsx`), except where Next reserves the name (`page.tsx`, `layout.tsx`). **[lint]**
 - **Zod schema files end in `.schema.ts`**; tests sit next to their source as
   `<name>.test.ts(x)`. **[review]**
-- **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix:
-  `FeedItemSchema` / `type FeedItem = z.infer<typeof FeedItemSchema>`. **[review]**
+- **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix: `FeedItemSchema` / `type FeedItem = z.infer<typeof FeedItemSchema>`. **[review]**
 - **Components are PascalCase and export a `<Component>Props` type.** **[review]**
 - **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not obvious: `LOW_CONFIDENCE`, `RENEWAL_REUSE_MS`.
   No magic numbers inline. **[review]**
@@ -367,7 +366,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   (`gap-2`, `mt-1`) use Tailwind's numeric scale, itself a token (multiples of `--spacing`).
   **[review]**
 - **Sizes are tokens.**
-  Heights and sizes: `h-bar` (the top bar), `min-h-control` (a field), `min-h-button`, `min-h-button-sm`, `size-icon`, `size-glyph`, `size-avatar-sm`, `size-avatar`, `size-avatar-lg`.
+  Heights and sizes: `h-bar` (the top bar), `min-h-control` (a field), `min-h-button`, `min-h-button-sm`, `size-icon`, `size-glyph`, `size-avatar-sm`, `size-avatar`, `size-avatar-lg`, `h-chart` (the price chart), `max-h-results` (search results before they scroll), `h-placeholder` (a card's loading placeholder).
   Widths: `w-rail`, `max-w-content`, `max-w-auth`, `max-w-search`, `w-menu`, `w-dialog`, `max-w-prose` (74 characters of brief).
   Radii: `rounded-tag`, `rounded-control`, `rounded-avatar`, `rounded-menu`, `rounded-card`, `rounded-pill`.
   Opacity: `opacity-disabled`, `opacity-dimmed` (an empty entry kept for context). **[test]**
