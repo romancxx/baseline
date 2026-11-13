@@ -1,6 +1,12 @@
 import { z } from "zod";
-import { InstrumentSchema } from "@/features/instruments";
 import { ToneSchema } from "@/features/news/schemas/tone.schema";
+
+/** What a card shows of a listing an article is about. */
+export const FeedInstrumentSchema = z.object({
+  id: z.uuid(),
+  symbol: z.string().min(1),
+  name: z.string().min(1),
+});
 
 /** What produced each part of a card, so nothing claims to be generated that was not. */
 export const ArticleProvenanceSchema = z.object({
@@ -17,7 +23,7 @@ export const ArticleFeedItemSchema = z.object({
   url: z.url(),
   /** The outlet's own standfirst. Not generated, and not a summary. */
   teaser: z.string().min(1).nullable(),
-  instruments: z.array(InstrumentSchema).min(1),
+  instruments: z.array(FeedInstrumentSchema).min(1),
   tone: ToneSchema.nullable(),
   provenance: ArticleProvenanceSchema,
 });
@@ -25,6 +31,7 @@ export const ArticleFeedItemSchema = z.object({
 /** Theme cards join this union, which is what keeps the feed itself unchanged. */
 export const FeedItemSchema = z.discriminatedUnion("kind", [ArticleFeedItemSchema]);
 
+export type FeedInstrument = z.infer<typeof FeedInstrumentSchema>;
 export type ArticleProvenance = z.infer<typeof ArticleProvenanceSchema>;
 export type ArticleFeedItem = z.infer<typeof ArticleFeedItemSchema>;
 export type FeedItem = z.infer<typeof FeedItemSchema>;

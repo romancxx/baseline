@@ -4,9 +4,11 @@ import { createApiClient, REQUEST_ID_HEADER, send } from "@/shared/api/client";
 import { logger } from "@/shared/logger";
 import { ROUTES } from "@/shared/routes";
 import { clearSession, readSession } from "@/shared/session";
-import type { ApiClient, ApiResult, ClientOutcome, RequestApiClient } from "@/types/api";
+import type { ApiClient, ApiError, ApiResult, ClientOutcome, RequestApiClient } from "@/types/api";
 
 const UNAUTHORIZED = 401;
+const NOT_FOUND = 404;
+const NOT_FOUND_CODE = "not_found";
 
 /** The ID `proxy.ts` gave this request. */
 export async function currentRequestId(): Promise<string | null> {
@@ -37,8 +39,28 @@ export async function readApi<T>(
   const { api, requestId, sendsAccessToken } = await requestApiClient();
   const result = await send(call(api));
   if (result.ok) return result.data;
+  return failRead(action, result.error, requestId, sendsAccessToken);
+}
 
-  const { status, code, message } = result.error;
+/** Like `readApi`, but resolves to `null` when the API answers 404 `not_found`. */
+export async function findApi<T>(
+  action: string,
+  call: (api: ApiClient) => Promise<ClientOutcome<T>>,
+): Promise<T | null> {
+  const { api, requestId, sendsAccessToken } = await requestApiClient();
+  const result = await send(call(api));
+  if (result.ok) return result.data;
+  if (result.error.status === NOT_FOUND && result.error.code === NOT_FOUND_CODE) return null;
+  return failRead(action, result.error, requestId, sendsAccessToken);
+}
+
+/** Ends a failed read: redirects a 401 to the session's access token, throws on anything else. */
+function failRead(
+  action: string,
+  { status, code, message }: ApiError,
+  requestId: string | null,
+  sendsAccessToken: boolean,
+): never {
   if (status === UNAUTHORIZED && sendsAccessToken) redirect(ROUTES.sessionExpired);
 
   logger.error("api.read_failed", { action, status, code, requestId });

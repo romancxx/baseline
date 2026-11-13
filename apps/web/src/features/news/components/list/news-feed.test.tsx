@@ -5,20 +5,14 @@ import { type FeedItem, FeedItemSchema } from "@/features/news/schemas/feed.sche
 
 const instrument = {
   id: "a1111111-1111-4111-8111-111111111111",
-  ticker: "AAPL",
-  isin: null,
+  symbol: "AAPL",
   name: "Apple",
-  type: "stock",
-  macroBucket: "big-tech",
 };
 
 const nvidia = {
   id: "b2222222-2222-4222-8222-222222222222",
-  ticker: "NVDA",
-  isin: null,
+  symbol: "NVDA",
   name: "NVIDIA",
-  type: "stock",
-  macroBucket: "semiconductors",
 };
 
 function articleItem(overrides: Record<string, unknown> = {}): FeedItem {
@@ -49,7 +43,7 @@ describe("NewsFeed", () => {
     expect(link).toHaveAttribute("rel", "noreferrer");
   });
 
-  it("heads the card with the instrument's ticker and name", () => {
+  it("heads the card with the listing's symbol and name", () => {
     render(<NewsFeed items={[articleItem()]} hasInstruments />);
 
     expect(screen.getByText("AAPL")).toBeInTheDocument();

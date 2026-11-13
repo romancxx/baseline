@@ -747,6 +747,32 @@
         }
       }
     },
+    "/api/v1/portfolio/overview": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Get Mine",
+        "operationId": "get_mine_api_v1_portfolio_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioOverviewResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/portfolio/import": {
       "post": {
         "tags": [
@@ -1009,6 +1035,32 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/portfolio/briefs": {
+      "get": {
+        "tags": [
+          "briefs"
+        ],
+        "summary": "List Mine",
+        "operationId": "list_mine_api_v1_portfolio_briefs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioBriefsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     }
   },
@@ -1612,6 +1664,87 @@
         "title": "LocalSearchResult",
         "description": "A stored instrument."
       },
+      "OverviewTotals": {
+        "properties": {
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency"
+          },
+          "value_base": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Base"
+          },
+          "unrealised_gain_base": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealised Gain Base"
+          },
+          "unrealised_gain_base_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealised Gain Base Pct"
+          },
+          "positions": {
+            "type": "integer",
+            "title": "Positions"
+          },
+          "valued_positions": {
+            "type": "integer",
+            "title": "Valued Positions"
+          },
+          "prices_as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prices As Of"
+          },
+          "unvalued": {
+            "items": {
+              "$ref": "#/components/schemas/UnvaluedPosition"
+            },
+            "type": "array",
+            "title": "Unvalued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_currency",
+          "value_base",
+          "unrealised_gain_base",
+          "unrealised_gain_base_pct",
+          "positions",
+          "valued_positions",
+          "prices_as_of",
+          "unvalued"
+        ],
+        "title": "OverviewTotals",
+        "description": "Totals over the valued positions, in the base currency; null when none counts."
+      },
       "Page_ArticleRead_": {
         "properties": {
           "items": {
@@ -1696,6 +1829,44 @@
         ],
         "title": "Page[PositionRead]"
       },
+      "PortfolioBriefsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SecurityBrief"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "PortfolioBriefsResponse",
+        "description": "Every security group held in the portfolio, newest brief first, then those without one\nby name."
+      },
+      "PortfolioOverviewResponse": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/PositionOverview"
+            },
+            "type": "array",
+            "title": "Positions"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/OverviewTotals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positions",
+          "totals"
+        ],
+        "title": "PortfolioOverviewResponse",
+        "description": "Every position of the portfolio, largest value first, then those not valued."
+      },
       "PortfolioRead": {
         "properties": {
           "id": {
@@ -1770,6 +1941,103 @@
           "instrument_id"
         ],
         "title": "PositionCreate"
+      },
+      "PositionOverview": {
+        "properties": {
+          "position": {
+            "$ref": "#/components/schemas/PositionRead"
+          },
+          "latest_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Close"
+          },
+          "latest_close_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Close Date"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "value_base": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Base"
+          },
+          "unrealised_gain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealised Gain"
+          },
+          "unrealised_gain_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealised Gain Pct"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position",
+          "latest_close",
+          "latest_close_date",
+          "value",
+          "value_base",
+          "unrealised_gain",
+          "unrealised_gain_pct",
+          "weight"
+        ],
+        "title": "PositionOverview"
       },
       "PositionRead": {
         "properties": {
@@ -1862,6 +2130,49 @@
         "title": "PositionUpdate",
         "description": "Omitted fields are left unchanged; null clears one."
       },
+      "SecurityBrief": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "instruments": {
+            "items": {
+              "$ref": "#/components/schemas/InstrumentRead"
+            },
+            "type": "array",
+            "title": "Instruments"
+          },
+          "news_collected": {
+            "type": "boolean",
+            "title": "News Collected"
+          },
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BriefRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "instruments",
+          "news_collected",
+          "brief"
+        ],
+        "title": "SecurityBrief",
+        "description": "A security group held in a portfolio, and its latest brief."
+      },
       "TokenResponse": {
         "properties": {
           "access_token": {
@@ -1896,6 +2207,33 @@
         ],
         "title": "Tone",
         "description": "How the reported facts bear on the company, not on its share price."
+      },
+      "UnvaluedPosition": {
+        "properties": {
+          "position_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Position Id"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/UnvaluedReason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position_id",
+          "reason"
+        ],
+        "title": "UnvaluedPosition"
+      },
+      "UnvaluedReason": {
+        "type": "string",
+        "enum": [
+          "no_quantity",
+          "no_price",
+          "no_rate"
+        ],
+        "title": "UnvaluedReason"
       },
       "UserCreate": {
         "properties": {

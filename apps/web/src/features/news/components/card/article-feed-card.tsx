@@ -18,10 +18,10 @@ export function ArticleFeedCard({ item }: ArticleFeedCardProps) {
         <InstrumentAvatar instrument={lead} />
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="font-semibold text-detail text-primary">
-            {lead.ticker}
+            {lead.symbol}
             {others.length > 0 ? (
               <span
-                title={others.map((instrument) => instrument.ticker).join(", ")}
+                title={others.map((instrument) => instrument.symbol).join(", ")}
                 className="ml-1.5 font-normal text-tertiary"
               >
                 +{others.length}

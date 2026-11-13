@@ -230,6 +230,23 @@ export interface paths {
         patch: operations["update_api_v1_portfolio_positions__position_id__patch"];
         trace?: never;
     };
+    "/api/v1/portfolio/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Mine */
+        get: operations["get_mine_api_v1_portfolio_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolio/import": {
         parameters: {
             query?: never;
@@ -290,6 +307,23 @@ export interface paths {
         };
         /** Get Latest */
         get: operations["get_latest_api_v1_instruments__instrument_id__brief_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/briefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Mine */
+        get: operations["list_mine_api_v1_portfolio_briefs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -552,6 +586,28 @@ export interface components {
              */
             source: "local";
         };
+        /**
+         * OverviewTotals
+         * @description Totals over the valued positions, in the base currency; null when none counts.
+         */
+        OverviewTotals: {
+            /** Base Currency */
+            base_currency: string;
+            /** Value Base */
+            value_base: string | null;
+            /** Unrealised Gain Base */
+            unrealised_gain_base: string | null;
+            /** Unrealised Gain Base Pct */
+            unrealised_gain_base_pct: string | null;
+            /** Positions */
+            positions: number;
+            /** Valued Positions */
+            valued_positions: number;
+            /** Prices As Of */
+            prices_as_of: string | null;
+            /** Unvalued */
+            unvalued: components["schemas"]["UnvaluedPosition"][];
+        };
         /** Page[ArticleRead] */
         Page_ArticleRead_: {
             /** Items */
@@ -572,6 +628,24 @@ export interface components {
             items: components["schemas"]["PositionRead"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /**
+         * PortfolioBriefsResponse
+         * @description Every security group held in the portfolio, newest brief first, then those without one
+         *     by name.
+         */
+        PortfolioBriefsResponse: {
+            /** Items */
+            items: components["schemas"]["SecurityBrief"][];
+        };
+        /**
+         * PortfolioOverviewResponse
+         * @description Every position of the portfolio, largest value first, then those not valued.
+         */
+        PortfolioOverviewResponse: {
+            /** Positions */
+            positions: components["schemas"]["PositionOverview"][];
+            totals: components["schemas"]["OverviewTotals"];
         };
         /** PortfolioRead */
         PortfolioRead: {
@@ -604,6 +678,24 @@ export interface components {
             quantity?: number | string | null;
             /** Average Price */
             average_price?: number | string | null;
+        };
+        /** PositionOverview */
+        PositionOverview: {
+            position: components["schemas"]["PositionRead"];
+            /** Latest Close */
+            latest_close: string | null;
+            /** Latest Close Date */
+            latest_close_date: string | null;
+            /** Value */
+            value: string | null;
+            /** Value Base */
+            value_base: string | null;
+            /** Unrealised Gain */
+            unrealised_gain: string | null;
+            /** Unrealised Gain Pct */
+            unrealised_gain_pct: string | null;
+            /** Weight */
+            weight: string | null;
         };
         /** PositionRead */
         PositionRead: {
@@ -639,6 +731,21 @@ export interface components {
             average_price?: number | string | null;
         };
         /**
+         * SecurityBrief
+         * @description A security group held in a portfolio, and its latest brief.
+         */
+        SecurityBrief: {
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Instruments */
+            instruments: components["schemas"]["InstrumentRead"][];
+            /** News Collected */
+            news_collected: boolean;
+            brief: components["schemas"]["BriefRead"] | null;
+        };
+        /**
          * TokenResponse
          * @description OAuth2 token response; Swagger UI's Authorize button reads `access_token`.
          */
@@ -656,6 +763,20 @@ export interface components {
          * @enum {string}
          */
         Tone: "positive" | "negative" | "neutral" | "mixed";
+        /** UnvaluedPosition */
+        UnvaluedPosition: {
+            /**
+             * Position Id
+             * Format: uuid
+             */
+            position_id: string;
+            reason: components["schemas"]["UnvaluedReason"];
+        };
+        /**
+         * UnvaluedReason
+         * @enum {string}
+         */
+        UnvaluedReason: "no_quantity" | "no_price" | "no_rate";
         /** UserCreate */
         UserCreate: {
             /**
@@ -1181,6 +1302,26 @@ export interface operations {
             };
         };
     };
+    get_mine_api_v1_portfolio_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioOverviewResponse"];
+                };
+            };
+        };
+    };
     import_csv_api_v1_portfolio_import_post: {
         parameters: {
             query?: {
@@ -1311,6 +1452,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mine_api_v1_portfolio_briefs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioBriefsResponse"];
                 };
             };
         };

@@ -2,7 +2,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeApi } from "@/shared/api/fake-api";
-import { readApi, writeApi } from "@/shared/api/request";
+import { findApi, readApi, writeApi } from "@/shared/api/request";
 
 function cookiesOf(cookie: string) {
   return new NextRequest("http://localhost:3000/", { headers: { cookie } }).cookies;
@@ -78,6 +78,62 @@ describe("reading from the API while rendering", () => {
 
     await expect(loadUser()).rejects.toThrow("Could not load the user: Not authenticated");
     expect(requestCookies.has("sn_refresh")).toBe(true);
+  });
+});
+
+describe("reading something that may not exist", () => {
+  const INSTRUMENT_ID = "a1111111-1111-4111-8111-111111111111";
+  const INSTRUMENT = `GET /api/v1/instruments/${INSTRUMENT_ID}`;
+
+  function findInstrument() {
+    return findApi("load the instrument", (api) =>
+      api.GET("/api/v1/instruments/{instrument_id}", {
+        params: { path: { instrument_id: INSTRUMENT_ID } },
+      }),
+    );
+  }
+
+  it("returns null when the API answers 404 not_found, rather than throwing", async () => {
+    fakeApi({
+      [INSTRUMENT]: () => ({
+        status: 404,
+        body: { code: "not_found", message: "Instrument not found", details: null },
+      }),
+    });
+
+    expect(await findInstrument()).toBeNull();
+  });
+
+  it("throws on a 404 with another code, rather than reading it as missing", async () => {
+    fakeApi({
+      [INSTRUMENT]: () => ({
+        status: 404,
+        body: { code: "no_portfolio", message: "No portfolio", details: null },
+      }),
+    });
+
+    await expect(findInstrument()).rejects.toThrow("Could not load the instrument: No portfolio");
+  });
+
+  it("throws on a server error, naming what could not be read", async () => {
+    fakeApi({
+      [INSTRUMENT]: () => ({
+        status: 500,
+        body: { code: "internal_error", message: "An unexpected error occurred.", details: null },
+      }),
+    });
+
+    await expect(findInstrument()).rejects.toThrow(
+      "Could not load the instrument: An unexpected error occurred.",
+    );
+  });
+
+  it("redirects to /session/expired on a 401, like any read while rendering", async () => {
+    fakeApi({ [INSTRUMENT]: () => UNAUTHORIZED_ANSWER });
+
+    await expect(findInstrument()).rejects.toMatchObject({
+      digest: expect.stringContaining(";/session/expired;"),
+    });
   });
 });
 

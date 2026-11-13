@@ -24,7 +24,7 @@ Worth doing when the web app runs as more than one instance.
 
 ## ui
 
-**The app is desktop only.** The top bar holds the logo, two links, a search button up to 460 px wide, the as-of stamp and the account menu in one row, which needs roughly 900 px.
+**The app is desktop only.** The top bar holds the logo, two links, a search button up to 460 px wide and the account menu in one row, which needs roughly 900 px.
 A narrow layout is needed before the app is used on a phone.
 
 **The Review-era feed names no model.** `TonalityBadge` credited the model and its confidence in its hover text; `ToneChip`, which replaced it, shows only the tone.

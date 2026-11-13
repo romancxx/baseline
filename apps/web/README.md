@@ -71,7 +71,7 @@ The rules that keep this shape intact — dependency rules, the client/server sp
 ## Shell and look
 
 Signed-in pages sit under a top bar ([ADR 0002](docs/adr/0002-visual-foundation-and-shell.md)).
-It holds the logo, the two destinations, Home (`/`) and Holdings (`/holdings`), a search button that ⌘K or Ctrl+K also opens, the date the prices are as of when one is known, and the account menu, which shows the user's email and leads to "Import a CSV" (`/holdings/import`) and "Sign out".
+It holds the logo, the two destinations, Home (`/`) and Holdings (`/holdings`), a search button that ⌘K or Ctrl+K also opens, and the account menu, which shows the user's email and leads to "Import a CSV" (`/holdings/import`) and "Sign out".
 `/portfolio`, Holdings' old path, redirects there permanently.
 The app is desktop only.
 
@@ -136,7 +136,6 @@ CI fails when either file drifts from the code that produces it.
 ## Holdings
 
 **Being rebuilt:** `/holdings` and `/holdings/import` show only their heading until they read and import positions through the API.
-`PortfolioSection` stays for the rebuild: a read-only list of positions with an explicit empty state.
 
 ## Home feed
 

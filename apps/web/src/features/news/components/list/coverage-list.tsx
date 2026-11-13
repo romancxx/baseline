@@ -1,10 +1,9 @@
-import type { Instrument } from "@/features/instruments";
 import { CoverageRow } from "@/features/news/components/row/coverage-row";
-import type { FeedItem } from "@/features/news/schemas/feed.schema";
+import type { FeedInstrument, FeedItem } from "@/features/news/schemas/feed.schema";
 
 export type CoverageListProps = {
   readonly items: readonly FeedItem[];
-  readonly instruments: readonly Instrument[];
+  readonly instruments: readonly FeedInstrument[];
 };
 
 /** Articles per instrument id, in order of each instrument's most recent article. */

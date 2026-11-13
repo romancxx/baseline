@@ -1,25 +1,22 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { type Instrument, InstrumentSchema } from "@/features/instruments";
 import { CoverageList } from "@/features/news/components/list/coverage-list";
-import { type FeedItem, FeedItemSchema } from "@/features/news/schemas/feed.schema";
+import {
+  type FeedInstrument,
+  FeedInstrumentSchema,
+  type FeedItem,
+  FeedItemSchema,
+} from "@/features/news/schemas/feed.schema";
 
-function instrument(id: string, ticker: string): Instrument {
-  return InstrumentSchema.parse({
-    id,
-    ticker,
-    isin: null,
-    name: ticker,
-    type: "etf",
-    macroBucket: null,
-  });
+function instrument(id: string, symbol: string): FeedInstrument {
+  return FeedInstrumentSchema.parse({ id, symbol, name: symbol });
 }
 
 const iwda = instrument("a1111111-1111-4111-8111-111111111111", "IWDA");
 const asml = instrument("b2222222-2222-4222-8222-222222222222", "ASML");
 const eimi = instrument("c3333333-3333-4333-8333-333333333333", "EIMI");
 
-function article(id: string, instruments: readonly Instrument[]): FeedItem {
+function article(id: string, instruments: readonly FeedInstrument[]): FeedItem {
   return FeedItemSchema.parse({
     kind: "article",
     id,

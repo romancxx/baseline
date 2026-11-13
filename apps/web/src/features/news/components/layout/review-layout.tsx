@@ -1,14 +1,13 @@
-import type { Instrument } from "@/features/instruments";
 import { FeedDisclaimer } from "@/features/news/components/display/feed-disclaimer";
 import { CoverageList } from "@/features/news/components/list/coverage-list";
 import { NewsFeed } from "@/features/news/components/list/news-feed";
 import { ReviewHeader } from "@/features/news/components/section/review-header";
-import type { FeedItem } from "@/features/news/schemas/feed.schema";
+import type { FeedInstrument, FeedItem } from "@/features/news/schemas/feed.schema";
 
 export type ReviewLayoutProps = {
   readonly date: Date;
   readonly items: readonly FeedItem[];
-  readonly instruments: readonly Instrument[];
+  readonly instruments: readonly FeedInstrument[];
 };
 
 export function ReviewLayout({ date, items, instruments }: ReviewLayoutProps) {

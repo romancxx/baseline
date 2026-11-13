@@ -7,12 +7,10 @@ export type TopBarProps = {
   /** `NavLink`s, each rendering its own `<li>` */
   readonly navigation: ReactNode;
   readonly search: ReactNode;
-  /** The prices as-of stamp, or nothing */
-  readonly asOf: ReactNode;
   readonly account: ReactNode;
 };
 
-export function TopBar({ navigation, search, asOf, account }: TopBarProps) {
+export function TopBar({ navigation, search, account }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-bar shrink-0 items-center gap-1.5 border-hairline border-b bg-canvas px-5">
       <Link href={ROUTES.home} aria-label="StockNews, Home" className="mr-3.5 rounded-control">
@@ -22,10 +20,7 @@ export function TopBar({ navigation, search, asOf, account }: TopBarProps) {
         <ul className="flex gap-0.5">{navigation}</ul>
       </nav>
       {search}
-      <div className="ml-auto flex items-center gap-3.5">
-        {asOf}
-        {account}
-      </div>
+      <div className="ml-auto">{account}</div>
     </header>
   );
 }

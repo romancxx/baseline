@@ -41,10 +41,10 @@ thing. Do not invent a new name for something one of these already covers.
 | Directory | Holds | Runs on | Example |
 | --- | --- | --- | --- |
 | `screens/` | One async Server Component per route: loads its data, renders the feature's components | server | `auth/screens/sign-in-screen.tsx` |
-| `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `portfolio/components/section/portfolio-section.tsx` |
+| `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `news/components/card/article-feed-card.tsx` |
 | `actions/` | Server actions (`"use server"`) | server | `auth/actions/auth-actions.ts` |
 | `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
-| `schemas/` | Zod contracts and the types derived from them | anywhere | `portfolio/schemas/portfolio.schema.ts` |
+| `schemas/` | Zod contracts and the types derived from them | anywhere | `auth/schemas/credentials.schema.ts` |
 | `fixtures/` | Scaffolding data — delete when real data lands | anywhere | none at present |
 | `index.ts` | Public API, **client-safe** | anywhere | |
 | `server.ts` | Public API, **server-only** | server | |
@@ -61,7 +61,7 @@ means the same thing everywhere; do not invent a new one for something these cov
 | --- | --- | --- |
 | `layout/` | Structure that places other components on the page | `shared/ui/layout/top-bar.tsx` |
 | `navigation/` | Links, menus and dialogs that move between screens | `shared/ui/navigation/nav-link.tsx` |
-| `section/` | A titled region of a screen composing other roles | `portfolio/components/section/portfolio-section.tsx` |
+| `section/` | A titled region of a screen composing other roles | `news/components/section/review-header.tsx` |
 | `card/` | A self-contained panel presenting one item | `news/components/card/article-feed-card.tsx` |
 | `list/` | A collection and its empty state | `news/components/list/coverage-list.tsx` |
 | `row/` | One entry of a list | `news/components/row/coverage-row.tsx` |
@@ -123,9 +123,8 @@ Each feature has two entry points:
 - **`server.ts` is server-only.**
   It exports `data/` functions and the server actions that routes call directly (e.g. `signOut`).
 
-Anything not re-exported from one of the two is internal to the feature. Export the type
-alongside the value (`export { PortfolioSection, type PortfolioSectionProps }`) so consumers
-never need to reach for a schema file.
+Anything not re-exported from one of the two is internal to the feature.
+Export the type alongside the value (`export { InstrumentAvatar, type InstrumentAvatarProps }`) so consumers never need to reach for a schema file.
 
 Server actions are the one thing that crosses the line by design: a client component may
 import an action from its own feature's `actions/` directory, because `"use server"` turns it
@@ -143,7 +142,7 @@ loud crash instead of a leaked secret. Do not remove it, and do not add a server
 that bypasses it: every `data/` module reaches either `server-env` or `next/headers`, which is
 what makes an accidental client import fail.
 
-The API is reached only from the server, through `@/shared/api` (`readApi`, `writeApi`, `createApiClient`), and the session only through `@/shared/session`.
+The API is reached only from the server, through `@/shared/api` (`readApi`, `findApi`, `writeApi`, `createApiClient`), and the session only through `@/shared/session`.
 Both reach `server-env`, so a client import fails loudly. **[review]**
 
 ---
@@ -180,7 +179,7 @@ Both reach `server-env`, so a client import fails loudly. **[review]**
 - **Zod schema files end in `.schema.ts`**; tests sit next to their source as
   `<name>.test.ts(x)`. **[review]**
 - **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix:
-  `PositionSchema` / `type Position = z.infer<typeof PositionSchema>`. **[review]**
+  `FeedItemSchema` / `type FeedItem = z.infer<typeof FeedItemSchema>`. **[review]**
 - **Components are PascalCase and export a `<Component>Props` type.** **[review]**
 - **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not obvious: `LOW_CONFIDENCE`, `RENEWAL_REUSE_MS`.
   No magic numbers inline. **[review]**
@@ -201,11 +200,10 @@ Both reach `server-env`, so a client import fails loudly. **[review]**
 - **Types are derived with `z.infer`, never hand-written alongside a schema.** **[review]**
 - **Validate at the edge, then trust.**
   Actions parse their form data with `parseForm`, `data/` maps API responses; everything downstream receives domain objects and never re-validates. **[review]**
-- **Coerce once, at the schema.** Form fields arrive as strings; the schema turns them into
-  numbers, `null`s and trimmed strings (`QuantitySchema`, `CostBasisSchema`). Dates become
-  `Date` objects in the schema so nothing re-parses them. **[review]**
-- **User-facing validation messages live in the schema** (`{ error: "Pick an instrument." }`),
-  written as instructions to the user. **[review]**
+- **Coerce once, at the schema.** Form fields arrive as strings; the schema turns them into `null`s and trimmed strings.
+  A figure is checked by pattern and stays a decimal string, never a number (§7).
+  Dates become `Date` objects in the schema so nothing re-parses them. **[review]**
+- **User-facing validation messages live in the schema** (`{ error: "Enter a valid email address." }`), written as instructions to the user. **[review]**
 - **Fixtures and test data are `.parse()`d, never cast**, so data that drifts from the
   contract fails loudly. **[review]**
 
@@ -263,6 +261,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 
 - **A read from the API goes through `readApi("<verb> <thing>", (api) => api.GET(…))`** from `@/shared/api/request`.
   It throws `Could not <verb> <thing>: …` for the route's error boundary, and redirects a 401 to `/session/expired`, which clears the cookies a Server Component cannot.
+  A read whose absence the screen shows, such as a missing instrument or no brief yet, goes through `findApi` instead: the same, but `null` on a 404 `not_found`.
   Wrap a read several components need in React `cache()`, so one request makes one call (`getCurrentUser`). **[review]**
 - **Screens fetch in parallel** with `Promise.all` when reads are independent. **[review]**
 
@@ -307,7 +306,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   the screen, under the feature's `screens/`. `src/app/pages.test.ts` checks every page file.
   **[test]**
 - **Screens render inside the app shell.**
-  `(app)/layout.tsx` composes `AppShell` and `TopBar`, filled with the `NavLink`s, the search, the as-of stamp and the account menu; a screen's root is a `<div>`, because the shell owns `<main>`.
+  `(app)/layout.tsx` composes `AppShell` and `TopBar`, filled with the `NavLink`s, the search and the account menu; a screen's root is a `<div>`, because the shell owns `<main>`.
   The bar holds Home and Holdings only: a screen reached from a holding, a brief or search, like an instrument page, gets no `NavLink`, and nothing renders disabled. **[review]**
 - **Icons are `lucide-react`, rendered through `Icon`** (`<Icon icon={Eye} />`), which sets size, stroke and `aria-hidden`.
   An icon never carries meaning alone; text beside it does.
@@ -409,7 +408,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   would otherwise have to stop and work something out. **[review]**
 - **Only comment what the code cannot say itself.**
   The meaning of a `null`, a contract a caller must know ("renders its own `<li>`"), a unit.
-  Never restate a name, a prop, a slot or the JSX structure — `/** The bar: logo and links on the left, account on the right */` above `TopBar({ navigation, search, asOf, account })` adds nothing.
+  Never restate a name, a prop, a slot or the JSX structure — `/** The bar: logo and links on the left, account on the right */` above `TopBar({ navigation, search, account })` adds nothing.
   If deleting the comment loses no information, delete it. **[review]**
 - **Short JSDoc on public functions whose behaviour is not obvious from the signature** — one sentence saying what it does (`requireUser`, `refreshSession`). **[review]**
 - **Record numbers in the ADR when a decision came from measurement** (the 0.08 dedup
