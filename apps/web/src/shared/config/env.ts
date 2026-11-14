@@ -18,9 +18,7 @@ const clientRuntimeEnv = {
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 };
 
-export type ClientEnv = z.infer<typeof clientSchema>;
-
-export const clientEnv: ClientEnv = parseEnv(clientSchema, clientRuntimeEnv, "client");
+export const clientEnv = parseEnv(clientSchema, clientRuntimeEnv, "client");
 
 /**
  * Shared parse-or-die. Failure is a hard stop: a process with a broken config should never

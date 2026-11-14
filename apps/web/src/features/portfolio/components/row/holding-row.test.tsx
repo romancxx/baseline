@@ -2,8 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { HoldingRow } from "@/features/portfolio/components/row/holding-row";
-import type { FormState } from "@/shared/form-state";
-import type { FormAction } from "@/types/form-state";
+import type { FormAction, FormState } from "@/types/form-state";
 import type { Holding } from "@/types/portfolio";
 
 const LVMH: Holding = {

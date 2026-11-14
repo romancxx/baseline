@@ -1,5 +1,5 @@
-import type { Tone } from "@/features/news/schemas/tone.schema";
 import { cn } from "@/shared/ui/cn";
+import type { Tone } from "@/types/news";
 
 export type ToneChipProps = {
   readonly tone: Tone;

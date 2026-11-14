@@ -4,11 +4,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { CreateAccountSchema, SignInSchema } from "@/features/auth/schemas/credentials.schema";
 import { api, currentRequestId, resultOf } from "@/shared/api/request";
-import { type FormState, formError, parseForm } from "@/shared/form-state";
+import { formError, parseForm } from "@/shared/form-state";
 import { logger } from "@/shared/logger";
 import { ROUTES } from "@/shared/routes";
 import { createSession, endSession, writeSession } from "@/shared/session";
 import type { ApiError } from "@/types/api";
+import type { FormState } from "@/types/form-state";
 
 const INVALID_CREDENTIALS = "invalid_credentials";
 const EMAIL_TAKEN = "email_taken";

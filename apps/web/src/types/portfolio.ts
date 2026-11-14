@@ -114,7 +114,7 @@ export type ImportStepEntry = {
 };
 
 /** A dry run's report, with the file it read, to be sent again by the confirm. */
-export type ImportPreview = {
+export type ImportDryRun = {
   readonly file: File;
   readonly report: ImportReport;
 };
@@ -122,7 +122,7 @@ export type ImportPreview = {
 export type ImportFlow = {
   readonly step: ImportStep;
   /** `null` until a file is previewed. */
-  readonly preview: ImportPreview | null;
+  readonly preview: ImportDryRun | null;
   /** Why the last upload or confirm failed; `null` otherwise. */
   readonly failure: ImportFailure | null;
   /** The dry run is in flight. */

@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
-import type { ReactNode } from "react";
 import { clientEnv } from "@/shared/config/env";
 import { cn } from "@/shared/ui/cn";
 import { BROWSER_THEME_COLOR } from "@/shared/ui/theme";
@@ -35,7 +34,7 @@ export const metadata: Metadata = {
     default: "StockNews",
     template: "%s · StockNews",
   },
-  description: "A daily digest of the news that moved the stocks you actually own.",
+  description: "A short brief on the news about each security you hold, beside your portfolio.",
 };
 
 export const viewport: Viewport = {
@@ -43,7 +42,7 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={cn(inter.variable, jetBrainsMono.variable, newsreader.variable)}>
       <body>{children}</body>

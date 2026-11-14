@@ -9,6 +9,7 @@ const TILES = ["Total value", "Unrealised gain", "Briefs"] as const;
 export function HomeSkeleton() {
   return (
     <div aria-busy="true" className="flex flex-col gap-section px-gutter py-page">
+      <h1 className="sr-only">Home</h1>
       <div className="grid grid-cols-3 gap-stack">
         {TILES.map((label) => (
           <OverviewTile
@@ -22,7 +23,7 @@ export function HomeSkeleton() {
       <BriefsDisclaimer />
       <div className="flex items-start gap-section">
         <div className="flex min-w-0 flex-1 flex-col gap-stack">
-          <h1 className="text-title">Latest briefs</h1>
+          <h2 className="text-title">Latest briefs</h2>
           <div className="flex flex-col gap-3 rounded-card border border-hairline bg-surface p-card">
             <div className="flex items-center gap-2.5 text-heading">
               <Skeleton className="size-avatar rounded-avatar" />

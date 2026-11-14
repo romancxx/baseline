@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { type FormState, IDLE } from "@/shared/form-state";
+import { useClosingAction } from "@/features/portfolio/hooks/use-closing-action";
 import { FormError } from "@/shared/ui/display/form-error";
 import { Button } from "@/shared/ui/form/button";
 import { SubmitButton } from "@/shared/ui/form/submit-button";
@@ -16,11 +15,7 @@ export type PositionEditFormProps = {
 };
 
 export function PositionEditForm({ holding, editPosition, onClose }: PositionEditFormProps) {
-  const [state, formAction] = useActionState(async (previous: FormState, formData: FormData) => {
-    const next = await editPosition(previous, formData);
-    if (next.status === "success") onClose();
-    return next;
-  }, IDLE);
+  const [state, formAction] = useClosingAction(editPosition, onClose);
   const { instrument } = holding;
 
   return (

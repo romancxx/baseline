@@ -220,6 +220,16 @@ describe("HomeLayout", () => {
     });
   });
 
+  describe("headings", () => {
+    it("opens on one page heading, with the tiles and briefs under it rather than before it", () => {
+      renderHome(overview(holdings(2)), BRIEFS.slice(0, 2));
+
+      expect(screen.getAllByRole("heading")[0]).toHaveAccessibleName("Home");
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole("heading", { level: 2, name: "Latest briefs" })).toBeInTheDocument();
+    });
+  });
+
   describe("empty portfolio", () => {
     it("offers to search or import rather than showing tiles and briefs", () => {
       renderHome(overview([], { value: null, valuedCount: 0, pricesAsOf: null }));

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { InstrumentAvatar, InstrumentTypeTag } from "@/features/instruments";
-import { CELL } from "@/features/portfolio/components/list/holdings-columns";
+import { CELL } from "@/features/portfolio/components/holdings-columns";
 import { instrumentRoute } from "@/shared/routes";
 import type { Instrument } from "@/types/instruments";
 

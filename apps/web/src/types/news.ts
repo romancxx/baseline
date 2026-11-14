@@ -1,6 +1,9 @@
 import type { components } from "@/shared/api/api.types";
 import type { Instrument } from "@/types/instruments";
 
+/** How a brief's facts bear on the company itself, not on its share price. */
+export type Tone = components["schemas"]["Tone"];
+
 export type Article = {
   readonly id: string;
   readonly title: string;
@@ -12,7 +15,7 @@ export type Article = {
 
 export type Brief = {
   readonly text: string;
-  readonly tone: components["schemas"]["Tone"];
+  readonly tone: Tone;
   /** The articles the text cites. */
   readonly articles: readonly Article[];
   /** The API's own line: "From 7 articles, 28-30 Oct, generated 2026-10-30 06:00 UTC". */

@@ -3,7 +3,7 @@ import { LOG_LEVELS } from "../logger";
 // Relative on purpose: `next.config.ts` imports this module to validate the environment
 // at build time, and Next's config loader cannot resolve the `@/` alias from a nested
 // module. This is the only relative import in the codebase.
-import { type ClientEnv, clientEnv, parseEnv } from "./env";
+import { clientEnv, parseEnv } from "./env";
 
 /**
  * The private half of the environment contract. Server-only.
@@ -26,9 +26,7 @@ const serverSchema = z.object({
   LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
 });
 
-export type ServerEnv = ClientEnv & z.infer<typeof serverSchema>;
-
-export const serverEnv: ServerEnv = {
+export const serverEnv = {
   ...clientEnv,
   ...parseEnv(serverSchema, process.env, "server"),
 };

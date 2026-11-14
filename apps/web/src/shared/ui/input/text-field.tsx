@@ -8,14 +8,13 @@ export type TextFieldProps = Omit<ComponentPropsWithoutRef<"input">, "id" | "cla
   /** Keeps the label for screen readers only, where the column or card already names the field */
   readonly hideLabel?: boolean;
   readonly hint?: string;
-  readonly error?: string;
   /** A control inside the field's right edge, such as a show-password button */
   readonly trailing?: ReactNode;
 };
 
-export function TextField({ label, hideLabel, hint, error, trailing, ...input }: TextFieldProps) {
+export function TextField({ label, hideLabel, hint, trailing, ...input }: TextFieldProps) {
   const id = useId();
-  const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  const hintId = `${id}-hint`;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -26,22 +25,16 @@ export function TextField({ label, hideLabel, hint, error, trailing, ...input }:
         <input
           {...input}
           id={id}
-          aria-describedby={describedBy}
-          aria-invalid={error ? true : undefined}
+          aria-describedby={hint ? hintId : undefined}
           className={cn(FIELD_CONTROL, trailing ? "pr-10" : null)}
         />
         {trailing ? (
           <div className="absolute inset-y-0 right-0 flex items-center pr-2">{trailing}</div>
         ) : null}
       </div>
-      {hint && !error ? (
-        <p id={`${id}-hint`} className="text-caption text-tertiary">
+      {hint ? (
+        <p id={hintId} className="text-caption text-tertiary">
           {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p id={`${id}-error`} role="alert" className="text-caption text-danger">
-          {error}
         </p>
       ) : null}
     </div>

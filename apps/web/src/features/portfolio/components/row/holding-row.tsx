@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CELL, NUMERIC_CELL } from "@/features/portfolio/components/list/holdings-columns";
+import { CELL, NUMERIC_CELL } from "@/features/portfolio/components/holdings-columns";
 import { HoldingEditRow } from "@/features/portfolio/components/row/holding-edit-row";
 import { HoldingFigureCells } from "@/features/portfolio/components/row/holding-figure-cells";
 import { HoldingRemoveRow } from "@/features/portfolio/components/row/holding-remove-row";

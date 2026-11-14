@@ -2,8 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PositionCard } from "@/features/portfolio/components/card/position-card";
-import type { FormState } from "@/shared/form-state";
-import type { FormAction } from "@/types/form-state";
+import type { FormAction, FormState } from "@/types/form-state";
 import type { Instrument } from "@/types/instruments";
 import type { Holding } from "@/types/portfolio";
 

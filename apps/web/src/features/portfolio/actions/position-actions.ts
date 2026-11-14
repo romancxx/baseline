@@ -7,10 +7,11 @@ import {
   RemovePositionSchema,
 } from "@/features/portfolio/schemas/position.schema";
 import { api, currentRequestId, resultOf } from "@/shared/api/request";
-import { type FormState, formError, parseForm } from "@/shared/form-state";
+import { formError, parseForm } from "@/shared/form-state";
 import { logger } from "@/shared/logger";
 import { instrumentRoute, ROUTES } from "@/shared/routes";
 import type { ApiError } from "@/types/api";
+import type { FormState } from "@/types/form-state";
 
 const NOT_FOUND = "not_found";
 const CONFLICT = "conflict";

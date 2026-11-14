@@ -1,4 +1,4 @@
-import type { DecimalString, SignOptions } from "@/types/format";
+import type { DecimalString, Direction, SignOptions } from "@/types/format";
 
 /** Fixed, so the server and the browser render the same string. */
 export const LOCALE = "en-GB";
@@ -7,7 +7,7 @@ export const LOCALE = "en-GB";
 const MISSING = "—";
 
 /** U+2212, written for every negative figure in place of a hyphen */
-export const MINUS = "−";
+const MINUS = "−";
 
 /** Most decimals `Intl.NumberFormat` accepts; enough to show any recorded quantity unrounded. */
 const MAX_FRACTION_DIGITS = 100;
@@ -107,4 +107,11 @@ export function formatPercent(
   { signed = false }: SignOptions = {},
 ): string {
   return value === null ? MISSING : format(signed ? PERCENT.signed : PERCENT.plain, value);
+}
+
+/** The direction a signed figure's text shows, read from its sign so a colour never disagrees. */
+export function direction(formatted: string): Direction {
+  if (formatted.startsWith("+")) return "up";
+  if (formatted.startsWith(MINUS)) return "down";
+  return "flat";
 }

@@ -1,7 +1,6 @@
 import { cn } from "@/shared/ui/cn";
 
 export type AvatarProps = {
-  /** Shown as given; the caller picks the letters. */
   readonly initials: string;
   readonly size?: keyof typeof SIZES | undefined;
 };
@@ -12,7 +11,6 @@ const SIZES = {
   lg: "size-avatar-lg text-heading",
 } as const;
 
-/** A neutral monogram; the name beside it carries the meaning. */
 export function Avatar({ initials, size = "md" }: AvatarProps) {
   return (
     <span

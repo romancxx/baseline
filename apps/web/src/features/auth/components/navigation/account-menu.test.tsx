@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AccountMenu } from "@/features/auth/components/navigation/account-menu";
 
-const EMAIL = "roman.cirier@example.com";
+const EMAIL = "jane.doe@example.com";
 
 function renderMenu(signOut = vi.fn()) {
   render(<AccountMenu email={EMAIL} signOut={signOut} />);
@@ -14,7 +14,7 @@ describe("AccountMenu", () => {
   it("shows the user's initials, taken from the email's first two parts", () => {
     const { trigger } = renderMenu();
 
-    expect(trigger).toHaveTextContent("RC");
+    expect(trigger).toHaveTextContent("JD");
   });
 
   it("stays closed until opened, then shows the email the user is signed in with", async () => {

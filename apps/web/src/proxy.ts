@@ -23,14 +23,14 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   request.headers.set(REQUEST_ID_HEADER, requestId);
   const refresh = await refreshIfNeeded(request, requestId);
 
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
   const signedIn = readSession(request.cookies).status !== "signed-out";
 
   if (!signedIn && !isPublicRoute(pathname)) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = ROUTES.signIn;
     redirect.search = "";
-    redirect.searchParams.set("next", pathname);
+    redirect.searchParams.set("next", `${pathname}${search}`);
     return respond(NextResponse.redirect(redirect), refresh);
   }
 

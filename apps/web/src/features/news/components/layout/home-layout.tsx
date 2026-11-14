@@ -26,6 +26,7 @@ export function HomeLayout({ overview, briefs, resolveInstrument }: HomeLayoutPr
   if (overview.holdings.length === 0) {
     return (
       <div className="px-gutter py-page">
+        <h1 className="sr-only">Home</h1>
         <EmptyPortfolio resolveInstrument={resolveInstrument} />
       </div>
     );
@@ -33,6 +34,7 @@ export function HomeLayout({ overview, briefs, resolveInstrument }: HomeLayoutPr
 
   return (
     <div className="flex flex-col gap-section px-gutter py-page">
+      <h1 className="sr-only">Home</h1>
       {priced === null ? null : <MissingPricesNotice count={priced} />}
       <OverviewTiles overview={overview} priced={priced} briefed={groups.briefed} />
       <BriefsDisclaimer />

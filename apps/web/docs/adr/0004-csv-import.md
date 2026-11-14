@@ -9,7 +9,7 @@
 The API imports holdings from a CSV at `POST /portfolio/import`, as multipart with one field, `file`, and reports one result per row; `?dry_run=true` reports without saving.
 A file it cannot read is refused before any row with `invalid_file`, whose message names the cause (unknown or missing columns, an empty file, text that is not UTF-8), or `file_too_large` past 64 KiB.
 Each row's result carries its line, ISIN, status, the matched listing's symbol, up to three other listings by symbol, and a reason when the row is skipped; it carries neither the row's quantity, average price and currency nor the matched listing's name and exchange.
-The design ([screens 07, 08 and 03](../design/screens.html)) shows an upload, a preview table with the name, quantity and average price of each row, and a notice on Holdings once imported.
+The design ([screens 07, 08 and 03](https://github.com/romancxx/stock-news-v2/blob/4936852/apps/web/docs/design/screens.html)) shows an upload, a preview table with the name, quantity and average price of each row, and a notice on Holdings once imported.
 
 ## Decision
 

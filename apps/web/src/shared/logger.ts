@@ -1,8 +1,7 @@
+// Type-only, so erased at build: `server-env.ts` imports this module relatively, without `@/`.
+import type { LogFields, LogLevel } from "@/types/logger";
+
 export const LOG_LEVELS = ["debug", "info", "warn", "error", "silent"] as const;
-
-export type LogLevel = (typeof LOG_LEVELS)[number];
-
-export type LogFields = Record<string, unknown>;
 
 const RANK: Record<LogLevel, number> = {
   debug: 10,

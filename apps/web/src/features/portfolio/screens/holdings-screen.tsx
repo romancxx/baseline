@@ -11,7 +11,7 @@ import { importedSummary } from "@/features/portfolio/utils/import";
 
 export type HoldingsScreenProps = {
   /** Counts of rows by status after an import, from `importedHoldingsRoute`. */
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+  readonly searchParams: PageProps<"/holdings">["searchParams"];
 };
 
 export async function HoldingsScreen({ searchParams }: HoldingsScreenProps) {

@@ -8,10 +8,10 @@ import {
 } from "@/features/portfolio/utils/import";
 import { Notice } from "@/shared/ui/display/notice";
 import { Button } from "@/shared/ui/form/button";
-import type { ImportFailure, ImportPreview as Preview } from "@/types/portfolio";
+import type { ImportDryRun, ImportFailure } from "@/types/portfolio";
 
 export type ImportPreviewProps = {
-  readonly preview: Preview;
+  readonly preview: ImportDryRun;
   readonly failure: ImportFailure | null;
   readonly confirming: boolean;
   readonly onConfirm: () => void;

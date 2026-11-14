@@ -33,7 +33,7 @@ const IMPORT_STEPS = [
   { step: "confirm", label: "Confirm" },
 ] as const satisfies readonly Omit<ImportStepEntry, "state">[];
 
-/** The CSV's header and three rows, as screen 07 shows them. */
+/** The CSV's header and three example rows. */
 export const FORMAT_EXAMPLE = {
   header: "isin,quantity,average_price,currency",
   rows: "FR0000121014,4,612.30,EUR\nIE00B4L5Y983,25,98.10,EUR\nUS67066G1040,6,164.20,USD",

@@ -12,7 +12,7 @@ Each rule is tagged with what holds it in place:
 - **[commit]** The root `commit-msg` hook (`lefthook.yml`).
 - **[review]** Convention only. Nothing catches it but a reader, so read for it.
 
-`pnpm verify` runs everything CI runs except the build.
+`pnpm verify` runs everything CI runs except the build and the check that `api.types.ts` matches the API's schema.
 
 ---
 
@@ -41,7 +41,7 @@ thing. Do not invent a new name for something one of these already covers.
 | Directory | Holds | Runs on | Example |
 | --- | --- | --- | --- |
 | `screens/` | One async Server Component per route: loads its data, renders the feature's components; a region that streams under `Suspense` is an async component loading its own | server | `auth/screens/sign-in-screen.tsx`, `news/screens/instrument-screen.tsx` |
-| `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `news/components/card/article-feed-card.tsx` |
+| `components/` | React components, in role folders (§1.2.1) | server by default; client if marked | `news/components/card/brief-card.tsx` |
 | `actions/` | Server actions (`"use server"`) | server | `auth/actions/auth-actions.ts` |
 | `data/` | All API reads for the feature | server only | `auth/data/current-user.ts` |
 | `schemas/` | Zod contracts and the types derived from them | anywhere | `auth/schemas/credentials.schema.ts` |
@@ -54,8 +54,8 @@ thing. Do not invent a new name for something one of these already covers.
 #### 1.2.1 Component roles
 
 Every components folder — a feature's `components/` and `src/shared/ui/` — groups its
-components into subfolders by role. No component sits at the folder's root; in `shared/ui`,
-only non-component modules do (`cn.ts`, `theme.*`). Like the directories above, a role name
+components into subfolders by role.
+No component sits at the folder's root; only non-component modules do, such as class tables shared across roles (`shared/ui/button-styles.ts`, `portfolio/components/holdings-columns.ts`) and, in `shared/ui`, `cn.ts` and `theme.*`. Like the directories above, a role name
 means the same thing everywhere; do not invent a new one for something these cover.
 **[review]**
 
@@ -63,10 +63,10 @@ means the same thing everywhere; do not invent a new one for something these cov
 | --- | --- | --- |
 | `layout/` | Structure that places other components on the page | `shared/ui/layout/top-bar.tsx` |
 | `navigation/` | Links, menus and dialogs that move between screens | `shared/ui/navigation/nav-link.tsx` |
-| `section/` | A titled region of a screen composing other roles | `news/components/section/review-header.tsx` |
-| `card/` | A self-contained panel presenting one item | `news/components/card/article-feed-card.tsx` |
-| `list/` | A collection and its empty state | `news/components/list/coverage-list.tsx` |
-| `row/` | One entry of a list | `news/components/row/coverage-row.tsx` |
+| `section/` | A titled region of a screen composing other roles | `portfolio/components/section/holdings-header.tsx` |
+| `card/` | A self-contained panel presenting one item | `news/components/card/brief-card.tsx` |
+| `list/` | A collection and its empty state | `news/components/list/instrument-news-list.tsx` |
+| `row/` | One entry of a list | `news/components/row/news-row.tsx` |
 | `form/` | A `<form>`, and controls bound to its submission | `shared/ui/form/submit-button.tsx` |
 | `input/` | One labelled form control | `shared/ui/input/text-field.tsx` |
 | `display/` | Read-only atoms: icon, avatar, badge, chip, a line of text | `news/components/display/tone-chip.tsx` |
@@ -100,7 +100,7 @@ surviving review.
 3. **Features never import from `app`.** Routes compose features, not the reverse. **[lint]**
 4. **Cross-feature dependencies form a DAG.**
    Both leaf features point at the foundation feature `instruments`: `portfolio → instruments`, `news → instruments`.
-   One edge joins two leaf features, `news → portfolio`: the instrument screen, in `news`, composes the header and chart from `instruments` and the position card from `portfolio`, and Review will read the user's holdings the same way.
+   One edge joins two leaf features, `news → portfolio`: the instrument screen, in `news`, composes the header and chart from `instruments` and the position card from `portfolio`, and Home composes the Holdings card, the missing-prices notice and the empty state from `portfolio` the same way.
    A new edge pointing the other way, or between two other leaf features, is a design question to raise before writing it. **[review]**
 5. **`types` sits at the bottom beside `shared`.** It may not import from `features` or `app`; it may import types from `shared` (a schema's `z.infer`, the generated API types). **[lint]**
 
@@ -111,6 +111,7 @@ first internal import — deliberately, so the override is not forgotten.
 **Relative imports** are allowed in one place only.
 `src/shared/config/server-env.ts` reaches `./env` and `../logger` relatively, because `next.config.ts` loads it to validate the environment at build time and Next's config loader cannot resolve `@/` from a nested module.
 Anything `server-env.ts` imports must therefore also avoid `@/`, so keep that module's import graph tiny.
+A type-only import (`import type`) is erased before the loader runs, so `logger.ts` may take its types from `@/types/logger`.
 
 Everywhere else, a relative import is a mistake. **[review]** CSS is not covered by the
 alias: `globals.css` imports `../shared/ui/theme.css` relatively.
@@ -180,7 +181,7 @@ Both reach `server-env`, so a client import fails loudly. **[review]**
 - **Filenames are kebab-case** (`sign-in-form.tsx`), except where Next reserves the name (`page.tsx`, `layout.tsx`). **[lint]**
 - **Zod schema files end in `.schema.ts`**; tests sit next to their source as
   `<name>.test.ts(x)`. **[review]**
-- **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix: `FeedItemSchema` / `type FeedItem = z.infer<typeof FeedItemSchema>`. **[review]**
+- **Schemas are `PascalCaseSchema`**, and their type is the same name without the suffix: `SecuritySearchSchema` / `type SecuritySearch = z.infer<typeof SecuritySearchSchema>`. **[review]**
 - **Components are PascalCase and export a `<Component>Props` type.** **[review]**
 - **Module-level constants are `SCREAMING_SNAKE_CASE`** and carry the unit when it is not obvious: `LOW_CONFIDENCE`, `RENEWAL_REUSE_MS`.
   No magic numbers inline. **[review]**
@@ -250,8 +251,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 ```
 
 - Signature is `(previous: FormState, formData: FormData) => Promise<FormState>` so it plugs
-  into `useActionState`. Use `FormState`, `IDLE`, `formError` and `parseForm` from
-  `@/shared/form-state` — do not define a per-feature state type. **[review]**
+  into `useActionState`.
+  Use `IDLE`, `formError` and `parseForm` from `@/shared/form-state`, and `FormState` from `@/types/form-state` — do not define a per-feature state type. **[review]**
 - **Call the API with `api` and pass the call to `resultOf`**, both from `@/shared/api/request`: `api` sends the session's access token and the request's ID, and `resultOf` on a 401 clears the session and redirects to `/sign-in`.
   Any other failure comes back as an `ApiError`. **[review]**
 - **Branch on the API's `code`, never its message**, with a named constant (`EMAIL_TAKEN = "email_taken"`).
@@ -304,8 +305,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   Hidden inputs carry ids. **[review]**
 - **One form, one action.** A screen offering two submissions renders two forms, each with its own `useActionState` (`SignInForm` and `CreateAccountForm`), so a form posted without JavaScript posts one action. **[review]**
 - **A form's error renders through `FormError`** under its fields; a message about the screen, such as a failed load or partial data, is a `Notice`. **[review]**
-- **Use the `shared/ui` primitives** (`TextField`, `SelectField`, `Button`, `ButtonLink`, `SubmitButton`) rather than styling raw inputs.
-  They wire `label`/`htmlFor`, `aria-describedby` and `aria-invalid` — a new primitive must do the same. **[review]**
+- **Use the `shared/ui` primitives** (`TextField`, `Button`, `ButtonLink`, `SubmitButton`) rather than styling raw inputs.
+  They wire `label`/`htmlFor`, and `aria-describedby` to a hint — a new primitive must do the same. **[review]**
 - **A page only returns its screen.** `src/app/**/page.tsx` imports one `*Screen` from a feature's `server.ts` and returns it, passing `params` and `searchParams` through when the route has them (typed with Next's generated `PageProps<"/route">`).
   Data loading and markup live in the screen, under the feature's `screens/`.
   `src/app/pages.test.ts` checks every page file. **[test]**
@@ -392,8 +393,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   touch Docker or the network. **[review]**
 - **Default environment is jsdom.** A test that reaches `server-env` must declare
   `// @vitest-environment node` at the top. **[test]**
-- **Test names describe behaviour, including the alternative rejected**: "renders an explicit empty state rather than a blank card". **[review]**
-- **Test data is built through the schema** (`FeedItemSchema.parse({ … })`), so test fixtures cannot drift from the contract either. **[review]**
+- **Test names describe behaviour, including the alternative rejected**: "says no holding is priced yet rather than showing an empty card". **[review]**
+- **Test data is built through the schema** (`SecuritySearchSchema.parse({ … })`), so test fixtures cannot drift from the contract either. **[review]**
 - **Replace dependencies by injection, not module mocking** — pass a stub client to the
   factory. `vi.fn()` for the stub's methods is fine. **[review]**
 - **Code that reaches the API is tested against `fakeApi`** from `@/shared/api/fake-api`, which replaces the global `fetch`, answers by method and path and records each request.
@@ -406,7 +407,7 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 ## 9. Comments and documentation
 
 - **Comments describe the code, to make it easier to read**: what a value is, what a block does, what a function returns.
-  `/** The outlet's own standfirst. Not generated, and not a summary. */` is the shape. **[review]**
+  `/** A count from Holdings' query string; missing or malformed is zero. */` is the shape. **[review]**
 - **Comments do not argue for implementation choices.** No "deliberately", "on purpose",
   "we measured", alternatives considered, or the bug that led here. That reasoning goes in an
   ADR, `docs/improvements.md`, or the commit message, where it can be long without cluttering
@@ -427,8 +428,8 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
 - **Deliberate shortcuts go in `docs/improvements.md`** under the feature's heading: what
   exists, what it should become, and what makes it worth doing. A `TODO` in code is not a
   substitute. **[review]**
-- **The README describes behaviour a user or operator sees**; this file describes how to
-  write code. Update whichever your change affects. **[review]**
+- **The README is for running the app**: setup, scripts, environment and a map of the code.
+  What a screen does and why goes in its phase's ADR, not the README; this file describes how to write code. **[review]**
 
 ## 10. Tooling and workflow
 

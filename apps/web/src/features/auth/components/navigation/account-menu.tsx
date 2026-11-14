@@ -3,6 +3,7 @@
 import { ChevronDown, Download, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { initials } from "@/features/auth/utils/user";
 import { ROUTES } from "@/shared/routes";
 import { Avatar } from "@/shared/ui/display/avatar";
 import { Icon } from "@/shared/ui/display/icon";
@@ -15,14 +16,6 @@ export type AccountMenuProps = {
 
 const ITEM =
   "flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-detail text-secondary hover:bg-surface-raised hover:text-primary";
-
-/** "RC" for roman.cirier@…: the first letters of the local part's first two words, or its first two letters. */
-function initials(email: string): string {
-  const local = email.split("@")[0] ?? "";
-  const [first, second] = local.split(/[._-]+/).filter((part) => part.length > 0);
-  const letters = first && second ? first.charAt(0) + second.charAt(0) : local.slice(0, 2);
-  return letters.toUpperCase();
-}
 
 export function AccountMenu({ email, signOut }: AccountMenuProps) {
   const [open, setOpen] = useState(false);

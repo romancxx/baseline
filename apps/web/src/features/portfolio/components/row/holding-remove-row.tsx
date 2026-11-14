@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useId } from "react";
-import { CELL, HOLDINGS_COLUMNS } from "@/features/portfolio/components/list/holdings-columns";
+import { CELL, HOLDINGS_COLUMNS } from "@/features/portfolio/components/holdings-columns";
+import { REMOVE_NOTE, removeTitle } from "@/features/portfolio/utils/holdings";
 import { IDLE } from "@/shared/form-state";
 import { FormError } from "@/shared/ui/display/form-error";
 import { Button } from "@/shared/ui/form/button";
@@ -28,11 +29,9 @@ export function HoldingRemoveRow({ holding, removePosition, onKeep }: HoldingRem
         >
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <p id={titleId} className="font-semibold text-danger text-detail">
-              Remove {holding.instrument.name}?
+              {removeTitle(holding.instrument)}
             </p>
-            <p className="text-caption text-secondary">
-              The position goes. Nothing else is affected, and you can add it again at any time.
-            </p>
+            <p className="text-caption text-secondary">{REMOVE_NOTE}</p>
             {state.status === "error" ? <FormError message={state.message} /> : null}
           </div>
           <form action={formAction} className="flex shrink-0 gap-2">

@@ -29,6 +29,16 @@ describe("gating", () => {
     expect(getRedirectUrl(response)).toBe("http://localhost:3000/sign-in?next=%2Fholdings");
   });
 
+  it("remembers the page's query too, rather than only its path", async () => {
+    fakeApi({});
+
+    const response = await visit("/instruments/a1?range=6M");
+
+    expect(getRedirectUrl(response)).toBe(
+      "http://localhost:3000/sign-in?next=%2Finstruments%2Fa1%3Frange%3D6M",
+    );
+  });
+
   it.each(["/sign-in", "/session/expired"])("lets an anonymous visitor open %s", async (path) => {
     fakeApi({});
 

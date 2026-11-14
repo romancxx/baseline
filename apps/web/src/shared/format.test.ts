@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  direction,
   formatDate,
   formatMoney,
   formatPercent,
@@ -8,6 +9,21 @@ import {
 } from "@/shared/format";
 
 const MINUS = "−";
+
+describe("direction", () => {
+  it.each([
+    ["up", "+€104.80"],
+    ["down", `${MINUS}1.2%`],
+    ["flat", "€0.00"],
+    ["flat", "—"],
+  ])("reads %s from %s's sign", (expected, formatted) => {
+    expect(direction(formatted)).toBe(expected);
+  });
+
+  it("reads a hyphen as flat rather than down, since figures write their minus as U+2212", () => {
+    expect(direction("-1.2%")).toBe("flat");
+  });
+});
 
 describe("formatMoney", () => {
   it.each([

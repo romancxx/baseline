@@ -1,6 +1,7 @@
 import { z } from "zod";
+import type { InstrumentType } from "@/types/instruments";
 
-const InstrumentTypeSchema = z.enum(["stock", "etf"]);
+const InstrumentTypeSchema = z.enum(["stock", "etf"] as const satisfies readonly InstrumentType[]);
 
 export const CatalogueResultSchema = z.object({
   source: z.literal("catalogue"),

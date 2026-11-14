@@ -1,4 +1,4 @@
-import { HOLDINGS_COLUMNS } from "@/features/portfolio/components/list/holdings-columns";
+import { HOLDINGS_COLUMNS } from "@/features/portfolio/components/holdings-columns";
 import { HoldingRow } from "@/features/portfolio/components/row/holding-row";
 import { EmptyPortfolio } from "@/features/portfolio/components/section/empty-portfolio";
 import { cn } from "@/shared/ui/cn";

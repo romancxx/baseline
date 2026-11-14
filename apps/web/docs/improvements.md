@@ -4,6 +4,8 @@ Deliberate shortcuts, per feature. Each entry says what exists today, what it sh
 become, and what makes it worth doing — so that the next person (you, in three weeks) is
 reading a decision rather than guessing at an omission.
 
+Screen numbers refer to the design mockups, removed once built; they remain at [`4936852`](https://github.com/romancxx/stock-news-v2/tree/4936852/apps/web/docs/design).
+
 ## auth
 
 **Password reset.** There is no recovery flow, and `apps/api` has no reset endpoint (see its improvements list).
@@ -15,7 +17,7 @@ Deliberate for a single-user build; needed before anyone else creates an account
 
 **Sign-in errors are not placed on a field.** Screen 01 shows "Wrong email or password" under the password field and "This email already has an account" under the email field, with a red border on that field.
 The actions return one message in `FormState`, so `FormError` shows it as one line under both fields and no field is marked invalid.
-Placing it needs `FormState`'s error to name a field; worth doing with the next form that has field-level errors.
+Placing it needs `FormState`'s error to name a field, and `TextField` an `error` prop that sets `aria-invalid` and points `aria-describedby` at the message; worth doing with the next form that has field-level errors.
 
 **One web instance only.** Concurrent refreshes of one token are deduplicated inside Next's process ([ADR 0001](adr/0001-auth-through-the-api.md)).
 Two instances refreshing the same token at once would look like reuse to the API, which then revokes every session of that user.
@@ -49,6 +51,6 @@ Keeping it needs the account menu and the as-of stamp to fail on their own, for 
 **The app is desktop only.** The top bar holds the logo, two links, a search button up to 460 px wide and the account menu in one row, which needs roughly 900 px.
 A narrow layout is needed before the app is used on a phone.
 
-**The Review-era feed names no model.** `TonalityBadge` credited the model and its confidence in its hover text; `ToneChip`, which replaced it, shows only the tone.
-Briefs carry their provenance (article count, window, generation time) in the line under them, built with Home.
-The article cards left from Review show none until they are rebuilt or removed.
+**Briefs name no model.** A brief's provenance line gives its article count, window and generation time, and `ToneChip` only its tone; neither says which model wrote it.
+The API sends the brief's `model`, which the web app does not map.
+Showing it would let a reader tell briefs from different models apart, worth doing once more than one model writes them.

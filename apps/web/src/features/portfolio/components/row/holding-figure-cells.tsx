@@ -1,4 +1,4 @@
-import { NUMERIC_CELL } from "@/features/portfolio/components/list/holdings-columns";
+import { NUMERIC_CELL } from "@/features/portfolio/components/holdings-columns";
 import { showsBaseValue } from "@/features/portfolio/utils/holdings";
 import { formatMoney, formatPercent } from "@/shared/format";
 import { cn } from "@/shared/ui/cn";

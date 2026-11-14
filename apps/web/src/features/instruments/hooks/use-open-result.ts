@@ -2,7 +2,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import type { SearchResult } from "@/features/instruments/schemas/security-search.schema";
 import { instrumentRoute } from "@/shared/routes";
-import type { ResolveInstrument } from "@/types/instruments";
+import type { ResolveInstrument, ResolveResult } from "@/types/instruments";
+
+/** When the action itself fails, such as Next's server being unreachable. */
+const OPEN_FAILED: ResolveResult = {
+  ok: false,
+  message: "Could not open this security. Try again.",
+};
 
 /** Opens a result's page; a provider candidate is stored in the catalogue first. */
 export function useOpenResult(onClose: () => void, resolveInstrument: ResolveInstrument) {
@@ -20,7 +26,7 @@ export function useOpenResult(onClose: () => void, resolveInstrument: ResolveIns
       }
 
       setOpening(true);
-      const resolved = await resolveInstrument(result.symbol);
+      const resolved = await resolveInstrument(result.symbol).catch(() => OPEN_FAILED);
       setOpening(false);
       if (!resolved.ok) {
         setError(resolved.message);

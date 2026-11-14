@@ -5,9 +5,9 @@ import { IMPORT_MAX_FILE_BYTES } from "@/features/portfolio/schemas/import.schem
 import { fileTooLarge } from "@/features/portfolio/utils/import";
 import type {
   ConfirmImport,
+  ImportDryRun,
   ImportFailure,
   ImportFlow,
-  ImportPreview,
   PreviewImport,
 } from "@/types/portfolio";
 
@@ -25,7 +25,7 @@ export function useImportFlow(
   previewImport: PreviewImport,
   confirmImport: ConfirmImport,
 ): ImportFlow {
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [preview, setPreview] = useState<ImportDryRun | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [reading, startReading] = useTransition();
   const [confirming, startConfirming] = useTransition();

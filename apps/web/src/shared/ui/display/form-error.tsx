@@ -5,7 +5,6 @@ export type FormErrorProps = {
   readonly message: string;
 };
 
-/** Why a form's submission failed, under its fields. */
 export function FormError({ message }: FormErrorProps) {
   return (
     <p role="alert" className="flex items-center gap-2 text-danger text-label font-normal">

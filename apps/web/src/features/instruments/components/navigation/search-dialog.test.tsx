@@ -222,4 +222,20 @@ describe("choosing a result", () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("says why when the action itself fails, rather than loading forever", async () => {
+    fakeApi({ [SEARCH]: () => ({ status: 200, body: LVMH }) });
+    const resolveInstrument = vi.fn(async (): Promise<ResolveResult> => {
+      throw new TypeError("Failed to fetch");
+    });
+    const { user, input, onClose } = renderDialog({ resolveInstrument });
+
+    await user.type(input, "lvmh");
+    await user.click(await screen.findByRole("option", { name: /LVMUY/ }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not open this security. Try again.",
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

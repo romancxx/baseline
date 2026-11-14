@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findHolding, holdingStatus } from "@/features/portfolio/utils/holdings";
+import { findHolding, holdingStatus, missingPricesLine } from "@/features/portfolio/utils/holdings";
 import type { Holding, PortfolioOverview } from "@/types/portfolio";
 
 const MC_ID = "a1111111-1111-4111-8111-111111111111";
@@ -46,6 +46,20 @@ describe("findHolding", () => {
 
   it("finds nothing for a listing not held, rather than another listing of the security", () => {
     expect(findHolding(OVERVIEW, "c3333333-3333-4333-8333-333333333333")).toBeNull();
+  });
+});
+
+describe("missingPricesLine", () => {
+  it("counts the priced holdings out of those with a quantity", () => {
+    expect(missingPricesLine({ priced: 9, of: 12 })).toBe(
+      "9 of 12 holdings are priced. Totals cover the priced ones only.",
+    );
+  });
+
+  it("speaks of one holding in the singular rather than '1 of 1 holdings are'", () => {
+    expect(missingPricesLine({ priced: 0, of: 1 })).toBe(
+      "0 of 1 holding is priced. Totals cover the priced ones only.",
+    );
   });
 });
 

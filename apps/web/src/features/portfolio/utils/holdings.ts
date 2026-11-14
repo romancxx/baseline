@@ -39,6 +39,18 @@ export function pricedCount({ holdings, totals }: PortfolioOverview): PricedCoun
   };
 }
 
+export const REMOVE_NOTE =
+  "The position goes. Nothing else is affected, and you can add it again at any time.";
+
+export function removeTitle({ name }: Instrument): string {
+  return `Remove ${name}?`;
+}
+
+export function missingPricesLine({ priced, of }: PricedCount): string {
+  const holdings = of === 1 ? "holding is" : "holdings are";
+  return `${priced} of ${of} ${holdings} priced. Totals cover the priced ones only.`;
+}
+
 const TOP_HOLDINGS = 5;
 
 export function topHoldings(holdings: readonly Holding[]): readonly Holding[] {

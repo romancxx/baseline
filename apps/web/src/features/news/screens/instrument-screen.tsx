@@ -16,8 +16,8 @@ import { Skeleton } from "@/shared/ui/display/skeleton";
 import { Card } from "@/shared/ui/layout/card";
 
 export type InstrumentScreenProps = {
-  readonly params: Promise<{ readonly id: string }>;
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+  readonly params: PageProps<"/instruments/[id]">["params"];
+  readonly searchParams: PageProps<"/instruments/[id]">["searchParams"];
 };
 
 export async function InstrumentScreen({ params, searchParams }: InstrumentScreenProps) {

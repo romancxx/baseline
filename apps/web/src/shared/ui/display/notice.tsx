@@ -33,7 +33,6 @@ const TONES = {
   },
 } as const;
 
-/** An inline message about the screen: an error, partial data, or a success. */
 export function Notice({ tone, title, children, action }: NoticeProps) {
   const { role, icon, box, mark } = TONES[tone];
 
