@@ -33,7 +33,8 @@ Run the tests through `just api-test`: a bare `uv run pytest` lacks the test dat
 
 ## Docs
 
-- `README.md`: what a user or operator sees (endpoints, commands, settings).
+- `README.md`: how to set up and run the API: settings, commands, the endpoint and job tables, and the CSV import format.
+  An endpoint or job gets one row there; how it behaves and why goes in its ADR and `/docs`, never repeated in the README.
 - `docs/adr/`: one record per topic. A change to how a topic works updates its ADR; a new
   topic gets a new ADR and a row in the index. ADRs record decisions and architecture, never
   progress (no "step N", "built", "done"). Leave an ADR's `Date` line as it is.
