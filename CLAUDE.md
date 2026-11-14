@@ -22,7 +22,7 @@ A wrapped paragraph is converted only when it is edited for another reason.
 
 ### Issue tracker
 
-Issues live in GitHub Issues on `romancxx/stock-news-v2`, through the `gh` CLI.
+Issues live in GitHub Issues on `romancxx/baseline`, through the `gh` CLI.
 See `docs/agents/issue-tracker.md`.
 
 ### Domain docs

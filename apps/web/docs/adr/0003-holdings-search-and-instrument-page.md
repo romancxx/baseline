@@ -9,7 +9,7 @@
 The API serves the portfolio overview, each holding valued in its listing's currency and in the base currency, search across the catalogue and the market data provider, resolving a provider candidate into the catalogue, and per listing its closing prices, latest brief and news.
 The web app used none of it: Holdings was a placeholder, the search modal found nothing, and there was no page for a security.
 Prices and briefs exist only for held securities and are updated by commands run by hand, so a holding just added has neither until the next run; ETFs never get news.
-The design ([screens 04, 05, 06, 09 and 10](https://github.com/romancxx/stock-news-v2/blob/4936852/apps/web/docs/design/screens.html)) puts the instrument page at `/s/<symbol>`, offers a Max chart range, and keeps a prices as-of stamp in the top bar.
+The design ([screens 04, 05, 06, 09 and 10](https://github.com/romancxx/baseline/blob/4936852/apps/web/docs/design/screens.html)) puts the instrument page at `/s/<symbol>`, offers a Max chart range, and keeps a prices as-of stamp in the top bar.
 
 ## Decision
 

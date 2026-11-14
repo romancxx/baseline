@@ -8,7 +8,7 @@
 Baseline tells a user what was reported about the securities they hold ([0009](0009-portfolios.md)): a short brief per security, with a tone and the headlines behind it.
 Like market data ([0007](0007-market-data.md)), it runs on one machine, for personal use, at almost no cost.
 
-The web prototype built a first pipeline, and its records hold what live runs taught ([old web 0004](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0004-ingestion-pipeline.md), [0005](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0005-summarization-and-tonality.md), [0006](https://github.com/romancxx/stock-news-v2/blob/e476ac1/apps/web/docs/adr/0006-home-feed.md)):
+The web prototype built a first pipeline, and its records hold what live runs taught ([old web 0004](https://github.com/romancxx/baseline/blob/e476ac1/apps/web/docs/adr/0004-ingestion-pipeline.md), [0005](https://github.com/romancxx/baseline/blob/e476ac1/apps/web/docs/adr/0005-summarization-and-tonality.md), [0006](https://github.com/romancxx/baseline/blob/e476ac1/apps/web/docs/adr/0006-home-feed.md)):
 
 - Feed teasers average 260 characters, too short to summarise; summaries need the article's text.
 - A ticker tag is a candidate, not proof: Finnhub files a Berkshire earnings piece under `AAPL`.

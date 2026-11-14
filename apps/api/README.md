@@ -1,6 +1,6 @@
 # Baseline API
 
-[![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
+[![API](https://github.com/romancxx/baseline/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/baseline/actions/workflows/api.yml)
 
 The backend of a news reader for the stocks you hold.
 It keeps your portfolio, fetches each stock's daily prices from Yahoo Finance and its headlines from Google News, and has Claude write a short brief per stock that cites the headlines it was written from.
@@ -61,7 +61,7 @@ flowchart LR
 Needs [uv](https://docs.astral.sh/uv/), [just](https://just.systems/), Docker and `jq`.
 
 ```sh
-git clone https://github.com/romancxx/stock-news-v2.git && cd stock-news-v2
+git clone https://github.com/romancxx/baseline.git && cd baseline
 cp apps/api/.env.example apps/api/.env
 # In apps/api/.env: set JWT_SECRET to the output of `openssl rand -hex 32`, and either
 # ANTHROPIC_API_KEY, or LLM_BACKEND=cli with the `claude` CLI logged in.

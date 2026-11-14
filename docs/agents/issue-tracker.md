@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues in `romancxx/stock-news-v2`.
+Issues and specs for this repo live as GitHub issues in `romancxx/baseline`.
 Use the `gh` CLI for all operations.
 
 ## Conventions
@@ -24,7 +24,7 @@ Use the `gh` CLI for all operations.
   On an already-closed issue, `gh issue close --comment` drops the comment and still exits 0.
 
 `gh` infers the repo from `git remote -v` when run inside this clone.
-File issues only into `romancxx/stock-news-v2`, never into `mattpocock/skills`.
+File issues only into `romancxx/baseline`, never into `mattpocock/skills`.
 
 ## When a skill says "publish to the issue tracker"
 

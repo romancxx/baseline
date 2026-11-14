@@ -1,7 +1,7 @@
 # Baseline
 
-[![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
-[![Web](https://github.com/romancxx/stock-news-v2/actions/workflows/web.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/web.yml)
+[![API](https://github.com/romancxx/baseline/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/baseline/actions/workflows/api.yml)
+[![Web](https://github.com/romancxx/baseline/actions/workflows/web.yml/badge.svg)](https://github.com/romancxx/baseline/actions/workflows/web.yml)
 
 A news reader for the stocks you hold: daily prices, headlines, and a short brief per stock written by Claude, citing its sources.
 Not investment advice.
@@ -67,7 +67,7 @@ Prices, news and briefs are written by commands run by hand, not by the API.
 Needs [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/), Node 22, [just](https://just.systems/) and Docker.
 
 ```sh
-git clone https://github.com/romancxx/stock-news-v2.git && cd stock-news-v2
+git clone https://github.com/romancxx/baseline.git && cd baseline
 cp apps/api/.env.example apps/api/.env
 # In apps/api/.env: set JWT_SECRET to the output of `openssl rand -hex 32`, and either
 # ANTHROPIC_API_KEY, or LLM_BACKEND=cli with the `claude` CLI logged in.

@@ -6,7 +6,7 @@
 
 ## Context
 
-The coming screens show prices and news tone side by side ([design](https://github.com/romancxx/stock-news-v2/blob/4936852/apps/web/docs/design/screens.html), "The two signal systems").
+The coming screens show prices and news tone side by side ([design](https://github.com/romancxx/baseline/blob/4936852/apps/web/docs/design/screens.html), "The two signal systems").
 The previous theme had one signal and a brand of its own: orange and teal accents, tinted avatars and a bullish/neutral/bearish badge, so a gain, a positive brief and a primary button competed for the same attention.
 The app has two destinations, Home and Holdings, and a 224 px sidebar held them beside two entries, Themes and Settings, that are not planned.
 The screens to come (Home, Holdings, search, CSV import, the instrument page) share figures, chips, buttons, notices and loading states, and each would otherwise draw its own.

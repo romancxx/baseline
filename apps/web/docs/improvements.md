@@ -4,7 +4,7 @@ Deliberate shortcuts, per feature. Each entry says what exists today, what it sh
 become, and what makes it worth doing — so that the next person (you, in three weeks) is
 reading a decision rather than guessing at an omission.
 
-Screen numbers refer to the design mockups, removed once built; they remain at [`4936852`](https://github.com/romancxx/stock-news-v2/tree/4936852/apps/web/docs/design).
+Screen numbers refer to the design mockups, removed once built; they remain at [`4936852`](https://github.com/romancxx/baseline/tree/4936852/apps/web/docs/design).
 
 ## auth
 
