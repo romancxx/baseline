@@ -1,4 +1,4 @@
-# StockNews
+# Baseline
 
 [![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
 [![Web](https://github.com/romancxx/stock-news-v2/actions/workflows/web.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/web.yml)
@@ -99,7 +99,7 @@ just brief           # a brief per stock with new headlines
 | `justfile` | Every command, run from the repository root |
 | `docker-compose.yml` | The API's Postgres |
 
-Each source's terms, and what StockNews does with its data, are in the [API's README](apps/api/README.md#data-sources-and-terms).
+Each source's terms, and what Baseline does with its data, are in the [API's README](apps/api/README.md#data-sources-and-terms).
 
 ## License
 

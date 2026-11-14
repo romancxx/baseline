@@ -21,7 +21,7 @@ logger = structlog.stdlib.get_logger(__name__)
 BASE_URL = "https://news.google.com"
 SEARCH_PATH = "/rss/search"
 LOCALE = {"hl": "en-US", "gl": "US", "ceid": "US:en"}
-USER_AGENT = "StockNews/0.1 (personal news reader)"
+USER_AGENT = "Baseline/0.1 (personal news reader)"
 TIMEOUT_SECONDS = 10
 REQUEST_INTERVAL_SECONDS = 1
 

@@ -5,7 +5,7 @@
 
 ## Context
 
-StockNews needs search (by name, symbol or ISIN), listing details and daily prices for stocks
+Baseline needs search (by name, symbol or ISIN), listing details and daily prices for stocks
 and ETFs on US, European and Asian exchanges. It runs locally, for personal use, at no cost.
 A probe of Yahoo Finance through yfinance found search, details and full price history for
 every exchange tried, and no throttling on a burst of 25 requests.

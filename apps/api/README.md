@@ -1,4 +1,4 @@
-# StockNews API
+# Baseline API
 
 [![API](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml/badge.svg)](https://github.com/romancxx/stock-news-v2/actions/workflows/api.yml)
 
@@ -109,7 +109,7 @@ The interactive docs are at <http://localhost:8000/docs>.
 
 ## Data sources and terms
 
-StockNews is a personal project, meant to be run for your own use.
+Baseline is a personal project, meant to be run for your own use.
 Each source has its own terms; read them before using the data any other way.
 
 | Source                                                                    | Used for                                                      | Terms                                                                                                                                                                                          |
@@ -162,7 +162,7 @@ each article (time, publisher, headline) and what was dropped. Tests never call 
 they read real feeds, recorded and trimmed, from `tests/fixtures/google_news/`.
 
 Tests need Postgres running.
-Each run recreates a separate `stocknews_test` database, migrates it to head, and migrates it back to base at the end; the development database is not touched.
+Each run recreates a separate `baseline_test` database, migrates it to head, and migrates it back to base at the end; the development database is not touched.
 `just api-test` sets the test `DATABASE_URL` and `JWT_SECRET`; CI sets its own.
 A test that connects to anything but the local Postgres fails.
 

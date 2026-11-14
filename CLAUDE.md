@@ -1,4 +1,4 @@
-# StockNews
+# Baseline
 
 Two apps with separate tooling:
 

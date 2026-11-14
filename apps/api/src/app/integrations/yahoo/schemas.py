@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 
 class QuoteType(StrEnum):
-    """The Yahoo quote types StockNews lists."""
+    """The Yahoo quote types Baseline lists."""
 
     EQUITY = "EQUITY"
     ETF = "ETF"

@@ -15,7 +15,7 @@ export type TopBarProps = {
 export function TopBar({ navigation, search, pricesAsOf, account }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-bar shrink-0 items-center gap-1.5 border-hairline border-b bg-canvas px-5">
-      <Link href={ROUTES.home} aria-label="StockNews, Home" className="mr-3.5 rounded-control">
+      <Link href={ROUTES.home} aria-label="Baseline, Home" className="mr-3.5 rounded-control">
         <Wordmark />
       </Link>
       <nav aria-label="Main">

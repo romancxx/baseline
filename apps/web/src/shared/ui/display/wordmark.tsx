@@ -18,9 +18,9 @@ export function Wordmark({ size = "md" }: WordmarkProps) {
         aria-hidden="true"
         className={cn("flex items-center justify-center bg-inverse font-bold text-inverse", mark)}
       >
-        S
+        B
       </span>
-      <span className={name}>StockNews</span>
+      <span className={name}>Baseline</span>
     </span>
   );
 }

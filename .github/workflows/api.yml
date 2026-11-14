@@ -16,17 +16,17 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_USER: stocknews
-          POSTGRES_PASSWORD: stocknews
-          POSTGRES_DB: stocknews
+          POSTGRES_USER: baseline
+          POSTGRES_PASSWORD: baseline
+          POSTGRES_DB: baseline
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U stocknews -d stocknews"
+          --health-cmd "pg_isready -U baseline -d baseline"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test
+      DATABASE_URL: postgresql+asyncpg://baseline:baseline@localhost:5432/baseline_test
       JWT_SECRET: test-secret-not-used-anywhere-else-0123456789
     steps:
       - uses: actions/checkout@v7

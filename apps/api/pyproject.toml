@@ -1,7 +1,7 @@
 [project]
 name = "app"
 version = "0.1.0"
-description = "StockNews backend API"
+description = "Baseline backend API"
 readme = "README.md"
 authors = [
     { name = "Roman Cirier", email = "roman.cirier@gmail.com" }

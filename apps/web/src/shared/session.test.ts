@@ -43,7 +43,7 @@ describe("writing a session", () => {
   });
 
   it.each([
-    ["https", "https://stocknews.example", true],
+    ["https", "https://baseline.example", true],
     ["http", "http://localhost:3000", false],
   ])(
     "marks the cookies Secure exactly when the app is served over %s",

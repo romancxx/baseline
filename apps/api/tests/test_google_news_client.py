@@ -88,7 +88,7 @@ async def test_search_sends_the_query_in_english_from_the_us(make_client: Client
         "gl": "US",
         "ceid": "US:en",
     }
-    assert request.headers["user-agent"].startswith("StockNews/")
+    assert request.headers["user-agent"].startswith("Baseline/")
 
 
 async def test_search_reads_titles_without_the_publisher_suffix(

@@ -1,4 +1,4 @@
-# StockNews
+# Baseline
 
 A short brief on the news about each security you hold, beside your portfolio.
 

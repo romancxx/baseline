@@ -31,8 +31,8 @@ export const metadata: Metadata = {
   // absolute URLs without a code change.
   metadataBase: new URL(clientEnv.NEXT_PUBLIC_APP_URL),
   title: {
-    default: "StockNews",
-    template: "%s · StockNews",
+    default: "Baseline",
+    template: "%s · Baseline",
   },
   description: "A short brief on the news about each security you hold, beside your portfolio.",
 };

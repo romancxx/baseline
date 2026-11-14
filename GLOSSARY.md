@@ -1,4 +1,4 @@
-# StockNews
+# Baseline
 
 News about the securities a user holds, read against their portfolio.
 This glossary is shared by the API and the web app.
@@ -85,11 +85,11 @@ _Avoid_: dashboard, summary
 
 **Article**:
 A news item about a security, as its publisher put it out: a headline, the publisher, the publication time and a link.
-StockNews keeps the headline only, never the article's text.
+Baseline keeps the headline only, never the article's text.
 _Avoid_: story, post, news item
 
 **Headline**:
-An article's title, the only part of it StockNews reads.
+An article's title, the only part of it Baseline reads.
 _Avoid_: title (except in the API's field names), teaser
 
 **Publisher**:
@@ -97,7 +97,7 @@ The outlet that published an article, such as Reuters.
 _Avoid_: source, outlet, provider
 
 **News source**:
-Where StockNews collects articles from, such as Google News.
+Where Baseline collects articles from, such as Google News.
 _Avoid_: feed, provider, publisher
 
 **Brief**:

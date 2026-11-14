@@ -48,13 +48,13 @@ api-typecheck:
 
 # The test database and secret; the database's credentials are the ones in .env.example
 api-test:
-    DATABASE_URL=postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test \
+    DATABASE_URL=postgresql+asyncpg://baseline:baseline@localhost:5432/baseline_test \
     JWT_SECRET=test-secret-not-used-anywhere-else-0123456789 \
     {{api}} run pytest
 
 # Write the API's OpenAPI schema to apps/api/openapi.json; the settings only need to exist, no database is reached
 api-openapi:
-    DATABASE_URL=postgresql+asyncpg://stocknews:stocknews@localhost:5432/stocknews_test \
+    DATABASE_URL=postgresql+asyncpg://baseline:baseline@localhost:5432/baseline_test \
     JWT_SECRET=test-secret-not-used-anywhere-else-0123456789 \
     {{api}} run python scripts/export_openapi.py
 

@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     configure_logging(settings.environment)
 
     app = FastAPI(
-        title="StockNews API",
+        title="Baseline API",
         debug=settings.debug,
         lifespan=lifespan,
         exception_handlers=EXCEPTION_HANDLERS,
