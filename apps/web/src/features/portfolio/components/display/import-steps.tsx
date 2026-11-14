@@ -10,7 +10,7 @@ export type ImportStepsProps = {
 
 const STATES = {
   done: { mark: "border-hairline-strong text-secondary", label: "text-secondary" },
-  current: { mark: "border-transparent bg-inverse text-inverse", label: "text-primary" },
+  current: { mark: "border-transparent bg-brand text-inverse", label: "text-primary" },
   next: { mark: "border-hairline-strong text-tertiary", label: "text-tertiary" },
 } as const;
 

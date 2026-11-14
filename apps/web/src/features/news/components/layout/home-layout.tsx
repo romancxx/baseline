@@ -38,7 +38,10 @@ export function HomeLayout({ overview, briefs, resolveInstrument }: HomeLayoutPr
       {priced === null ? null : <MissingPricesNotice count={priced} />}
       <OverviewTiles overview={overview} priced={priced} briefed={groups.briefed} />
       <BriefsDisclaimer />
-      <div className="flex items-start gap-section">
+      <div className="flex flex-wrap items-start gap-x-section gap-y-stack">
+        <h2 id="latest-briefs" className="basis-full text-title">
+          Latest briefs
+        </h2>
         <HomeBriefsSection groups={groups} />
         <aside className="flex w-rail shrink-0 flex-col gap-stack">
           <TopHoldingsCard overview={overview} />

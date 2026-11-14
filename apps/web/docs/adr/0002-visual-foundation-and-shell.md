@@ -13,7 +13,8 @@ The screens to come (Home, Holdings, search, CSV import, the instrument page) sh
 
 ## Decision
 
-- **The brand is contrast.** Buttons, the logo and avatars are white or neutral; there is no accent token.
+- **The brand is one green.** The logo mark, the primary button and the price line use the `brand` token; avatars stay neutral.
+  This amends the first version of this decision, which had white buttons and no accent token.
 - **Six hues carry meaning, each scoped in `theme.css` to the utilities it serves.**
   `up` and `down` are text colours only, so a price movement cannot become a chip (`bg-up` does not exist).
   The four tones (`tone-positive`, `-negative`, `-neutral`, `-mixed`: azure, amber, slate, violet) are text colours with tints derived by `color-mix`, kept off the green/red axis so a Negative brief never reads as "sell".

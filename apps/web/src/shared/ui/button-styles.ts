@@ -5,8 +5,8 @@ const BASE =
   "inline-flex items-center justify-center gap-2 rounded-control border font-semibold motion-safe:transition disabled:opacity-disabled";
 
 export const BUTTON_VARIANTS = {
-  /** White: the one main action on a screen */
-  primary: "border-transparent bg-inverse text-inverse hover:brightness-110",
+  /** Green: the one main action on a screen */
+  primary: "border-transparent bg-brand text-inverse hover:brightness-110",
   secondary: "border-hairline-strong bg-surface-raised text-primary hover:bg-surface-high",
   /** Backing out: Cancel, Keep */
   ghost: "border-hairline-strong bg-transparent text-secondary hover:bg-surface hover:text-primary",

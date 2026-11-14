@@ -339,15 +339,15 @@ export async function addThing(_previous: FormState, formData: FormData): Promis
   render nothing. **[test]**
 - **Every class must resolve.** `theme.test.ts` compiles the theme and fails on any utility
   in a component that generates no CSS — a stale token name or a reset default. **[test]**
-- **The brand is contrast, and six hues carry meaning.**
-  Buttons, the logo and avatars are white or neutral.
+- **The brand is one green, and six hues carry meaning.**
+  The `brand` green marks the logo, the primary button and the price line; avatars stay neutral, and it is not used for gains (that is `up`).
   `up` and `down` are price movement, as bare text only; the four `tone-*` hues are news tone, as chips only.
   Nothing else on screen is coloured: an error uses the down hue as `danger`, partial data the amber of `tone-negative`, a success stays neutral. **[review]**
 - **Colours are scoped to the utility they serve**, so a misuse does not exist as a class:
   | Utility | Tokens |
   | --- | --- |
-  | `bg-` | `canvas`, `surface`, `surface-raised`, `surface-high`, `popover`, `scrim`, `inverse`, `tone-{positive,negative,neutral,mixed}-tint`, `{danger,partial,success}-tint` |
-  | `text-` | `primary`, `secondary`, `tertiary`, `inverse`, `up`, `down`, `tone-{positive,negative,neutral,mixed}`, `danger`, `partial` |
+  | `bg-` | `canvas`, `surface`, `surface-raised`, `surface-high`, `popover`, `scrim`, `brand`, `tone-{positive,negative,neutral,mixed}-tint`, `{danger,partial,success}-tint` |
+  | `text-` | `primary`, `secondary`, `tertiary`, `inverse`, `brand`, `up`, `down`, `tone-{positive,negative,neutral,mixed}`, `danger`, `partial` |
   | `border-` | `hairline`, `hairline-strong`, `focus`, `danger`, `{danger,partial,success}-muted` |
   | `outline-`, `ring-` | `focus` |
 

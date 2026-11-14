@@ -22,7 +22,7 @@ export type PriceChartProps = {
 
 /** Theme colours, read by the SVG Recharts draws. */
 const COLORS = {
-  line: "var(--text-color-primary)",
+  line: "var(--text-color-brand)",
   grid: "var(--border-color-hairline)",
   axis: "var(--text-color-tertiary)",
   cursor: "var(--border-color-hairline-strong)",

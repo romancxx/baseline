@@ -12,7 +12,7 @@ export type NavLinkProps = {
 };
 
 const STATES = {
-  active: "bg-surface-raised font-semibold text-primary",
+  active: "bg-surface-raised font-semibold text-brand",
   idle: "font-medium text-secondary hover:bg-surface hover:text-primary",
 } as const;
 

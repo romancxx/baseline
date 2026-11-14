@@ -21,9 +21,9 @@ export function HomeSkeleton() {
         ))}
       </div>
       <BriefsDisclaimer />
-      <div className="flex items-start gap-section">
+      <div className="flex flex-wrap items-start gap-x-section gap-y-stack">
+        <h2 className="basis-full text-title">Latest briefs</h2>
         <div className="flex min-w-0 flex-1 flex-col gap-stack">
-          <h2 className="text-title">Latest briefs</h2>
           <div className="flex flex-col gap-3 rounded-card border border-hairline bg-surface p-card">
             <div className="flex items-center gap-2.5 text-heading">
               <Skeleton className="size-avatar rounded-avatar" />

@@ -98,7 +98,7 @@ describe("theme", () => {
     expect(unresolved(compiler, defaults)).toEqual(defaults);
   });
 
-  it("has no brand hue or avatar tints, so the six semantic hues are the only colour", () => {
+  it("has no accent hue or avatar tints, so the brand green and six semantic hues are the only colour", () => {
     const removed = ["text-accent", "outline-accent", "bg-warm-tint", "text-cool"];
 
     expect(unresolved(compiler, removed)).toEqual(removed);

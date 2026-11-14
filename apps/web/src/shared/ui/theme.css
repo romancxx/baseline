@@ -16,21 +16,24 @@
   /* Menus and dialogs, above the page */
   --background-color-popover: #14171d;
   --background-color-scrim: rgb(5 6 8 / 58%);
-  /* The brand is contrast: a white primary button */
-  --background-color-inverse: #ffffff;
+  /* The brand green: the logo mark, the primary button, the price line */
+  --background-color-brand: #1fe85c;
 
   /* text-*: by emphasis */
   --text-color-primary: #f2f4f7;
   --text-color-secondary: #9ba3af;
   --text-color-tertiary: #828a97;
+  /* On a brand background */
   --text-color-inverse: var(--background-color-canvas);
+  /* The brand as a line colour, for the price chart */
+  --text-color-brand: var(--background-color-brand);
 
   --border-color-hairline: #23272f;
   /* Inputs, secondary buttons, menus */
   --border-color-hairline-strong: #2e333d;
   --border-color-focus: var(--outline-color-focus);
 
-  --outline-color-focus: #7cc4ff;
+  --outline-color-focus: var(--background-color-brand);
   --ring-color-focus: color-mix(in oklab, var(--outline-color-focus) 16%, transparent);
 
   /* Price movement: bare text only, never a background or a chip */

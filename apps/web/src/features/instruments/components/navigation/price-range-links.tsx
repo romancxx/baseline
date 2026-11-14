@@ -20,7 +20,7 @@ export function PriceRangeLinks({ instrumentId, active }: PriceRangeLinksProps) 
           aria-current={range === active ? "true" : undefined}
           className={cn(
             "rounded-tag px-2 py-0.5 font-mono text-caption text-tertiary hover:text-primary",
-            range === active && "bg-surface-high text-primary",
+            range === active && "bg-surface-high text-brand",
           )}
         >
           {range}
