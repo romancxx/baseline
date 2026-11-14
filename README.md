@@ -6,10 +6,6 @@
 A news reader for the stocks you hold: daily prices, headlines, and a short brief per stock written by Claude, citing its sources.
 Not investment advice.
 
-## Screenshots
-
-<!-- Screenshots go here. -->
-
 ## What it does
 
 - **Portfolio**: add holdings by search, or import a broker export as CSV by ISIN, with a dry run and a report per row.
@@ -61,6 +57,38 @@ Prices, news and briefs are written by commands run by hand, not by the API.
 | Database | Postgres 18 with pg_trgm, in Docker Compose |
 | Data sources | Yahoo Finance (yfinance), OpenFIGI, Google News RSS, Claude through the Anthropic API or the `claude` CLI |
 | Tooling | just, lefthook, GitHub Actions |
+
+## Screenshots
+
+### Home
+
+The portfolio total, the unrealised gain, and the latest brief of each stock with the headlines it cites.
+
+![Home: portfolio total and latest briefs](docs/screenshots/home.png)
+
+### Holdings
+
+Every position valued in the base currency, with its average price, latest close, unrealised gain and weight.
+
+![Holdings table](docs/screenshots/holding.png)
+
+### Instrument
+
+The price history over 1 month to 5 years, your position, and the latest brief with its sources.
+
+![Instrument page with price chart and brief](docs/screenshots/instrument.png)
+
+### Search
+
+Search the catalogue, and fall back to the market data provider for securities not added yet.
+
+![Search dialog](docs/screenshots/search.png)
+
+### Import
+
+Import a broker export as CSV by ISIN, with a preview before anything is saved.
+
+![CSV import](docs/screenshots/import.png)
 
 ## Quickstart
 
