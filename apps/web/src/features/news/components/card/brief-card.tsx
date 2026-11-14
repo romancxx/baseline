@@ -32,10 +32,10 @@ export function BriefCard({ brief, security }: BriefCardProps) {
                 href={article.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 text-detail text-secondary hover:text-primary"
+                className="flex items-start gap-2 text-detail text-secondary hover:text-primary"
               >
-                <span className="font-semibold text-primary">{article.publisher}</span>
-                <span className="truncate">{article.title}</span>
+                <span className="shrink-0 font-semibold text-primary">{article.publisher}</span>
+                <span className="min-w-0">{article.title}</span>
                 <Icon icon={ArrowUpRight} />
               </a>
             </li>

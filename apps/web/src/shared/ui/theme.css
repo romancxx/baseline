@@ -161,7 +161,7 @@
   --spacing-placeholder: 6rem;
 
   /* Widths, for `w-*`, `max-w-*` and `min-w-*`; never a `--spacing-*` name, which those read first */
-  --container-rail: 18rem;
+  --container-rail: 22rem;
   --container-content: 48rem;
   --container-auth: 23.25rem;
   --container-search: 28.75rem;
