@@ -22,6 +22,7 @@ What it leaves out (more sources, article text, model-confirmed links, a schedul
 ## Probes
 
 Throwaway scripts queried six stocks (AAPL, MC.PA, TTE.PA, SAP.DE, ASML.AS, 7203.T) on 2026-10-30 and 31.
+The full results, source by source, are in the [news source benchmark](../news-source-benchmark.md).
 
 - **Yahoo search news has nothing outside the US**: 0 items for each of the five non-US symbols.
 - **Finnhub's tags are loose**: PACCAR under `TM`, Samsung and TSMC under `ASML`, Berkshire's portfolio under `AAPL`.
